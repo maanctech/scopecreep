@@ -12,6 +12,8 @@ coverage
 
 # Local persistence and recovery files can contain private prospect/client data.
 data/*
+backups/*
+!backups/.gitkeep
 
 *.log
 *.tsbuildinfo

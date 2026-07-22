@@ -31,3 +31,23 @@ textarea {
   background: #111111;
   color: #ffffff;
 }
+
+@media print {
+  header,
+  .print\:hidden {
+    display: none !important;
+  }
+
+  main {
+    max-width: none !important;
+    padding: 0 !important;
+  }
+
+  textarea[aria-label="Report markdown"] {
+    min-height: 0;
+    height: auto;
+    border: 0;
+    overflow: visible;
+    white-space: pre-wrap;
+  }
+}

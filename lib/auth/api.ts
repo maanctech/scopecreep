@@ -1,7 +1,8 @@
+import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 import { AuthorizationError, assertPermission } from "@/lib/auth/authorization";
 import { getAuthContext } from "@/lib/auth/service";
-import { assertSameOrigin, InvalidOriginError, RateLimitError } from "@/lib/auth/security";
+import { assertSameOrigin, checkRateLimit, InvalidOriginError, RateLimitError } from "@/lib/auth/security";
 import type { AuthContext, Permission } from "@/lib/auth/types";
 import { SESSION_COOKIE_NAME } from "@/lib/auth/current";
 
@@ -23,6 +24,14 @@ export async function requireApiPermission(
   if (process.env.NODE_ENV === "test") return null;
 
   const token = cookieValue(request.headers.get("cookie"), SESSION_COOKIE_NAME);
+  if (!["GET", "HEAD", "OPTIONS"].includes(request.method.toUpperCase())) {
+    const path = new URL(request.url).pathname;
+    const principal = token
+      ? createHash("sha256").update(token).digest("hex").slice(0, 24)
+      : requestIp(request);
+    checkRateLimit(`protected:${principal}:${path}`, 120, 60_000);
+  }
+
   const context = token ? await getAuthContext(token) : null;
   if (!context) throw new AuthenticationError("Sign in to continue.");
   assertPermission(context.role, permission);

@@ -44,7 +44,8 @@ Local authentication includes:
 - Approved hours and approved amounts tracked in integer cents, separate from AI-estimated potential revenue.
 - Append-only billing event history with CSV export.
 - Global findings review page (`/app/findings`) and billing history page (`/app/billing`) with filters.
-- Markdown audit report generator (explicit generate action; viewing a report never changes data).
+- Six versioned audit/report formats with Markdown, formula-safe CSV, print output, source provenance, and content checksums. Generation is explicit; viewing never changes data.
+- System diagnostics, redacted support bundles, correlation IDs, structured safe logs, startup configuration validation, and installation backup controls.
 - Sales asset templates for cold email, LinkedIn DM, discovery calls, audit reveal calls, proposals, follow-up, and objection handling.
 - Ollama-first structured analysis with conservative validation and an explicit test-only demo analyzer.
 - Basic tests for AI JSON parsing, validation, API behavior, and local analysis safety cases.
@@ -70,6 +71,7 @@ Local authentication includes:
 - `/setup` - One-time first-owner setup after database migration.
 - `/account` - Current organization, role, sign-out, and password change.
 - `/app/settings/ai` - Current AI provider, selected model, installed model inventory, and health status.
+- `/app/settings/system` - Health, migrations, AI and job diagnostics, configuration checks, backups, and redacted audit activity.
 - `/reset-password` - One-time self-hosted password reset completion.
 
 ## API Routes
@@ -102,6 +104,10 @@ Local authentication includes:
 - `POST /api/auth/change-password` - Change the signed-in user's password and revoke other sessions.
 - `POST /api/auth/reset-password` - Consume a one-time administrator-generated reset token.
 - `GET /api/ai/health` - Authenticated provider/model health and discovery result.
+- `GET /api/health` - Minimal public application/database health check.
+- `GET /api/diagnostics` - Authenticated organization-scoped operational diagnostics.
+- `GET /api/diagnostics/support-bundle` - Download a redacted support bundle.
+- `GET|POST /api/backups` - List installation backup attempts or create a complete backup as a system administrator.
 
 All mutation bodies are validated with Zod. Errors return plain messages without stack traces: 400 for invalid payloads or invalid transitions, 404 for missing records, 409 for stale versions.
 
@@ -228,6 +234,7 @@ DATABASE_POOL_SIZE=10
 DATABASE_SSL=disable
 APP_URL=http://127.0.0.1:3000
 SCOPELEDGER_DOCUMENT_DIR=./data/documents
+SCOPELEDGER_BACKUP_DIR=./backups
 SCOPELEDGER_MASTER_KEY=<base64-encoded-32-byte-key>
 ```
 
@@ -239,6 +246,8 @@ Notes:
 - The owner/user password environment variables are consumed only by administrative setup commands.
 - Ollama is the default AI provider. OpenAI is used only when explicitly selected or configured as a fallback.
 - `SCOPELEDGER_DOCUMENT_DIR` stores private source documents locally. Include it in installation backups and restrict host access.
+- `SCOPELEDGER_BACKUP_DIR` stores local backup archives. Move completed archives to encrypted off-host storage.
+- Set `PG_DUMP_PATH` and `PG_RESTORE_PATH` when compatible PostgreSQL client tools are not on `PATH`.
 - Generate `SCOPELEDGER_MASTER_KEY` with `openssl rand -base64 32` before saving any integration secret. Losing this key makes stored credentials unrecoverable.
 - Do not commit `.env`, `.env.local`, API keys, private SOWs, private message exports, or local JSON data.
 
@@ -361,6 +370,9 @@ npm run build
 - `npm run db:create-user` - Create or assign an organization user and role.
 - `npm run db:password-reset` - Generate a one-time self-hosted password reset link.
 - `npm run db:import-json` - Validate a legacy JSON store; add `--apply` and an organization to import.
+- `npm run backup` - Create and verify a PostgreSQL and document backup archive.
+- `npm run restore -- /path/to/backup.tar.gz --confirm-restore` - Validate and restore a backup.
+- `npm run config:check` - Validate production runtime configuration without printing secrets.
 
 ## Current Limitations
 
@@ -376,10 +388,12 @@ npm run build
 - No QuickBooks integration.
 - Text-based PDFs are supported. Scanned/image-only PDFs require manual paste or a separately configured local OCR workflow; ScopeLedger never claims OCR succeeded.
 - Manual imports and signed webhooks are verified locally. IMAP is credential-ready and contract-tested but not verified against a real mailbox in this repository.
-- No Docker packaging, automated PostgreSQL backup restore, or production deployment guide yet.
+- No Docker packaging or production deployment guide yet. Native backup/restore requires compatible PostgreSQL client tools; see the verification note in the backup guide.
 - Organization switching and browser-based member administration are not implemented; server administrators provision users with the documented command.
 - The security controls have not received an independent penetration test.
 - AI output must be reviewed by a human before any client billing decision.
+
+Operational guides: [Backup and Restore](docs/backup-and-restore.md), [Diagnostics](docs/diagnostics.md), [Security Model](docs/security-model.md), and [Integration Setup](docs/integration-setup.md).
 
 ## Product Decisions
 
@@ -392,8 +406,8 @@ npm run build
 
 ## Planned Next Phase
 
-- Professional-only integration hub and notification mock mode.
-- Docker packaging, backup/restore drills, and private-beta operations documentation.
+- Docker packaging, first-run configuration, and a real containerized backup/restore drill.
+- Professional-only email notification mock mode and private-beta release documentation.
 
 ## Cursor/Fable Handoff
 

@@ -10,6 +10,7 @@ import {
   ListChecks,
   Receipt,
   ShieldCheck,
+  Settings,
   UserRound,
 } from "lucide-react";
 
@@ -26,6 +27,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
     { href: "/sales-assets", label: "Sales Assets", icon: FileText },
     { href: "/account", label: "Account", icon: UserRound },
     { href: "/app/settings/ai", label: "AI Status", icon: Activity },
+    { href: "/app/settings/system", label: "System", icon: Settings },
   ];
 
   return (

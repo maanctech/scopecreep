@@ -45,6 +45,14 @@ describe("commercial PostgreSQL foundation", () => {
     expect(tables.has("billing_events")).toBe(true);
     expect(tables.has("report_versions")).toBe(true);
     expect(tables.size).toBeGreaterThanOrEqual(32);
+    const reportColumns = await db.query<{ column_name: string }>(
+      "SELECT column_name FROM information_schema.columns WHERE table_name='report_versions'"
+    );
+    const columns = new Set(reportColumns.rows.map((row) => row.column_name));
+    expect(columns.has("source_finding_ids")).toBe(true);
+    expect(columns.has("analysis_references")).toBe(true);
+    expect(columns.has("content_sha256")).toBe(true);
+    expect(columns.has("csv_content")).toBe(true);
   });
 
   it("validates and imports the Northstar demo without changing its revenue total", async () => {

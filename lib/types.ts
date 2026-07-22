@@ -120,6 +120,7 @@ export type Project = {
   hourly_rate: number;
   project_value: number | null;
   sow_text: string;
+  active_sow_version_id?: string | null;
   created_at: string;
   /** True for the fictional Northstar/ApertureOps demonstration project. */
   is_demo: boolean;
@@ -280,7 +281,26 @@ export type Report = {
   analyzed_messages_count: number;
   out_of_scope_count: number;
   created_at: string;
+  report_type?: ReportType;
+  version_number?: number;
+  sow_version_id?: string | null;
+  source_finding_ids?: string[];
+  analysis_references?: Array<{ provider: string; model: string; promptVersion: string }>;
+  content_sha256?: string | null;
+  csv_content?: string;
+  csv_sha256?: string | null;
 };
+
+export const REPORT_TYPES = [
+  "Internal Scope Audit",
+  "Finding Summary",
+  "Revenue Leakage Report",
+  "Client Discussion Brief",
+  "Change Order Draft",
+  "Invoice Support Summary"
+] as const;
+
+export type ReportType = (typeof REPORT_TYPES)[number];
 
 export type SalesTemplate = {
   id: string;

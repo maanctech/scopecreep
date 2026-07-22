@@ -2,24 +2,30 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { REPORT_TYPES, type ReportType } from "@/lib/types";
 
 export function GenerateReportButton({
   projectId,
-  hasExistingReport
+  hasExistingReport,
+  initialReportType = "Internal Scope Audit"
 }: {
   projectId: string;
   hasExistingReport: boolean;
+  initialReportType?: ReportType;
 }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [reportType, setReportType] = useState<ReportType>(initialReportType);
 
   async function generate() {
     setError(null);
     setIsSubmitting(true);
     try {
       const response = await fetch(`/api/projects/${encodeURIComponent(projectId)}/report`, {
-        method: "POST"
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reportType })
       });
       const json = (await response.json()) as { error?: string };
       if (!response.ok) {
@@ -37,6 +43,17 @@ export function GenerateReportButton({
 
   return (
     <div className="space-y-2">
+      <label className="block">
+        <span className="mb-1 block text-sm font-medium">Report type</span>
+        <select
+          value={reportType}
+          onChange={(event) => setReportType(event.target.value as ReportType)}
+          disabled={isSubmitting}
+          className="min-h-11 w-full rounded-md border border-audit-border bg-white px-3 text-sm"
+        >
+          {REPORT_TYPES.map((type) => <option key={type}>{type}</option>)}
+        </select>
+      </label>
       <button
         type="button"
         onClick={generate}

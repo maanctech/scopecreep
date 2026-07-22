@@ -3,8 +3,9 @@ import { notFound } from "next/navigation";
 import { CopyMarkdownButton } from "@/components/CopyMarkdownButton";
 import { Disclaimer } from "@/components/Disclaimer";
 import { GenerateReportButton } from "@/components/forms/GenerateReportButton";
+import { PrintReportButton } from "@/components/PrintReportButton";
 import { formatDollars } from "@/lib/domain/money";
-import { readAuditReport } from "@/lib/store";
+import { getReportHistory, readAuditReport } from "@/lib/store";
 import { currentAuthContext } from "@/lib/auth/current";
 import { hasPermission } from "@/lib/auth/authorization";
 
@@ -25,6 +26,7 @@ export default async function ReportPage({ params }: ReportPageProps) {
   const canGenerate = Boolean(auth && hasPermission(auth.role, "reports:write"));
   const result = await readAuditReport(id);
   if (!result) notFound();
+  const history = await getReportHistory(id);
 
   return (
     <div className="space-y-8">
@@ -86,15 +88,70 @@ export default async function ReportPage({ params }: ReportPageProps) {
               </div>
               <div className="flex flex-wrap items-center gap-3">
                 <CopyMarkdownButton markdown={result.report.markdown} />
-                {canGenerate ? <GenerateReportButton projectId={result.project.id} hasExistingReport /> : null}
+                <Link
+                  href={`/api/projects/${result.project.id}/report?format=markdown`}
+                  className="inline-flex h-11 items-center rounded-md border border-audit-border px-4 text-sm font-semibold hover:bg-audit-soft"
+                >
+                  Download Markdown
+                </Link>
+                <Link
+                  href={`/api/projects/${result.project.id}/report?format=csv`}
+                  className="inline-flex h-11 items-center rounded-md border border-audit-border px-4 text-sm font-semibold hover:bg-audit-soft"
+                >
+                  Download CSV
+                </Link>
+                <PrintReportButton />
+                {canGenerate ? (
+                  <GenerateReportButton
+                    projectId={result.project.id}
+                    hasExistingReport
+                    initialReportType={result.report.report_type}
+                  />
+                ) : null}
               </div>
             </div>
+            <dl className="mb-4 grid gap-3 border-y border-audit-border py-4 text-sm sm:grid-cols-4">
+              <div><dt className="text-audit-muted">Report type</dt><dd className="mt-1 font-semibold">{result.report.report_type || "Internal Scope Audit"}</dd></div>
+              <div><dt className="text-audit-muted">Version</dt><dd className="mt-1 font-semibold">v{result.report.version_number || 1}</dd></div>
+              <div><dt className="text-audit-muted">Source findings</dt><dd className="mt-1 font-semibold">{result.report.source_finding_ids?.length || result.report.analyzed_messages_count}</dd></div>
+              <div><dt className="text-audit-muted">Content checksum</dt><dd className="mt-1 break-all font-mono text-xs">{result.report.content_sha256?.slice(0, 16) || "Legacy report"}</dd></div>
+            </dl>
             <textarea
               readOnly
               aria-label="Report markdown"
               value={result.report.markdown}
-              className="min-h-[620px] w-full rounded-md border border-audit-border bg-audit-soft p-4 font-mono text-sm leading-6"
+              className="min-h-[620px] w-full rounded-md border border-audit-border bg-audit-soft p-4 font-mono text-sm leading-6 print:hidden"
             />
+            <pre className="hidden whitespace-pre-wrap text-sm leading-6 print:block">{result.report.markdown}</pre>
+          </section>
+
+          <section>
+            <h2 className="text-xl font-semibold">Report history</h2>
+            <p className="mt-2 text-sm text-zinc-700">
+              Every explicit generation is preserved with its source findings, SOW version, model references, and checksums.
+            </p>
+            <div className="mt-4 overflow-x-auto rounded-md border border-audit-border">
+              <table className="min-w-full text-left text-sm">
+                <caption className="sr-only">Saved report versions</caption>
+                <thead className="bg-audit-soft"><tr><th className="p-3">Version</th><th className="p-3">Type</th><th className="p-3">Generated</th><th className="p-3">Sources</th><th className="p-3">Exports</th></tr></thead>
+                <tbody className="divide-y divide-audit-border">
+                  {history.map((version) => (
+                    <tr key={version.id}>
+                      <td className="p-3 font-semibold">v{version.version_number || 1}</td>
+                      <td className="p-3">{version.report_type || "Internal Scope Audit"}</td>
+                      <td className="p-3">{new Date(version.created_at).toLocaleString()}</td>
+                      <td className="p-3">{version.source_finding_ids?.length || version.analyzed_messages_count} findings</td>
+                      <td className="p-3">
+                        <div className="flex gap-3">
+                          <Link className="font-semibold underline" href={`/api/projects/${id}/report/versions/${version.id}?format=markdown`}>Markdown</Link>
+                          <Link className="font-semibold underline" href={`/api/projects/${id}/report/versions/${version.id}?format=csv`}>CSV</Link>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </section>
         </>
       ) : (

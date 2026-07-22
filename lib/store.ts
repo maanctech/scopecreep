@@ -1,13 +1,13 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { buildDemoStore } from "@/lib/demoData";
 import {
   applyFindingAction,
   TransitionError,
   type FindingActionName
 } from "@/lib/domain/findingTransitions";
-import { assertIntegerCents, formatCents, formatDollars } from "@/lib/domain/money";
+import { assertIntegerCents } from "@/lib/domain/money";
 import {
   computeRevenueTotals,
   emptyRevenueTotals,
@@ -36,6 +36,7 @@ import type {
   ProjectDetail,
   ProjectSummary,
   Report,
+  ReportType,
   SalesTemplate,
   ScopeFinding
 } from "@/lib/types";
@@ -43,6 +44,7 @@ import { LocalStoreCorruptError, NotFoundError, VersionConflictError } from "@/l
 import type { AnalysisMetadata } from "@/lib/ai/types";
 import { usePostgresStorage } from "@/lib/runtimeStorage";
 import * as postgresStore from "@/lib/postgresStore";
+import { generateFindingsCsv, generateReportDocument } from "@/lib/reports/generator";
 
 export { LocalStoreCorruptError, NotFoundError, VersionConflictError } from "@/lib/storeErrors";
 
@@ -257,87 +259,6 @@ function withEventContext(event: BillingEvent, store: BusinessStore): BillingEve
     finding: store.scopeFindings.find((finding) => finding.id === event.scope_finding_id) ?? null,
     project: store.projects.find((project) => project.id === event.project_id) ?? null
   };
-}
-
-function buildReportMarkdown(input: { project: Project; rows: MessageWithFinding[] }) {
-  const analyzed = input.rows.filter((row) => row.finding);
-  const findings = analyzed
-    .map((row) => row.finding)
-    .filter((finding): finding is ScopeFinding => Boolean(finding));
-  const flagged = analyzed
-    .filter((row) => row.finding && row.finding.classification !== "In Scope")
-    .sort((a, b) => (b.finding?.estimated_revenue ?? 0) - (a.finding?.estimated_revenue ?? 0));
-  const top = flagged.slice(0, 5);
-  const total = analyzed.reduce((sum, row) => sum + findingPotential(row.finding), 0);
-  const outOfScope = analyzed.filter((row) => row.finding?.classification === "Out of Scope").length;
-  const totals = computeRevenueTotals(findings);
-
-  const opportunities = top
-    .map((row, index) => {
-      const finding = row.finding;
-      if (!finding) return "";
-      const evidence = finding.relevant_sow_sections.map((item) => `  - ${item}`).join("\n") || "  - No SOW evidence returned.";
-      return `### ${index + 1}. ${finding.classification}: ${row.message.message_text}
-
-- Estimated hours: ${finding.estimated_hours}
-- Potential revenue: ${formatDollars(finding.estimated_revenue)}
-- Request type: ${finding.request_type}
-- Review status: ${finding.billing_decision === "Undecided" ? "Needs review" : `${finding.billing_decision} (${finding.workflow_status})`}
-- Reasoning: ${finding.reasoning}
-- SOW evidence:
-${evidence}
-- Suggested change order:
-${finding.suggested_change_order}`;
-    })
-    .filter(Boolean)
-    .join("\n\n");
-
-  return `# Scope Creep Revenue Leakage Audit
-
-Client: ${input.project.client_name}
-Project: ${input.project.project_name}
-Hourly rate: $${input.project.hourly_rate}/hour
-
-## Executive Summary
-
-This audit reviewed ${analyzed.length} client message${analyzed.length === 1 ? "" : "s"} against the supplied Statement of Work. It found ${outOfScope} out-of-scope request${outOfScope === 1 ? "" : "s"} and an estimated ${formatDollars(total)} in potential revenue leakage.
-
-## Totals
-
-- Total potential revenue leakage: ${formatDollars(total)}
-- Analyzed messages: ${analyzed.length}
-- Out-of-scope requests: ${outOfScope}
-
-## Billing Review Status
-
-Potential values are AI estimates in dollars. Approved values are human-approved amounts tracked in cents and shown as currency.
-
-- Needs review: ${formatDollars(totals.needs_review_dollars)} (${totals.needs_review_count} finding${totals.needs_review_count === 1 ? "" : "s"})
-- Being discussed with client: ${formatDollars(totals.discussing_dollars)}
-- Approved for billing (not yet invoiced): ${formatCents(totals.billable_cents)}
-- Invoiced: ${formatCents(totals.invoiced_cents)}
-- Paid: ${formatCents(totals.paid_cents)}
-- Included in retainer: ${formatCents(totals.retainer_cents)}
-- Absorbed as courtesy: ${formatDollars(totals.absorbed_dollars)}
-- Rejected findings: ${formatDollars(totals.rejected_dollars)}
-
-## Top Missed Billing Opportunities
-
-${opportunities || "No missed billing opportunities were found in the analyzed messages."}
-
-## Recommended Next Steps
-
-1. Review each flagged request with the project manager.
-2. Validate estimated hours before discussing pricing with the client.
-3. Send change-order language only after internal approval.
-4. Track similar requests weekly during active delivery.
-
-## Suggested Monthly Monitoring Plan
-
-- Weekly review of client requests from Slack, email, and project-management exports.
-- Monthly leakage summary by project and request type.
-- Change-order draft support for validated out-of-scope work.
-- Recommended pilot: $1,500 setup + $750/month monitoring, or 10-20% of validated recovered revenue.`;
 }
 
 export async function resetLocalDemoStore() {
@@ -843,14 +764,15 @@ export async function readAuditReport(projectId: string): Promise<
  * Explicit mutation: generates a new report snapshot and prepends it to the
  * project's report history. Older reports are kept.
  */
-export async function generateAuditReport(projectId: string) {
-  if (usePostgresStorage()) return postgresStore.generateAuditReport(projectId);
+export async function generateAuditReport(projectId: string, reportType: ReportType = "Internal Scope Audit") {
+  if (usePostgresStorage()) return postgresStore.generateAuditReport(projectId, reportType);
   return mutateLocalStore((store) => {
     const project = store.projects.find((item) => item.id === projectId);
     if (!project) throw new NotFoundError("Project not found.");
 
     const rows = rowsForProject(project.id, store);
-    const markdown = buildReportMarkdown({ project, rows });
+    const markdown = generateReportDocument({ project, rows, reportType });
+    const csv = generateFindingsCsv(project, rows);
     const analyzed = rows.filter((row) => row.finding);
     const total = analyzed.reduce((sum, row) => sum + findingPotential(row.finding), 0);
     const outOfScope = analyzed.filter((row) => row.finding?.classification === "Out of Scope").length;
@@ -858,17 +780,48 @@ export async function generateAuditReport(projectId: string) {
     const report: Report = {
       id: randomUUID(),
       project_id: project.id,
-      title: `${project.client_name} Scope Creep Audit`,
+      title: `${project.client_name} ${reportType}`,
       markdown,
       total_revenue_leakage: total,
       analyzed_messages_count: analyzed.length,
       out_of_scope_count: outOfScope,
-      created_at: now()
+      created_at: now(),
+      report_type: reportType,
+      version_number: store.reports.filter((item) => item.project_id === project.id).length + 1,
+      sow_version_id: null,
+      source_finding_ids: analyzed.flatMap((row) => row.finding ? [row.finding.id] : []),
+      analysis_references: [],
+      content_sha256: createHash("sha256").update(markdown).digest("hex"),
+      csv_content: csv,
+      csv_sha256: createHash("sha256").update(csv).digest("hex")
     };
 
     store.reports = [report, ...store.reports];
     return { report, project, messages: rows };
   });
+}
+
+export async function getReportHistory(projectId: string) {
+  if (usePostgresStorage()) return postgresStore.getReportHistory(projectId);
+  const store = await readLocalStore();
+  if (!store.projects.some((item) => item.id === projectId)) throw new NotFoundError("Project not found.");
+  return store.reports
+    .filter((item) => item.project_id === projectId)
+    .sort((a, b) => (b.version_number || 0) - (a.version_number || 0));
+}
+
+export async function getReportVersion(projectId: string, versionId: string) {
+  if (usePostgresStorage()) return postgresStore.getReportVersion(projectId, versionId);
+  const versions = await getReportHistory(projectId);
+  return versions.find((version) => version.id === versionId) || null;
+}
+
+export async function exportFindingsCsv(projectId: string) {
+  if (usePostgresStorage()) return postgresStore.exportFindingsCsv(projectId);
+  const store = await readLocalStore();
+  const project = store.projects.find((item) => item.id === projectId);
+  if (!project) throw new NotFoundError("Project not found.");
+  return generateFindingsCsv(project, rowsForProject(projectId, store));
 }
 
 export async function getBusinessDashboard(): Promise<BusinessDashboard> {
