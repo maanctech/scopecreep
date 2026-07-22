@@ -4,9 +4,10 @@ import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { buildDemoStore } from "@/lib/demoData";
 import { validateProductionConfiguration } from "@/lib/config/runtime";
+import { useSecureSessionCookie } from "@/lib/auth/sessionConfig";
 import { redactLogMetadata } from "@/lib/observability/logger";
 import { buildSupportBundle } from "@/lib/operations/diagnostics";
 import {
@@ -26,6 +27,7 @@ const originalDatabaseUrl = process.env.DATABASE_URL;
 const originalPgRestorePath = process.env.PG_RESTORE_PATH;
 
 afterEach(async () => {
+  vi.unstubAllEnvs();
   if (originalBackupDirectory === undefined) delete process.env.SCOPELEDGER_BACKUP_DIR;
   else process.env.SCOPELEDGER_BACKUP_DIR = originalBackupDirectory;
   if (originalDocumentDirectory === undefined) delete process.env.SCOPELEDGER_DOCUMENT_DIR;
@@ -100,6 +102,45 @@ describe("production configuration and log safety", () => {
         SCOPELEDGER_MASTER_KEY: `${Buffer.alloc(32).toString("base64")}not-base64`
       })
     ).toContain("SCOPELEDGER_MASTER_KEY must be canonical base64 for exactly 32 bytes.");
+    expect(validateProductionConfiguration({})).toContain(
+      "SCOPELEDGER_MASTER_KEY is required to protect integration credentials."
+    );
+    expect(validateProductionConfiguration({
+      DATABASE_URL: "postgresql://localhost/scopeledger",
+      APP_URL: "http://192.168.1.20:3000",
+      SCOPELEDGER_MASTER_KEY: Buffer.alloc(32).toString("base64"),
+      AI_PROVIDER: "demo"
+    })).toEqual(expect.arrayContaining([
+      "APP_URL must use HTTPS unless the installation is bound to loopback.",
+      "AI_PROVIDER=demo is test-only and cannot be used for a commercial production start."
+    ]));
+    expect(validateProductionConfiguration({
+      DATABASE_URL: "postgresql://localhost/scopeledger",
+      APP_URL: "http://127.0.0.1:3000",
+      SCOPELEDGER_MASTER_KEY: Buffer.alloc(32).toString("base64"),
+      SCOPELEDGER_DOCUMENT_DIR: "/private/scopeledger",
+      SCOPELEDGER_BACKUP_DIR: "/private/scopeledger/backups"
+    })).toContain("SCOPELEDGER_DOCUMENT_DIR and SCOPELEDGER_BACKUP_DIR must not overlap.");
+    expect(validateProductionConfiguration({
+      DATABASE_URL: "postgresql://localhost/scopeledger",
+      APP_URL: "http://127.0.0.1:3000",
+      SCOPELEDGER_MASTER_KEY: Buffer.alloc(32).toString("base64"),
+      AI_PROVIDER: "openai",
+      AI_MAX_ATTEMPTS: "zero",
+      ALLOW_INSECURE_IMAP: "yes"
+    })).toEqual(expect.arrayContaining([
+      "OPENAI_API_KEY is required when OpenAI is the provider or fallback.",
+      "AI_MAX_ATTEMPTS must be a positive integer.",
+      "ALLOW_INSECURE_IMAP must be true or false."
+    ]));
+  });
+
+  it("uses secure cookies for HTTPS and permits explicit loopback HTTP setup", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("APP_URL", "https://scopeledger.example");
+    expect(useSecureSessionCookie()).toBe(true);
+    vi.stubEnv("APP_URL", "http://127.0.0.1:3000");
+    expect(useSecureSessionCookie()).toBe(false);
   });
 
   it("redacts nested credentials and sensitive business text", () => {

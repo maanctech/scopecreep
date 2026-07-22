@@ -64,6 +64,21 @@ After restore:
 5. Test one integration connection without starting an unrestricted sync.
 6. Create a new backup after validation.
 
+## Docker Restore
+
+Stop the application while leaving PostgreSQL running, then restore from a path inside the backup volume:
+
+```bash
+docker compose stop app
+docker compose run --rm \
+  -e SCOPELEDGER_SKIP_MIGRATIONS=true \
+  app npm run restore -- /app/backups/<backup-file>.tar.gz --confirm-restore
+docker compose run --rm app npm run db:migrate
+docker compose up -d app
+```
+
+Then complete the validation checklist above. Do not run restore while the normal application container can write to the database.
+
 ## Verification Status
 
-Archive integrity, tamper rejection, cleanup, migration compatibility, and document replacement are automated tests. The PostgreSQL restore command is exercised with a controlled mock executable in the host test suite. The current development Mac does not have `pg_dump` or `pg_restore`, so a real native database dump/restore was not claimed there. The container release test performs the real PostgreSQL-tool drill.
+Archive integrity, tamper rejection, cleanup, migration compatibility, and document replacement are automated tests. The PostgreSQL restore command is exercised with a controlled mock executable in the host test suite. The current development Mac does not have `pg_dump` or `pg_restore`, so a real native database dump/restore was not claimed there. A real PostgreSQL-tool drill remains required on a host with Docker or compatible native client tools.

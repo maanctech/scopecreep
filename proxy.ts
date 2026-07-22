@@ -1,6 +1,14 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { SESSION_COOKIE_NAME } from "@/lib/auth/sessionConfig";
 
+function applyRuntimeHeaders(response: NextResponse, correlationId: string) {
+  response.headers.set("x-correlation-id", correlationId);
+  if (process.env.APP_URL?.startsWith("https://")) {
+    response.headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+  }
+  return response;
+}
+
 export function proxy(request: NextRequest) {
   const suppliedCorrelationId = request.headers.get("x-correlation-id") || "";
   const correlationId = /^[A-Za-z0-9._-]{1,128}$/.test(suppliedCorrelationId)
@@ -15,12 +23,10 @@ export function proxy(request: NextRequest) {
     const login = new URL("/login", request.url);
     login.searchParams.set("next", request.nextUrl.pathname);
     const response = NextResponse.redirect(login);
-    response.headers.set("x-correlation-id", correlationId);
-    return response;
+    return applyRuntimeHeaders(response, correlationId);
   }
   const response = NextResponse.next({ request: { headers: requestHeaders } });
-  response.headers.set("x-correlation-id", correlationId);
-  return response;
+  return applyRuntimeHeaders(response, correlationId);
 }
 
 export const config = {

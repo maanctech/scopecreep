@@ -83,13 +83,17 @@ export class OllamaProvider implements AiProvider {
         message: `Ollama is ready with ${model}.`
       };
     } catch (error) {
+      const detail = error instanceof Error ? error.message : "";
+      const message = /^(Configured Ollama model|Ollama is running but no local models|Ollama model discovery returned \d+)/.test(detail)
+        ? detail
+        : "Ollama could not be reached. Check OLLAMA_BASE_URL, the Ollama service, and the local firewall.";
       return {
         provider: this.name,
         available: false,
         configuredModel,
         selectedModel: null,
         models: [],
-        message: error instanceof Error ? error.message : "Ollama is unavailable."
+        message
       };
     }
   }

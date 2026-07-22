@@ -57,8 +57,14 @@ async function main() {
     return;
   }
 
-  const organizationId = argument("--organization") || process.env.SCOPELEDGER_ORGANIZATION_ID;
-  if (!organizationId) throw new Error("--organization=<uuid> is required when applying an import.");
+  let organizationId = argument("--organization") || process.env.SCOPELEDGER_ORGANIZATION_ID;
+  if (!organizationId) {
+    const organizations = await query<{ id: string }>("SELECT id FROM organizations ORDER BY created_at");
+    if (organizations.rowCount !== 1) {
+      throw new Error("--organization=<uuid> is required unless the installation has exactly one organization.");
+    }
+    organizationId = organizations.rows[0].id;
+  }
   const organization = await query("SELECT id FROM organizations WHERE id = $1", [organizationId]);
   if (!organization.rowCount) throw new Error("Organization not found. Complete first-run setup before importing.");
 

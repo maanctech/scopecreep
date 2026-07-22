@@ -73,7 +73,7 @@ export function SetupForm() {
         email: String(data.get("email")),
         password: String(data.get("password"))
       });
-      router.replace("/app");
+      router.replace("/app/settings/ai?setup=complete");
       router.refresh();
     } catch (error) {
       setState({ kind: "error", message: error instanceof Error ? error.message : "Setup failed." });

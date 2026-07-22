@@ -9,13 +9,16 @@
     "test": "vitest run",
     "seed": "node scripts/seed-demo.mjs",
     "db:migrate": "tsx scripts/migrate.ts",
+    "db:wait": "tsx scripts/wait-for-database.ts",
     "db:import-json": "tsx scripts/import-json.ts",
+    "db:seed-demo": "npm run seed && tsx scripts/import-json.ts --file=data/demo-store.json --apply",
     "db:create-admin": "tsx scripts/create-admin.ts",
     "db:create-user": "tsx scripts/create-user.ts",
     "db:password-reset": "tsx scripts/generate-password-reset.ts",
     "backup": "tsx scripts/backup.ts",
     "restore": "tsx scripts/restore.ts",
-    "config:check": "tsx scripts/validate-config.ts"
+    "config:check": "tsx scripts/validate-config.ts",
+    "ollama:check": "tsx scripts/check-ollama.ts"
   },
   "dependencies": {
     "@node-rs/argon2": "^2.0.2",

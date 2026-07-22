@@ -1,13 +1,33 @@
+import Link from "next/link";
 import { Activity, CheckCircle2, XCircle } from "lucide-react";
 import { configuredProviderHealth } from "@/lib/ai/providers";
+import { requirePagePermission } from "@/lib/auth/current";
 
 export const dynamic = "force-dynamic";
 
-export default async function AiSettingsPage() {
+export default async function AiSettingsPage({
+  searchParams
+}: {
+  searchParams: Promise<{ setup?: string }>;
+}) {
+  await requirePagePermission("settings:read");
+  const firstRun = (await searchParams).setup === "complete";
   const health = await configuredProviderHealth();
   const StatusIcon = health.available ? CheckCircle2 : XCircle;
   return (
     <div className="space-y-8">
+      {firstRun ? (
+        <section className="rounded-md border border-emerald-300 bg-emerald-50 p-5 text-emerald-950">
+          <h1 className="text-lg font-semibold">Secure workspace created</h1>
+          <p className="mt-2 text-sm leading-6">
+            Confirm the analysis provider below. When it is ready, create a project or review the installation diagnostics.
+          </p>
+          <div className="mt-4 flex flex-wrap gap-3">
+            <Link className="inline-flex h-11 items-center rounded-md bg-ink px-4 text-sm font-semibold text-white" href="/app/projects/new">Create first project</Link>
+            <Link className="inline-flex h-11 items-center rounded-md border border-emerald-800 px-4 text-sm font-semibold" href="/app/settings/system">Review system checks</Link>
+          </div>
+        </section>
+      ) : null}
       <section className="border-b border-audit-border pb-7">
         <div className="flex items-center gap-2 text-sm font-medium text-audit-muted">
           <Activity className="h-4 w-4" aria-hidden="true" />

@@ -9,6 +9,7 @@ coverage
 .env
 .env.*
 !.env.example
+!.env.compose.example
 
 # Local persistence and recovery files can contain private prospect/client data.
 data/*

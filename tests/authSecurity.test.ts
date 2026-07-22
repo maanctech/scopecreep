@@ -1,7 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { NextRequest } from "next/server";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { hasPermission } from "@/lib/auth/authorization";
 import { hashPassword, validatePassword, verifyPassword } from "@/lib/auth/password";
 import { assertSameOrigin, InvalidOriginError } from "@/lib/auth/security";
+import { proxy } from "@/proxy";
+
+afterEach(() => vi.unstubAllEnvs());
 
 describe("password security", () => {
   it("rejects weak passwords", () => {
@@ -50,5 +54,22 @@ describe("same-origin mutation defense", () => {
         })
       )
     ).toThrow(InvalidOriginError);
+  });
+});
+
+describe("runtime transport headers", () => {
+  it("emits HSTS for an HTTPS installation and a bounded correlation ID", () => {
+    vi.stubEnv("APP_URL", "https://scopeledger.example");
+    const response = proxy(new NextRequest("https://scopeledger.example/api/health", {
+      headers: { "x-correlation-id": "invalid correlation value" }
+    }));
+    expect(response.headers.get("strict-transport-security")).toContain("max-age=31536000");
+    expect(response.headers.get("x-correlation-id")).toMatch(/^[a-f0-9-]{36}$/);
+  });
+
+  it("does not emit HSTS for the supported loopback HTTP installation", () => {
+    vi.stubEnv("APP_URL", "http://127.0.0.1:3000");
+    const response = proxy(new NextRequest("http://127.0.0.1:3000/api/health"));
+    expect(response.headers.has("strict-transport-security")).toBe(false);
   });
 });

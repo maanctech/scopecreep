@@ -1,0 +1,81 @@
+name: scopeledger
+
+services:
+  postgres:
+    image: postgres:15-bookworm
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: scopeledger
+      POSTGRES_USER: scopeledger
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      - scopeledger_postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U scopeledger -d scopeledger"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - private
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL:-}
+      SCOPELEDGER_DB_HOST: postgres
+      SCOPELEDGER_DB_PORT: "5432"
+      SCOPELEDGER_DB_NAME: scopeledger
+      SCOPELEDGER_DB_USER: scopeledger
+      SCOPELEDGER_DB_PASSWORD: ${POSTGRES_PASSWORD}
+      DATABASE_POOL_SIZE: ${DATABASE_POOL_SIZE:-10}
+      DATABASE_SSL: disable
+      DATABASE_STARTUP_TIMEOUT_MS: ${DATABASE_STARTUP_TIMEOUT_MS:-90000}
+      APP_URL: ${APP_URL:-http://127.0.0.1:3000}
+      SCOPELEDGER_DOCUMENT_DIR: /app/data/documents
+      SCOPELEDGER_BACKUP_DIR: /app/backups
+      SCOPELEDGER_MASTER_KEY: ${SCOPELEDGER_MASTER_KEY:?Set SCOPELEDGER_MASTER_KEY in .env}
+      PG_DUMP_PATH: /usr/bin/pg_dump
+      PG_RESTORE_PATH: /usr/bin/pg_restore
+      AI_PROVIDER: ${AI_PROVIDER:-ollama}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-gemma3:12b-it-qat}
+      AI_TIMEOUT_MS: ${AI_TIMEOUT_MS:-90000}
+      AI_MAX_ATTEMPTS: ${AI_MAX_ATTEMPTS:-2}
+      ANALYSIS_JOB_MAX_ATTEMPTS: ${ANALYSIS_JOB_MAX_ATTEMPTS:-3}
+      AI_FALLBACK_PROVIDER: ${AI_FALLBACK_PROVIDER:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4.1-mini}
+      ALLOW_PRIVATE_INTEGRATION_HOSTS: ${ALLOW_PRIVATE_INTEGRATION_HOSTS:-false}
+      ALLOW_INSECURE_IMAP: ${ALLOW_INSECURE_IMAP:-false}
+    ports:
+      - "${SCOPELEDGER_BIND_ADDRESS:-127.0.0.1}:${APP_PORT:-3000}:3000"
+    volumes:
+      - scopeledger_app_data:/app/data
+      - scopeledger_backups:/app/backups
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    networks:
+      - private
+
+volumes:
+  scopeledger_postgres:
+  scopeledger_app_data:
+  scopeledger_backups:
+
+networks:
+  private:
+    driver: bridge

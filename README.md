@@ -283,6 +283,8 @@ Open:
 http://127.0.0.1:3000
 ```
 
+For the supported self-hosted container path, follow [Self-Hosted Installation](docs/installation.md). It provides PostgreSQL, persistent private volumes, startup migration and validation, health checks, host/LAN Ollama configuration, first-owner setup, backup commands, and macOS-first instructions.
+
 ## How to Seed Demo Data
 
 Reset the local demo store:
@@ -366,6 +368,8 @@ npm run build
 - `npm test` - Run Vitest tests.
 - `npm run seed` - Reset local JSON demo data.
 - `npm run db:migrate` - Apply pending PostgreSQL migrations transactionally.
+- `npm run db:wait` - Wait a bounded time for PostgreSQL readiness without printing credentials.
+- `npm run db:seed-demo` - Generate and import the fictional demo into a single-organization database.
 - `npm run db:create-admin` - Create the first organization owner from environment variables.
 - `npm run db:create-user` - Create or assign an organization user and role.
 - `npm run db:password-reset` - Generate a one-time self-hosted password reset link.
@@ -373,6 +377,7 @@ npm run build
 - `npm run backup` - Create and verify a PostgreSQL and document backup archive.
 - `npm run restore -- /path/to/backup.tar.gz --confirm-restore` - Validate and restore a backup.
 - `npm run config:check` - Validate production runtime configuration without printing secrets.
+- `npm run ollama:check` - Check Ollama reachability and the configured model without downloading anything.
 
 ## Current Limitations
 
@@ -388,12 +393,12 @@ npm run build
 - No QuickBooks integration.
 - Text-based PDFs are supported. Scanned/image-only PDFs require manual paste or a separately configured local OCR workflow; ScopeLedger never claims OCR succeeded.
 - Manual imports and signed webhooks are verified locally. IMAP is credential-ready and contract-tested but not verified against a real mailbox in this repository.
-- No Docker packaging or production deployment guide yet. Native backup/restore requires compatible PostgreSQL client tools; see the verification note in the backup guide.
+- Docker packaging and a deployment guide are present, but this host has no Docker runtime, so image startup and a real containerized backup/restore drill remain unverified. Native backup/restore requires compatible PostgreSQL client tools.
 - Organization switching and browser-based member administration are not implemented; server administrators provision users with the documented command.
 - The security controls have not received an independent penetration test.
 - AI output must be reviewed by a human before any client billing decision.
 
-Operational guides: [Backup and Restore](docs/backup-and-restore.md), [Diagnostics](docs/diagnostics.md), [Security Model](docs/security-model.md), and [Integration Setup](docs/integration-setup.md).
+Operational guides: [Self-Hosted Installation](docs/installation.md), [Ollama Setup](docs/ollama-setup.md), [Backup and Restore](docs/backup-and-restore.md), [Diagnostics](docs/diagnostics.md), [Security Model](docs/security-model.md), and [Integration Setup](docs/integration-setup.md).
 
 ## Product Decisions
 
@@ -406,7 +411,7 @@ Operational guides: [Backup and Restore](docs/backup-and-restore.md), [Diagnosti
 
 ## Planned Next Phase
 
-- Docker packaging, first-run configuration, and a real containerized backup/restore drill.
+- A real containerized backup/restore drill on a host with Docker installed.
 - Professional-only email notification mock mode and private-beta release documentation.
 
 ## Cursor/Fable Handoff

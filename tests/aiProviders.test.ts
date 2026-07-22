@@ -80,6 +80,11 @@ describe("Ollama provider", () => {
     expect(result.analysis.classification).toBe("Needs Human Review");
     expect(result.analysis.estimated_revenue).toBe(0);
     expect(result.analysis.reasoning).not.toContain("connection refused");
+    const health = await new OllamaProvider().health();
+    expect(health.available).toBe(false);
+    expect(health.message).toBe(
+      "Ollama could not be reached. Check OLLAMA_BASE_URL, the Ollama service, and the local firewall."
+    );
   });
 });
 
