@@ -5,6 +5,8 @@ import { Disclaimer } from "@/components/Disclaimer";
 import { GenerateReportButton } from "@/components/forms/GenerateReportButton";
 import { formatDollars } from "@/lib/domain/money";
 import { readAuditReport } from "@/lib/store";
+import { currentAuthContext } from "@/lib/auth/current";
+import { hasPermission } from "@/lib/auth/authorization";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +21,8 @@ type ReportPageProps = {
  */
 export default async function ReportPage({ params }: ReportPageProps) {
   const { id } = await params;
+  const auth = await currentAuthContext();
+  const canGenerate = Boolean(auth && hasPermission(auth.role, "reports:write"));
   const result = await readAuditReport(id);
   if (!result) notFound();
 
@@ -82,7 +86,7 @@ export default async function ReportPage({ params }: ReportPageProps) {
               </div>
               <div className="flex flex-wrap items-center gap-3">
                 <CopyMarkdownButton markdown={result.report.markdown} />
-                <GenerateReportButton projectId={result.project.id} hasExistingReport />
+                {canGenerate ? <GenerateReportButton projectId={result.project.id} hasExistingReport /> : null}
               </div>
             </div>
             <textarea
@@ -100,9 +104,13 @@ export default async function ReportPage({ params }: ReportPageProps) {
             Reports are only created when you ask for one. Generate a report to get a markdown
             summary of this project's findings and billing review status.
           </p>
-          <div className="mt-5 flex justify-center">
-            <GenerateReportButton projectId={result.project.id} hasExistingReport={false} />
-          </div>
+          {canGenerate ? (
+            <div className="mt-5 flex justify-center">
+              <GenerateReportButton projectId={result.project.id} hasExistingReport={false} />
+            </div>
+          ) : (
+            <p className="mt-4 text-sm text-audit-muted">A Reviewer, Admin, or Owner must generate the first report.</p>
+          )}
         </section>
       )}
     </div>

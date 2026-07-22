@@ -39,6 +39,11 @@ import type {
   SalesTemplate,
   ScopeFinding
 } from "@/lib/types";
+import { LocalStoreCorruptError, NotFoundError, VersionConflictError } from "@/lib/storeErrors";
+import { usePostgresStorage } from "@/lib/runtimeStorage";
+import * as postgresStore from "@/lib/postgresStore";
+
+export { LocalStoreCorruptError, NotFoundError, VersionConflictError } from "@/lib/storeErrors";
 
 /**
  * Single-operator local MVP: there is no authentication yet, so every human
@@ -85,19 +90,7 @@ const dataDir = path.join(process.cwd(), "data");
 const dataFile = path.join(dataDir, "demo-store.json");
 let mutationQueue: Promise<void> = Promise.resolve();
 
-export class NotFoundError extends Error {}
-
-export class VersionConflictError extends Error {
-  constructor(message = "This finding changed since you loaded it. Reload and try again.") {
-    super(message);
-  }
-}
-
-/**
- * Raised when the local store file exists but cannot be used. The original
- * file is preserved (backed up), never silently replaced with demo data.
- */
-export class LocalStoreCorruptError extends Error {}
+/** Raised when local JSON exists but cannot be safely used. */
 
 function now() {
   return new Date().toISOString();
@@ -353,6 +346,7 @@ export async function resetLocalDemoStore() {
 }
 
 export async function createLead(input: LeadInput) {
+  if (usePostgresStorage()) return postgresStore.createLead(input);
   return mutateLocalStore((store) => {
     const company = findOrCreateCompany(store, {
       name: input.company,
@@ -394,6 +388,7 @@ export async function createLead(input: LeadInput) {
 }
 
 export async function updateLeadStatus(input: { lead_id: string; status: LeadStatus; note?: string | null }) {
+  if (usePostgresStorage()) return postgresStore.updateLeadStatus(input);
   return mutateLocalStore((store) => {
     const lead = store.leads.find((item) => item.id === input.lead_id);
     if (!lead) throw new Error("Lead not found.");
@@ -414,6 +409,7 @@ export async function updateLeadStatus(input: { lead_id: string; status: LeadSta
 }
 
 export async function createAuditRequest(input: AuditRequestInput) {
+  if (usePostgresStorage()) return postgresStore.createAuditRequest(input);
   return mutateLocalStore((store) => {
     const lead = input.lead_id ? store.leads.find((item) => item.id === input.lead_id) : null;
     const company = lead?.company_id
@@ -473,6 +469,7 @@ export async function createAuditRequest(input: AuditRequestInput) {
 }
 
 export async function createProject(input: ProjectInput) {
+  if (usePostgresStorage()) return postgresStore.createProject(input);
   return mutateLocalStore((store) => {
     const project: Project = {
       id: randomUUID(),
@@ -519,6 +516,7 @@ export type AppDashboard = {
 };
 
 export async function getAppDashboard(): Promise<AppDashboard> {
+  if (usePostgresStorage()) return postgresStore.getAppDashboard();
   const store = await readLocalStore();
   const projects = store.projects.map((project) => summarizeProject(project, store));
   const demoFindings = store.scopeFindings.filter((finding) => finding.is_demo);
@@ -587,6 +585,7 @@ export async function getAppDashboard(): Promise<AppDashboard> {
 }
 
 export async function getProjectDetail(projectId: string): Promise<ProjectDetail | null> {
+  if (usePostgresStorage()) return postgresStore.getProjectDetail(projectId);
   const store = await readLocalStore();
   const project = store.projects.find((item) => item.id === projectId);
   if (!project) return null;
@@ -594,6 +593,7 @@ export async function getProjectDetail(projectId: string): Promise<ProjectDetail
 }
 
 export async function getFindings(): Promise<FindingWithContext[]> {
+  if (usePostgresStorage()) return postgresStore.getFindings();
   const store = await readLocalStore();
   return store.scopeFindings
     .slice()
@@ -604,6 +604,7 @@ export async function getFindings(): Promise<FindingWithContext[]> {
 export async function getFindingDetail(findingId: string): Promise<
   (FindingWithContext & { events: BillingEvent[] }) | null
 > {
+  if (usePostgresStorage()) return postgresStore.getFindingDetail(findingId);
   const store = await readLocalStore();
   const finding = store.scopeFindings.find((item) => item.id === findingId);
   if (!finding) return null;
@@ -616,6 +617,7 @@ export async function getFindingDetail(findingId: string): Promise<
 }
 
 export async function getBillingEvents(): Promise<BillingEventWithContext[]> {
+  if (usePostgresStorage()) return postgresStore.getBillingEvents();
   const store = await readLocalStore();
   return sortEventsNewestFirst(store.billingEvents).map((event) => withEventContext(event, store));
 }
@@ -628,6 +630,7 @@ export async function saveMessageWithFinding(input: {
   message_date?: string | null;
   analysis: AnalysisInput;
 }) {
+  if (usePostgresStorage()) return postgresStore.saveMessageWithFinding(input);
   return mutateLocalStore((store) => {
     const project = store.projects.find((item) => item.id === input.project_id);
     if (!project) throw new NotFoundError("Project not found.");
@@ -701,6 +704,7 @@ export async function updateFindingDetails(input: {
   client_facing_explanation?: string;
   internal_note?: string | null;
 }) {
+  if (usePostgresStorage()) return postgresStore.updateFindingDetails(input);
   return mutateLocalStore((store) => {
     const index = store.scopeFindings.findIndex((item) => item.id === input.finding_id);
     if (index === -1) throw new NotFoundError("Finding not found.");
@@ -782,6 +786,7 @@ export async function performFindingAction(input: {
   action: FindingActionName;
   note?: string | null;
 }) {
+  if (usePostgresStorage()) return postgresStore.performFindingAction(input);
   return mutateLocalStore((store) => {
     const index = store.scopeFindings.findIndex((item) => item.id === input.finding_id);
     if (index === -1) throw new NotFoundError("Finding not found.");
@@ -817,6 +822,7 @@ export async function performFindingAction(input: {
 export async function readAuditReport(projectId: string): Promise<
   { project: Project; report: Report | null; messages: MessageWithFinding[] } | null
 > {
+  if (usePostgresStorage()) return postgresStore.readAuditReport(projectId);
   const store = await readLocalStore();
   const project = store.projects.find((item) => item.id === projectId);
   if (!project) return null;
@@ -834,6 +840,7 @@ export async function readAuditReport(projectId: string): Promise<
  * project's report history. Older reports are kept.
  */
 export async function generateAuditReport(projectId: string) {
+  if (usePostgresStorage()) return postgresStore.generateAuditReport(projectId);
   return mutateLocalStore((store) => {
     const project = store.projects.find((item) => item.id === projectId);
     if (!project) throw new NotFoundError("Project not found.");
@@ -861,6 +868,7 @@ export async function generateAuditReport(projectId: string) {
 }
 
 export async function getBusinessDashboard(): Promise<BusinessDashboard> {
+  if (usePostgresStorage()) return postgresStore.getBusinessDashboard();
   const store = await readLocalStore();
   const projects = store.projects.map((project) => summarizeProject(project, store));
   const leakageByCompany = new Map<string, number>();
@@ -897,6 +905,7 @@ export async function getBusinessDashboard(): Promise<BusinessDashboard> {
 }
 
 export async function getSalesTemplates(): Promise<SalesTemplate[]> {
+  if (usePostgresStorage()) return postgresStore.getSalesTemplates();
   const store = await readLocalStore();
   return store.salesTemplates;
 }

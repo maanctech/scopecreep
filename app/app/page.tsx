@@ -4,6 +4,8 @@ import { BillingSummary } from "@/components/BillingSummary";
 import { Disclaimer } from "@/components/Disclaimer";
 import { formatCents, formatDollars } from "@/lib/domain/money";
 import { getAppDashboard } from "@/lib/store";
+import { currentAuthContext } from "@/lib/auth/current";
+import { hasPermission } from "@/lib/auth/authorization";
 
 export const dynamic = "force-dynamic";
 
@@ -14,11 +16,19 @@ function formatTimestamp(value: string) {
   });
 }
 
-export default async function ProductDashboardPage() {
+export default async function ProductDashboardPage({ searchParams }: { searchParams: Promise<{ notice?: string }> }) {
+  const query = await searchParams;
+  const auth = await currentAuthContext();
+  const canCreateProject = Boolean(auth && hasPermission(auth.role, "projects:write"));
   const dashboard = await getAppDashboard();
 
   return (
     <div className="space-y-10">
+      {query.notice === "permission-denied" ? (
+        <div role="alert" className="rounded-md border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+          Your role does not allow access to that page. No data was changed.
+        </div>
+      ) : null}
       <section className="flex flex-col gap-4 border-b border-audit-border pb-7 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <div className="flex items-center gap-2 text-sm font-medium text-audit-muted">
@@ -38,13 +48,15 @@ export default async function ProductDashboardPage() {
           >
             Review all findings
           </Link>
-          <Link
-            href="/app/projects/new"
-            className="inline-flex h-11 items-center gap-2 rounded-md bg-ink px-4 text-sm font-semibold text-white hover:bg-zinc-800"
-          >
-            <Plus className="h-4 w-4" aria-hidden="true" />
-            New project
-          </Link>
+          {canCreateProject ? (
+            <Link
+              href="/app/projects/new"
+              className="inline-flex h-11 items-center gap-2 rounded-md bg-ink px-4 text-sm font-semibold text-white hover:bg-zinc-800"
+            >
+              <Plus className="h-4 w-4" aria-hidden="true" />
+              New project
+            </Link>
+          ) : null}
         </div>
       </section>
 

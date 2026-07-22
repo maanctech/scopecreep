@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { MAX_HOURLY_RATE, MAX_SOW_LENGTH } from "@/lib/limits";
 import { createProject, getAppDashboard } from "@/lib/store";
+import { authErrorResponse, requireApiPermission } from "@/lib/auth/api";
 
 export const runtime = "nodejs";
 
@@ -30,12 +31,18 @@ function validationMessage(error: z.ZodError) {
   return error.issues[0]?.message ?? "Invalid request.";
 }
 
-export async function GET() {
-  return NextResponse.json(await getAppDashboard());
+export async function GET(request: Request) {
+  try {
+    await requireApiPermission(request, "projects:read");
+    return NextResponse.json(await getAppDashboard());
+  } catch (error) {
+    return authErrorResponse(error) || NextResponse.json({ error: "Failed to load projects." }, { status: 500 });
+  }
 }
 
 export async function POST(request: Request) {
   try {
+    await requireApiPermission(request, "projects:write");
     let json: unknown;
     try {
       json = await request.json();
@@ -51,6 +58,8 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ project }, { status: 201 });
   } catch (error) {
+    const authResponse = authErrorResponse(error);
+    if (authResponse) return authResponse;
     const status = error instanceof z.ZodError ? 400 : 500;
     return NextResponse.json(
       {

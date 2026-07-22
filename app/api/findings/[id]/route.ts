@@ -7,6 +7,7 @@ import {
   updateFindingDetails,
   VersionConflictError
 } from "@/lib/store";
+import { authErrorResponse, requireApiPermission } from "@/lib/auth/api";
 
 export const runtime = "nodejs";
 
@@ -26,21 +27,25 @@ function validationMessage(error: z.ZodError) {
   return error.issues[0]?.message ?? "Invalid request.";
 }
 
-export async function GET(_request: Request, context: { params: Promise<{ id: string }> }) {
+export async function GET(request: Request, context: { params: Promise<{ id: string }> }) {
   const { id } = await context.params;
   try {
+    await requireApiPermission(request, "findings:read");
     const detail = await getFindingDetail(id);
     if (!detail) {
       return NextResponse.json({ error: "Finding not found." }, { status: 404 });
     }
     return NextResponse.json(detail);
-  } catch {
+  } catch (error) {
+    const authResponse = authErrorResponse(error);
+    if (authResponse) return authResponse;
     return NextResponse.json({ error: "Failed to load the finding." }, { status: 500 });
   }
 }
 
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
+    await requireApiPermission(request, "findings:review");
     const { id } = await context.params;
     let json: unknown;
     try {
@@ -61,6 +66,8 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
 
     return NextResponse.json({ finding });
   } catch (error) {
+    const authResponse = authErrorResponse(error);
+    if (authResponse) return authResponse;
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: validationMessage(error) }, { status: 400 });
     }

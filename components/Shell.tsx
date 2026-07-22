@@ -6,7 +6,8 @@ import {
   FileText,
   ListChecks,
   Receipt,
-  ShieldCheck
+  ShieldCheck,
+  UserRound
 } from "lucide-react";
 
 export function Shell({ children }: { children: React.ReactNode }) {
@@ -17,7 +18,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
     { href: "/app/findings", label: "Findings", icon: ListChecks },
     { href: "/app/billing", label: "Billing", icon: Receipt },
     { href: "/admin", label: "Admin", icon: ShieldCheck },
-    { href: "/sales-assets", label: "Sales Assets", icon: FileText }
+    { href: "/sales-assets", label: "Sales Assets", icon: FileText },
+    { href: "/account", label: "Account", icon: UserRound }
   ];
 
   return (
@@ -26,9 +28,9 @@ export function Shell({ children }: { children: React.ReactNode }) {
         <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
           <Link href="/" className="min-w-0">
             <div className="text-sm font-semibold uppercase tracking-[0.16em] text-audit-muted">
-              Scope Creep Revenue Recovery
+              ScopeLedger
             </div>
-            <div className="text-lg font-semibold text-ink sm:text-xl">Revenue Leakage Audit System</div>
+            <div className="text-lg font-semibold text-ink sm:text-xl">Revenue Recovery Workspace</div>
           </Link>
           <nav className="flex flex-wrap items-center gap-2">
             {navItems.map((item) => {

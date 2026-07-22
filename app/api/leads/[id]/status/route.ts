@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { updateLeadStatus } from "@/lib/store";
 import { LEAD_STATUSES } from "@/lib/types";
+import { authErrorResponse, requireApiPermission } from "@/lib/auth/api";
 
 export const runtime = "nodejs";
 
@@ -19,6 +20,7 @@ export async function PATCH(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
+    await requireApiPermission(request, "leads:write");
     const { id } = await context.params;
     let json: unknown;
     try {
@@ -36,6 +38,8 @@ export async function PATCH(
 
     return NextResponse.json({ lead });
   } catch (error) {
+    const authResponse = authErrorResponse(error);
+    if (authResponse) return authResponse;
     const status = error instanceof z.ZodError ? 400 : 500;
     return NextResponse.json(
       {

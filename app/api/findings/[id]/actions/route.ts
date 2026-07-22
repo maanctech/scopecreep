@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { FINDING_ACTIONS, TransitionError } from "@/lib/domain/findingTransitions";
 import { NotFoundError, performFindingAction, VersionConflictError } from "@/lib/store";
+import { authErrorResponse, requireApiPermission } from "@/lib/auth/api";
 
 export const runtime = "nodejs";
 
@@ -19,6 +20,7 @@ function validationMessage(error: z.ZodError) {
 
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
+    await requireApiPermission(request, "billing:write");
     const { id } = await context.params;
     let json: unknown;
     try {
@@ -37,6 +39,8 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
 
     return NextResponse.json({ finding });
   } catch (error) {
+    const authResponse = authErrorResponse(error);
+    if (authResponse) return authResponse;
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: validationMessage(error) }, { status: 400 });
     }

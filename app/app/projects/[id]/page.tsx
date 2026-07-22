@@ -9,6 +9,8 @@ import { computeRevenueTotals } from "@/lib/domain/revenueTotals";
 import { BillingSummary } from "@/components/BillingSummary";
 import { getBillingEvents, getProjectDetail } from "@/lib/store";
 import type { ScopeFinding } from "@/lib/types";
+import { currentAuthContext } from "@/lib/auth/current";
+import { hasPermission } from "@/lib/auth/authorization";
 
 export const dynamic = "force-dynamic";
 
@@ -39,6 +41,8 @@ function matchesFilter(finding: ScopeFinding | null, filter: string) {
 export default async function ProjectPage({ params, searchParams }: ProjectPageProps) {
   const { id } = await params;
   const query = await searchParams;
+  const auth = await currentAuthContext();
+  const canReview = Boolean(auth && hasPermission(auth.role, "findings:review"));
   const detail = await getProjectDetail(id);
   if (!detail) notFound();
 
@@ -100,10 +104,12 @@ export default async function ProjectPage({ params, searchParams }: ProjectPageP
         </p>
       </section>
 
-      <section className="space-y-4">
-        <h2 className="text-xl font-semibold">Analyze a new client message</h2>
-        <MessageAnalysisForm projectId={detail.project.id} />
-      </section>
+      {canReview ? (
+        <section className="space-y-4">
+          <h2 className="text-xl font-semibold">Analyze a new client message</h2>
+          <MessageAnalysisForm projectId={detail.project.id} />
+        </section>
+      ) : null}
 
       <section className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -145,6 +151,7 @@ export default async function ProjectPage({ params, searchParams }: ProjectPageP
                         .map((item) => item.event)
                     : []
                 }
+                canReview={canReview}
               />
             ))
           ) : (

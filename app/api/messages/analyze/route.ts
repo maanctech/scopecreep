@@ -4,6 +4,7 @@ import { analyzeClientRequest, validateAnalysisResult } from "@/lib/analysis";
 import { MAX_MESSAGE_LENGTH } from "@/lib/limits";
 import { getProjectDetail, saveMessageWithFinding } from "@/lib/store";
 import { MESSAGE_SOURCES } from "@/lib/types";
+import { authErrorResponse, requireApiPermission } from "@/lib/auth/api";
 
 export const runtime = "nodejs";
 
@@ -28,6 +29,7 @@ function validationMessage(error: z.ZodError) {
 
 export async function POST(request: Request) {
   try {
+    await requireApiPermission(request, "findings:review");
     let json: unknown;
     try {
       json = await request.json();
@@ -61,6 +63,8 @@ export async function POST(request: Request) {
 
     return NextResponse.json(saved, { status: 201 });
   } catch (error) {
+    const authResponse = authErrorResponse(error);
+    if (authResponse) return authResponse;
     const status = error instanceof z.ZodError ? 400 : 500;
     return NextResponse.json(
       {

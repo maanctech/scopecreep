@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { formatCents } from "@/lib/domain/money";
 import { getBillingEvents } from "@/lib/store";
+import { authErrorResponse, requireApiPermission } from "@/lib/auth/api";
 
 export const runtime = "nodejs";
 
@@ -15,6 +16,7 @@ function csvCell(value: string | null | undefined) {
  */
 export async function GET(request: Request) {
   try {
+    await requireApiPermission(request, "billing:read");
     const events = await getBillingEvents();
     const url = new URL(request.url);
 
@@ -62,7 +64,9 @@ export async function GET(request: Request) {
         "Content-Disposition": 'attachment; filename="billing-events.csv"'
       }
     });
-  } catch {
+  } catch (error) {
+    const authResponse = authErrorResponse(error);
+    if (authResponse) return authResponse;
     return NextResponse.json({ error: "Failed to load billing events." }, { status: 500 });
   }
 }

@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { MAX_HOURLY_RATE } from "@/lib/limits";
 import { createLead } from "@/lib/store";
+import { authErrorResponse, requestIp } from "@/lib/auth/api";
+import { assertSameOrigin, checkRateLimit } from "@/lib/auth/security";
 
 export const runtime = "nodejs";
 
@@ -32,6 +34,8 @@ function validationMessage(error: z.ZodError) {
 
 export async function POST(request: Request) {
   try {
+    assertSameOrigin(request);
+    checkRateLimit(`lead-capture:${requestIp(request)}`, 8, 60 * 60 * 1000);
     let json: unknown;
     try {
       json = await request.json();
@@ -49,6 +53,8 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ lead }, { status: 201 });
   } catch (error) {
+    const authResponse = authErrorResponse(error);
+    if (authResponse) return authResponse;
     const status = error instanceof z.ZodError ? 400 : 500;
     return NextResponse.json(
       {

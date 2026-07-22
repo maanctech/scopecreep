@@ -8,10 +8,12 @@ import type { BillingEvent, MessageWithFinding } from "@/lib/types";
 
 export function FindingCard({
   row,
-  events
+  events,
+  canReview = true
 }: {
   row: MessageWithFinding;
   events: BillingEvent[];
+  canReview?: boolean;
 }) {
   const finding = row.finding;
 
@@ -125,9 +127,15 @@ export function FindingCard({
         </section>
       ) : null}
 
-      <section className="mt-6 border-t border-audit-border pt-5">
-        <FindingReviewForm key={`${finding.id}-${finding.version}`} finding={finding} />
-      </section>
+      {canReview ? (
+        <section className="mt-6 border-t border-audit-border pt-5">
+          <FindingReviewForm key={`${finding.id}-${finding.version}`} finding={finding} />
+        </section>
+      ) : (
+        <p className="mt-6 rounded-md border border-audit-border bg-audit-soft p-4 text-sm text-audit-muted">
+          Read-only access. A Reviewer, Admin, or Owner must make billing decisions or edit this finding.
+        </p>
+      )}
 
       <details className="mt-5 rounded-md border border-audit-border p-4">
         <summary className="cursor-pointer text-base font-semibold">
