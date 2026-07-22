@@ -17,7 +17,10 @@ export class OpenAiProvider implements AiProvider {
         body: JSON.stringify({
           model,
           temperature: 0,
-          response_format: { type: "json_object" },
+          max_completion_tokens: request.maxOutputTokens || 1200,
+          response_format: request.jsonSchema
+            ? { type: "json_schema", json_schema: { name: "scopeledger_response", strict: true, schema: request.jsonSchema } }
+            : { type: "json_object" },
           messages: [
             { role: "system", content: request.systemPrompt },
             { role: "user", content: request.userPrompt }

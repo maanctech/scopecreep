@@ -276,6 +276,8 @@ export async function analyzeClientRequestDetailed(input: {
   const inputHash = createHash("sha256")
     .update(`${AI_PROMPT_VERSION}\n${AI_SYSTEM_PROMPT}\n${userPrompt}`)
     .digest("hex");
+  const startedAt = Date.now();
+  const inputCharacters = AI_SYSTEM_PROMPT.length + userPrompt.length;
   const primary = configuredProviderName();
   if (primary === "demo") {
     return {
@@ -285,6 +287,9 @@ export async function analyzeClientRequestDetailed(input: {
         model: "deterministic",
         promptVersion: AI_PROMPT_VERSION,
         inputHash,
+        latencyMs: Date.now() - startedAt,
+        inputCharacters,
+        outputCharacters: 0,
         attempts: 1,
         status: "Succeeded",
         errorMessage: null
@@ -327,6 +332,9 @@ export async function analyzeClientRequestDetailed(input: {
             model: response.model,
             promptVersion: AI_PROMPT_VERSION,
             inputHash,
+            latencyMs: Date.now() - startedAt,
+            inputCharacters,
+            outputCharacters: response.content.length,
             attempts,
             status: "Succeeded",
             errorMessage: null
@@ -345,6 +353,9 @@ export async function analyzeClientRequestDetailed(input: {
       model: lastModel,
       promptVersion: AI_PROMPT_VERSION,
       inputHash,
+      latencyMs: Date.now() - startedAt,
+      inputCharacters,
+      outputCharacters: 0,
       attempts,
       status: "Failed",
       errorMessage: lastError

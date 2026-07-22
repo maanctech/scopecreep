@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import type { PoolClient } from "pg";
 import { z } from "zod";
 import { migrateStoreShape, type BusinessStore } from "@/lib/migrations/localStore";
+import { splitSowSections } from "@/lib/sow/extraction";
 
 const idSchema = z.string().trim().min(1).max(240);
 const timestampSchema = z.string().datetime({ offset: true });
@@ -287,7 +288,20 @@ export async function executeJsonImport(
        ON CONFLICT (id) DO NOTHING`,
       [versionId, organizationId, documentId, row.sow_text, createHash("sha256").update(row.sow_text).digest("hex"), row.created_at]
     );
+    for (const section of splitSowSections(row.sow_text)) {
+      await client.query(
+        `INSERT INTO sow_sections
+         (id, organization_id, sow_version_id, heading, body, ordinal, created_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7) ON CONFLICT (id) DO NOTHING`,
+        [importedId(organizationId, "sow-section", `${row.id}:${section.ordinal}`), organizationId,
+         versionId, section.heading, section.body, section.ordinal, row.created_at]
+      );
+    }
     await client.query("UPDATE sow_documents SET current_version_id = $1 WHERE id = $2", [versionId, documentId]);
+    await client.query(
+      "UPDATE projects SET active_sow_version_id = $1 WHERE id = $2 AND organization_id = $3",
+      [versionId, projectId, organizationId]
+    );
   }
 
   for (const row of store.clientMessages) {

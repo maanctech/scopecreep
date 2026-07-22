@@ -7,6 +7,8 @@ export type AiRequest = {
   systemPrompt: string;
   userPrompt: string;
   timeoutMs: number;
+  jsonSchema?: Record<string, unknown>;
+  maxOutputTokens?: number;
 };
 
 export type AiRawResponse = {
@@ -34,6 +36,9 @@ export type AnalysisMetadata = {
   model: string;
   promptVersion: string;
   inputHash: string;
+  latencyMs: number;
+  inputCharacters: number;
+  outputCharacters: number;
   attempts: number;
   status: "Succeeded" | "Failed";
   errorMessage: string | null;

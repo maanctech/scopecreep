@@ -28,6 +28,7 @@ import type {
 } from "@/lib/types";
 import type { AppDashboard } from "@/lib/store";
 import type { AnalysisMetadata } from "@/lib/ai/types";
+import { splitSowSections } from "@/lib/sow/extraction";
 
 type Context = { organizationId: string; userId: string; actor: string };
 type DbRow = Record<string, unknown>;
@@ -389,7 +390,18 @@ async function insertProjectAndSow(client: PoolClient, organizationId: string, i
      VALUES ($1,$2,$3,1,'Pasted Text',$4,$5,$6)`,
     [versionId, organizationId, documentId, input.sowText.trim(), createHash("sha256").update(input.sowText.trim()).digest("hex"), createdAt]
   );
+  for (const section of splitSowSections(input.sowText.trim())) {
+    await client.query(
+      `INSERT INTO sow_sections (id, organization_id, sow_version_id, heading, body, ordinal, created_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+      [randomUUID(), organizationId, versionId, section.heading, section.body, section.ordinal, createdAt]
+    );
+  }
   await client.query("UPDATE sow_documents SET current_version_id = $1 WHERE id = $2", [versionId, documentId]);
+  await client.query(
+    "UPDATE projects SET active_sow_version_id = $1 WHERE id = $2 AND organization_id = $3",
+    [versionId, id, organizationId]
+  );
   return mapProject({ ...result.rows[0], sow_text: input.sowText.trim() });
 }
 
@@ -565,12 +577,14 @@ export async function saveMessageWithFinding(input: {
       await client.query(
         `INSERT INTO analysis_jobs
          (id, organization_id, project_id, client_message_id, provider, model, prompt_version,
-          status, input_sha256, error_message, attempt_count, started_at, completed_at, created_at, updated_at)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$12,$12,$12)`,
+          status, input_sha256, error_message, attempt_count, latency_ms, input_character_count,
+          output_character_count, started_at, completed_at, created_at, updated_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$15,$15,$15)`,
         [analysisJobId, context.organizationId, input.project_id, message.id, input.analysis_metadata.provider,
          input.analysis_metadata.model, input.analysis_metadata.promptVersion, input.analysis_metadata.status,
          input.analysis_metadata.inputHash,
-         input.analysis_metadata.errorMessage, input.analysis_metadata.attempts, timestamp]
+         input.analysis_metadata.errorMessage, input.analysis_metadata.attempts, input.analysis_metadata.latencyMs,
+         input.analysis_metadata.inputCharacters, input.analysis_metadata.outputCharacters, timestamp]
       );
     }
     const finding: ScopeFinding = {

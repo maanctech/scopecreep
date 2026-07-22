@@ -36,6 +36,8 @@ describe("commercial PostgreSQL foundation", () => {
     expect(tables.has("communication_connections")).toBe(true);
     expect(tables.has("analysis_jobs")).toBe(true);
     expect(tables.has("scope_findings")).toBe(true);
+    expect(tables.has("sow_risk_reviews")).toBe(true);
+    expect(tables.has("sow_risk_items")).toBe(true);
     expect(tables.has("billing_events")).toBe(true);
     expect(tables.has("report_versions")).toBe(true);
     expect(tables.size).toBeGreaterThanOrEqual(32);
@@ -63,6 +65,15 @@ describe("commercial PostgreSQL foundation", () => {
       [ORGANIZATION_ID]
     );
     expect(sow.rows[0].count).toBe(1);
+    const workspace = await db.query<{ active: boolean; sections: number }>(
+      `SELECT (p.active_sow_version_id = v.id) AS active,
+              (SELECT count(*)::int FROM sow_sections s WHERE s.sow_version_id = v.id) AS sections
+       FROM projects p JOIN sow_versions v ON v.id = p.active_sow_version_id
+       WHERE p.organization_id = $1`,
+      [ORGANIZATION_ID]
+    );
+    expect(workspace.rows[0].active).toBe(true);
+    expect(workspace.rows[0].sections).toBeGreaterThan(0);
   });
 
   it("is deterministic and idempotent for the same organization", async () => {

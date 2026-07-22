@@ -70,12 +70,10 @@ export default async function ProjectPage({ params, searchParams }: ProjectPageP
               : ""}
           </p>
         </div>
-        <Link
-          href={`/app/projects/${detail.project.id}/report`}
-          className="inline-flex h-11 items-center justify-center rounded-md bg-ink px-4 text-sm font-semibold text-white hover:bg-zinc-800"
-        >
-          View audit report
-        </Link>
+        <div className="flex flex-wrap gap-3">
+          <Link href={`/app/projects/${detail.project.id}/sow`} className="inline-flex h-11 items-center justify-center rounded-md border border-ink px-4 text-sm font-semibold hover:bg-audit-soft">Review SOW</Link>
+          <Link href={`/app/projects/${detail.project.id}/report`} className="inline-flex h-11 items-center justify-center rounded-md bg-ink px-4 text-sm font-semibold text-white hover:bg-zinc-800">View audit report</Link>
+        </div>
       </section>
 
       {query.created === "audit" ? (
@@ -98,7 +96,7 @@ export default async function ProjectPage({ params, searchParams }: ProjectPageP
       </section>
 
       <section className="rounded-md border border-audit-border bg-audit-soft p-5">
-        <h2 className="text-xl font-semibold">SOW summary source</h2>
+        <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-xl font-semibold">Current SOW text</h2><Link href={`/app/projects/${detail.project.id}/sow`} className="text-sm font-semibold underline">Open version and boundary workspace</Link></div>
         <p className="mt-3 max-h-44 overflow-auto whitespace-pre-wrap text-sm leading-6 text-zinc-700">
           {detail.project.sow_text}
         </p>

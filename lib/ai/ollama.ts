@@ -49,8 +49,8 @@ export class OllamaProvider implements AiProvider {
         body: JSON.stringify({
           model,
           stream: false,
-          format: analysisJsonSchema,
-          options: { temperature: 0, num_ctx: 8192 },
+          format: request.jsonSchema || analysisJsonSchema,
+          options: { temperature: 0, num_ctx: 8192, num_predict: request.maxOutputTokens || 1200 },
           messages: [
             { role: "system", content: request.systemPrompt },
             { role: "user", content: request.userPrompt }

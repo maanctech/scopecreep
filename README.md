@@ -35,6 +35,7 @@ Local authentication includes:
 - Lead status updates: New, Contacted, Audit Running, Proposal Sent, Closed Won, Closed Lost.
 - Client onboarding form for pasted SOW text, pasted client message exports, hourly rate, project value, client name, and notes.
 - Internal audit console for creating projects, pasting SOWs, submitting client messages, and running AI scope analysis.
+- Professional SOW workspace with immutable versions, paste/TXT/DOCX/text-PDF intake, safe local originals, extracted sections, AI-assisted risk review, and a human-approved Scope Boundary Map.
 - Reviewable Scope Findings: every AI analysis becomes a finding card with classification, confidence, SOW evidence, estimated hours, estimated potential revenue, an editable client-facing draft, an internal note, and full history.
 - Professional-only billing workflow: Mark as Billable, Include in Retainer, Discuss With Client, Mark as Courtesy, Reject Finding, Mark as Invoiced, Mark as Paid, and Reopen Finding, all validated by a central transition service.
 - Approved hours and approved amounts tracked in integer cents, separate from AI-estimated potential revenue.
@@ -42,7 +43,7 @@ Local authentication includes:
 - Global findings review page (`/app/findings`) and billing history page (`/app/billing`) with filters.
 - Markdown audit report generator (explicit generate action; viewing a report never changes data).
 - Sales asset templates for cold email, LinkedIn DM, discovery calls, audit reveal calls, proposals, follow-up, and objection handling.
-- Demo/local fallback analysis when `OPENAI_API_KEY` is not configured.
+- Ollama-first structured analysis with conservative validation and an explicit test-only demo analyzer.
 - Basic tests for AI JSON parsing, validation, API behavior, and local analysis safety cases.
 
 ## Current Routes and Pages
@@ -56,6 +57,7 @@ Local authentication includes:
 - `/app/billing` - Append-only billing event history, summary totals, filters, and CSV export.
 - `/app/projects/new` - Create a project and paste the SOW.
 - `/app/projects/[id]` - Project detail, message submission, and finding review (decisions, amounts, notes, history).
+- `/app/projects/[id]/sow` - Agreement versions, extracted sections, risk review, evidence-linked boundaries, and professional approval.
 - `/app/projects/[id]/report` - Markdown audit report view (read-only; generation is an explicit button).
 - `/admin` - Founder/admin dashboard.
 - `/sales-assets` - Sales templates and scripts.
@@ -73,6 +75,9 @@ Local authentication includes:
 - `POST /api/projects` - Create a project.
 - `GET /api/projects/[id]` - Fetch project detail.
 - `POST /api/messages/analyze` - Analyze one client message against the project SOW and save it as a Scope Finding.
+- `GET|POST /api/projects/[id]/sow` - Read the SOW workspace or add a pasted/uploaded agreement version.
+- `POST /api/projects/[id]/sow/analyze` - Generate a private draft risk review and boundary map.
+- `PUT /api/projects/[id]/sow/boundary` - Save or explicitly approve a reviewed boundary map.
 - `GET /api/findings` - List all findings with client/project context.
 - `GET /api/findings/[id]` - Read one finding with its full history.
 - `PATCH /api/findings/[id]` - Update approved hours/amount (integer cents), client-facing explanation, or internal note. Requires `expected_version`; stale versions get 409.
@@ -212,6 +217,7 @@ DATABASE_URL=postgresql://scopeledger:change-me@127.0.0.1:5432/scopeledger
 DATABASE_POOL_SIZE=10
 DATABASE_SSL=disable
 APP_URL=http://127.0.0.1:3000
+SCOPELEDGER_DOCUMENT_DIR=./data/documents
 ```
 
 Notes:
@@ -221,6 +227,7 @@ Notes:
 - `SCOPELEDGER_STORAGE=json` is an explicit legacy/demo escape hatch, not the commercial default.
 - The owner/user password environment variables are consumed only by administrative setup commands.
 - Ollama is the default AI provider. OpenAI is used only when explicitly selected or configured as a fallback.
+- `SCOPELEDGER_DOCUMENT_DIR` stores private source documents locally. Include it in installation backups and restrict host access.
 - Do not commit `.env`, `.env.local`, API keys, private SOWs, private message exports, or local JSON data.
 
 ## How to Run Locally
@@ -345,7 +352,7 @@ npm run build
 - No Slack integration.
 - No WhatsApp or Telegram integration.
 - No QuickBooks integration.
-- No PDF parsing.
+- Text-based PDFs are supported. Scanned/image-only PDFs require manual paste or a separately configured local OCR workflow; ScopeLedger never claims OCR succeeded.
 - No communication-provider integrations or background ingestion workers yet.
 - No Docker packaging, automated PostgreSQL backup restore, or production deployment guide yet.
 - Organization switching and browser-based member administration are not implemented; server administrators provision users with the documented command.
@@ -363,7 +370,6 @@ npm run build
 
 ## Planned Next Phase
 
-- SOW version workspace, risk review, and scope boundary maps.
 - Normalized manual/webhook/email communication ingestion with visible jobs and diagnostics.
 - Professional-only integration hub and notification mock mode.
 - Docker packaging, backup/restore drills, and private-beta operations documentation.
