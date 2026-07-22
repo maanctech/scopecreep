@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { analyzeClientRequest, validateAnalysisResult } from "@/lib/analysis";
+import { analyzeClientRequestDetailed, validateAnalysisResult } from "@/lib/analysis";
 import { MAX_MESSAGE_LENGTH } from "@/lib/limits";
 import { getProjectDetail, saveMessageWithFinding } from "@/lib/store";
 import { MESSAGE_SOURCES } from "@/lib/types";
@@ -43,12 +43,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Project not found." }, { status: 404 });
     }
 
+    const analyzed = await analyzeClientRequestDetailed({
+      sowText: projectDetail.project.sow_text,
+      messageText: body.messageText,
+      hourlyRate: projectDetail.project.hourly_rate
+    });
     const analysis = validateAnalysisResult(
-      await analyzeClientRequest({
-        sowText: projectDetail.project.sow_text,
-        messageText: body.messageText,
-        hourlyRate: projectDetail.project.hourly_rate
-      }),
+      analyzed.analysis,
       projectDetail.project.hourly_rate
     );
 
@@ -58,10 +59,23 @@ export async function POST(request: Request) {
       sender: body.sender,
       message_text: body.messageText,
       message_date: body.messageDate,
-      analysis
+      analysis,
+      analysis_metadata: analyzed.metadata
     });
 
-    return NextResponse.json(saved, { status: 201 });
+    return NextResponse.json(
+      {
+        ...saved,
+        ai: {
+          provider: analyzed.metadata.provider,
+          model: analyzed.metadata.model,
+          promptVersion: analyzed.metadata.promptVersion,
+          attempts: analyzed.metadata.attempts,
+          status: analyzed.metadata.status
+        }
+      },
+      { status: 201 }
+    );
   } catch (error) {
     const authResponse = authErrorResponse(error);
     if (authResponse) return authResponse;

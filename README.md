@@ -62,6 +62,7 @@ Local authentication includes:
 - `/login` - Professional sign-in.
 - `/setup` - One-time first-owner setup after database migration.
 - `/account` - Current organization, role, sign-out, and password change.
+- `/app/settings/ai` - Current AI provider, selected model, installed model inventory, and health status.
 - `/reset-password` - One-time self-hosted password reset completion.
 
 ## API Routes
@@ -85,6 +86,7 @@ Local authentication includes:
 - `POST /api/auth/logout` - Revoke the current session.
 - `POST /api/auth/change-password` - Change the signed-in user's password and revoke other sessions.
 - `POST /api/auth/reset-password` - Consume a one-time administrator-generated reset token.
+- `GET /api/ai/health` - Authenticated provider/model health and discovery result.
 
 All mutation bodies are validated with Zod. Errors return plain messages without stack traces: 400 for invalid payloads or invalid transitions, 404 for missing records, 409 for stale versions.
 
@@ -118,7 +120,8 @@ npm run seed
 - Tailwind CSS
 - Node.js runtime for API routes
 - Zod for validation
-- OpenAI API for scope analysis when configured
+- Ollama with `gemma3:12b-it-qat` as the recommended default local model
+- OpenAI as an optional explicitly configured provider or fallback
 - PostgreSQL 14+ as the primary durable runtime store
 - Explicit local JSON compatibility mode and transactional JSON-to-PostgreSQL import
 - Vitest for tests
@@ -217,7 +220,7 @@ Notes:
 - Use `DATABASE_SSL=require` only when the database server has a certificate trusted by the host.
 - `SCOPELEDGER_STORAGE=json` is an explicit legacy/demo escape hatch, not the commercial default.
 - The owner/user password environment variables are consumed only by administrative setup commands.
-- AI provider configuration is documented in `.env.example`; Ollama-first provider work follows in the next milestone.
+- Ollama is the default AI provider. OpenAI is used only when explicitly selected or configured as a fallback.
 - Do not commit `.env`, `.env.local`, API keys, private SOWs, private message exports, or local JSON data.
 
 ## How to Run Locally
@@ -290,6 +293,21 @@ Generate a one-time, 30-minute reset link for `SCOPELEDGER_ADMIN_EMAIL`:
 npm run db:password-reset
 ```
 
+## AI Provider Setup
+
+Install and start Ollama, then ensure at least one model is available:
+
+```bash
+ollama serve
+ollama pull gemma3:12b-it-qat
+```
+
+ScopeLedger discovers installed models from Ollama and selects `OLLAMA_MODEL` when configured, otherwise the recommended Gemma model, otherwise the first installed model. It never pulls a model automatically.
+
+Every provider response is constrained to a JSON schema and validated again with Zod. ScopeLedger retries invalid output a bounded number of times, requires SOW evidence for definitive `In Scope` and `Out of Scope` decisions, forces in-scope hours to zero, and recalculates revenue from estimated hours and the project rate. Provider failures produce `Needs Human Review` with zero recoverable revenue; they do not silently become confident scope findings.
+
+Provider, model, prompt version, attempt count, status, and a bounded internal error are saved in `analysis_jobs` for PostgreSQL-backed analyses. Raw prompts and SOW text are not written to provider diagnostics.
+
 ## How to Test
 
 ```bash
@@ -329,7 +347,6 @@ npm run build
 - No QuickBooks integration.
 - No PDF parsing.
 - No communication-provider integrations or background ingestion workers yet.
-- No Ollama provider abstraction yet; the current analyzer remains the pre-commercial OpenAI/demo implementation.
 - No Docker packaging, automated PostgreSQL backup restore, or production deployment guide yet.
 - Organization switching and browser-based member administration are not implemented; server administrators provision users with the documented command.
 - The security controls have not received an independent penetration test.
@@ -346,7 +363,6 @@ npm run build
 
 ## Planned Next Phase
 
-- Ollama-first AI provider abstraction with model discovery, health checks, structured retries, and OpenAI as an optional provider.
 - SOW version workspace, risk review, and scope boundary maps.
 - Normalized manual/webhook/email communication ingestion with visible jobs and diagnostics.
 - Professional-only integration hub and notification mock mode.

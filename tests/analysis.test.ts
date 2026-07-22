@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { analyzeClientRequest, fallbackAnalysis, parseAnalysisJson, validateAnalysisResult } from "@/lib/analysis";
+import { analyzeClientRequest, fallbackAnalysis, parseAnalysisJson, validateAnalysisResult, validateSowEvidence } from "@/lib/analysis";
 
 describe("parseAnalysisJson", () => {
   it("parses valid structured JSON and recalculates revenue", () => {
@@ -124,6 +124,22 @@ Thanks.`,
       )
     ).toThrow();
   });
+
+  it("rejects extra fields and definitive decisions without SOW evidence", () => {
+    const base = {
+      classification: "Out of Scope",
+      confidence_score: 0.8,
+      reasoning: "Excluded.",
+      relevant_sow_sections: [],
+      request_type: "Other",
+      estimated_hours: 1,
+      estimated_revenue: 100,
+      suggested_change_order: "Review.",
+      internal_note: "Review."
+    };
+    expect(() => parseAnalysisJson(JSON.stringify(base), 100)).toThrow(/requires SOW evidence/);
+    expect(() => parseAnalysisJson(JSON.stringify({ ...base, relevant_sow_sections: ["Excluded."], surprise: true }), 100)).toThrow();
+  });
 });
 
 describe("fallbackAnalysis", () => {
@@ -154,6 +170,21 @@ describe("validateAnalysisResult", () => {
         150
       )
     ).toThrow(/confidence_score/);
+  });
+
+  it("rejects evidence that is not grounded in the supplied SOW", () => {
+    const analysis = validateAnalysisResult({
+      classification: "Out of Scope",
+      confidence_score: 0.9,
+      reasoning: "Excluded.",
+      relevant_sow_sections: ["Cryptocurrency payment processing is excluded."],
+      request_type: "Engineering",
+      estimated_hours: 2,
+      estimated_revenue: 0,
+      suggested_change_order: "Review.",
+      internal_note: "Review."
+    }, 100);
+    expect(() => validateSowEvidence(analysis, "The project includes a five page marketing website.")).toThrow(/not grounded/);
   });
 });
 

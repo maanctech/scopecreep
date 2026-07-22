@@ -1,5 +1,6 @@
 import Link from "next/link";
 import {
+  Activity,
   BarChart3,
   Calculator,
   ClipboardList,
@@ -19,7 +20,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
     { href: "/app/billing", label: "Billing", icon: Receipt },
     { href: "/admin", label: "Admin", icon: ShieldCheck },
     { href: "/sales-assets", label: "Sales Assets", icon: FileText },
-    { href: "/account", label: "Account", icon: UserRound }
+    { href: "/account", label: "Account", icon: UserRound },
+    { href: "/app/settings/ai", label: "AI Status", icon: Activity }
   ];
 
   return (

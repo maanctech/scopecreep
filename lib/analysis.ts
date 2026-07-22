@@ -1,6 +1,8 @@
+import { createHash } from "node:crypto";
 import { z } from "zod";
-import { AI_SYSTEM_PROMPT, buildAnalysisPrompt } from "@/lib/aiPrompt";
-import { OPENAI_TIMEOUT_MS } from "@/lib/limits";
+import { AI_PROMPT_VERSION, AI_SYSTEM_PROMPT, buildAnalysisPrompt } from "@/lib/aiPrompt";
+import { configuredFallbackProviderName, configuredProviderName, providerFor } from "@/lib/ai/providers";
+import type { AiProviderName, DetailedAnalysis } from "@/lib/ai/types";
 import { CLASSIFICATIONS, REQUEST_TYPES, type AnalysisInput } from "@/lib/types";
 
 const analysisSchema = z.object({
@@ -27,7 +29,7 @@ const analysisSchema = z.object({
     .trim()
     .min(1)
     .catch("Review this result before using it for client communication.")
-});
+}).strict();
 
 function roundCurrency(value: number) {
   return Math.round(value * 100) / 100;
@@ -80,12 +82,46 @@ function normalizeParsedAnalysis(
   };
 }
 
+function assertEvidence(result: AnalysisInput) {
+  if (
+    (result.classification === "Out of Scope" || result.classification === "In Scope") &&
+    result.relevant_sow_sections.length === 0
+  ) {
+    throw new Error(`${result.classification} requires SOW evidence.`);
+  }
+  return result;
+}
+
+const EVIDENCE_STOP_WORDS = new Set([
+  "that", "this", "with", "from", "will", "would", "scope", "project", "includes", "included"
+]);
+
+function evidenceTokens(value: string) {
+  return new Set(
+    value.toLowerCase().match(/[a-z0-9]+/g)?.filter((word) => word.length >= 4 && !EVIDENCE_STOP_WORDS.has(word)) ?? []
+  );
+}
+
+export function validateSowEvidence(result: AnalysisInput, sowText: string) {
+  if (result.classification !== "Out of Scope" && result.classification !== "In Scope") return result;
+  const sowTokens = evidenceTokens(sowText);
+  for (const evidence of result.relevant_sow_sections) {
+    const tokens = Array.from(evidenceTokens(evidence));
+    const overlap = tokens.filter((token) => sowTokens.has(token)).length;
+    const requiredOverlap = Math.max(1, Math.ceil(Math.min(tokens.length, 6) / 2));
+    if (!tokens.length || overlap < requiredOverlap) {
+      throw new Error("AI SOW evidence is not grounded in the supplied SOW.");
+    }
+  }
+  return result;
+}
+
 export function parseAnalysisJson(raw: string, hourlyRate: number): AnalysisInput {
-  return normalizeParsedAnalysis(analysisSchema.parse(JSON.parse(extractJson(raw))), hourlyRate);
+  return assertEvidence(normalizeParsedAnalysis(analysisSchema.parse(JSON.parse(extractJson(raw))), hourlyRate));
 }
 
 export function validateAnalysisResult(value: unknown, hourlyRate: number): AnalysisInput {
-  return normalizeParsedAnalysis(analysisSchema.parse(value), hourlyRate);
+  return assertEvidence(normalizeParsedAnalysis(analysisSchema.parse(value), hourlyRate));
 }
 
 export function fallbackAnalysis(_reason: string): AnalysisInput {
@@ -228,52 +264,90 @@ export async function analyzeClientRequest(input: {
   messageText: string;
   hourlyRate: number;
 }): Promise<AnalysisInput> {
-  const apiKey = process.env.OPENAI_API_KEY?.trim();
-  const model = process.env.OPENAI_MODEL?.trim() || "gpt-4.1-mini";
+  return (await analyzeClientRequestDetailed(input)).analysis;
+}
 
-  if (!apiKey) {
-    return localHeuristicAnalysis(input);
-  }
-
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), OPENAI_TIMEOUT_MS);
-
-  try {
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      signal: controller.signal,
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        model,
-        temperature: 0,
-        response_format: { type: "json_object" },
-        messages: [
-          { role: "system", content: AI_SYSTEM_PROMPT },
-          { role: "user", content: buildAnalysisPrompt(input) }
-        ]
-      })
-    });
-
-    if (!response.ok) {
-      return fallbackAnalysis(`OpenAI request failed with status ${response.status}.`);
-    }
-
-    const payload = (await response.json()) as {
-      choices?: Array<{ message?: { content?: string } }>;
+export async function analyzeClientRequestDetailed(input: {
+  sowText: string;
+  messageText: string;
+  hourlyRate: number;
+}): Promise<DetailedAnalysis> {
+  const userPrompt = buildAnalysisPrompt(input);
+  const inputHash = createHash("sha256")
+    .update(`${AI_PROMPT_VERSION}\n${AI_SYSTEM_PROMPT}\n${userPrompt}`)
+    .digest("hex");
+  const primary = configuredProviderName();
+  if (primary === "demo") {
+    return {
+      analysis: localHeuristicAnalysis(input),
+      metadata: {
+        provider: "demo",
+        model: "deterministic",
+        promptVersion: AI_PROMPT_VERSION,
+        inputHash,
+        attempts: 1,
+        status: "Succeeded",
+        errorMessage: null
+      }
     };
-    const content = payload.choices?.[0]?.message?.content;
-
-    if (!content) {
-      return fallbackAnalysis("OpenAI returned an empty analysis response.");
-    }
-
-    return parseAnalysisJson(content, input.hourlyRate);
-  } catch (error) {
-    return fallbackAnalysis(error instanceof Error ? error.message : "Unknown AI analysis error.");
-  } finally {
-    clearTimeout(timeout);
   }
+
+  const fallback = configuredFallbackProviderName();
+  const providerNames = [primary, fallback]
+    .filter((name): name is Exclude<AiProviderName, "demo"> => Boolean(name && name !== "demo"))
+    .filter((name, index, names) => names.indexOf(name) === index);
+  const attemptsSetting = Number(process.env.AI_MAX_ATTEMPTS || 2);
+  const timeoutSetting = Number(process.env.AI_TIMEOUT_MS || 90_000);
+  const maxAttempts = Number.isFinite(attemptsSetting) ? Math.min(3, Math.max(1, Math.trunc(attemptsSetting))) : 2;
+  const timeoutMs = Number.isFinite(timeoutSetting) ? Math.min(300_000, Math.max(1_000, timeoutSetting)) : 90_000;
+  let attempts = 0;
+  let lastProvider: AiProviderName = primary;
+  let lastModel = "unavailable";
+  let lastError = "AI provider unavailable.";
+
+  for (const providerName of providerNames) {
+    const provider = providerFor(providerName);
+    lastProvider = providerName;
+    for (let providerAttempt = 1; providerAttempt <= maxAttempts; providerAttempt += 1) {
+      attempts += 1;
+      try {
+        const correction = providerAttempt > 1
+          ? "\n\nYour previous response was invalid. Return one complete JSON object matching the required shape, with SOW evidence for any definitive In Scope or Out of Scope decision."
+          : "";
+        const response = await provider.generate({
+          systemPrompt: AI_SYSTEM_PROMPT,
+          userPrompt: `${userPrompt}${correction}`,
+          timeoutMs
+        });
+        lastModel = response.model;
+        return {
+          analysis: validateSowEvidence(parseAnalysisJson(response.content, input.hourlyRate), input.sowText),
+          metadata: {
+            provider: providerName,
+            model: response.model,
+            promptVersion: AI_PROMPT_VERSION,
+            inputHash,
+            attempts,
+            status: "Succeeded",
+            errorMessage: null
+          }
+        };
+      } catch (error) {
+        lastError = error instanceof Error ? error.message.slice(0, 500) : "Unknown AI provider error.";
+      }
+    }
+  }
+
+  return {
+    analysis: fallbackAnalysis(lastError),
+    metadata: {
+      provider: lastProvider,
+      model: lastModel,
+      promptVersion: AI_PROMPT_VERSION,
+      inputHash,
+      attempts,
+      status: "Failed",
+      errorMessage: lastError
+    }
+  };
 }

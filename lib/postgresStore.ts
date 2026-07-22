@@ -27,6 +27,7 @@ import type {
   ScopeFinding
 } from "@/lib/types";
 import type { AppDashboard } from "@/lib/store";
+import type { AnalysisMetadata } from "@/lib/ai/types";
 
 type Context = { organizationId: string; userId: string; actor: string };
 type DbRow = Record<string, unknown>;
@@ -539,7 +540,7 @@ async function insertBillingEvent(client: PoolClient, organizationId: string, ev
 
 export async function saveMessageWithFinding(input: {
   project_id: string; source: MessageSource; sender?: string | null; message_text: string;
-  message_date?: string | null; analysis: AnalysisInput;
+  message_date?: string | null; analysis: AnalysisInput; analysis_metadata?: AnalysisMetadata;
 }) {
   const context = await requireContext();
   return transaction(async (client) => {
@@ -559,6 +560,19 @@ export async function saveMessageWithFinding(input: {
       [message.id, context.organizationId, message.project_id, message.source, message.sender, message.message_text,
        message.message_date, createHash("sha256").update(message.message_text).digest("hex"), timestamp]
     );
+    const analysisJobId = input.analysis_metadata ? randomUUID() : null;
+    if (input.analysis_metadata && analysisJobId) {
+      await client.query(
+        `INSERT INTO analysis_jobs
+         (id, organization_id, project_id, client_message_id, provider, model, prompt_version,
+          status, input_sha256, error_message, attempt_count, started_at, completed_at, created_at, updated_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$12,$12,$12)`,
+        [analysisJobId, context.organizationId, input.project_id, message.id, input.analysis_metadata.provider,
+         input.analysis_metadata.model, input.analysis_metadata.promptVersion, input.analysis_metadata.status,
+         input.analysis_metadata.inputHash,
+         input.analysis_metadata.errorMessage, input.analysis_metadata.attempts, timestamp]
+      );
+    }
     const finding: ScopeFinding = {
       id: randomUUID(), project_id: input.project_id, client_message_id: message.id, ...input.analysis,
       billing_decision: "Undecided", workflow_status: input.analysis.classification === "In Scope" ? "New" : "Needs Review",
@@ -568,12 +582,12 @@ export async function saveMessageWithFinding(input: {
     };
     await client.query(
       `INSERT INTO scope_findings
-       (id, organization_id, project_id, client_message_id, classification, confidence_score, reasoning,
+       (id, organization_id, project_id, client_message_id, analysis_job_id, classification, confidence_score, reasoning,
         relevant_sow_sections, request_type, estimated_hours, estimated_revenue_cents, suggested_change_order,
         billing_decision, workflow_status, approved_hours, approved_amount_cents, client_facing_explanation,
         internal_note, version, is_demo, created_at, updated_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8::jsonb,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22)`,
-      [finding.id, context.organizationId, finding.project_id, finding.client_message_id, finding.classification,
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23)`,
+      [finding.id, context.organizationId, finding.project_id, finding.client_message_id, analysisJobId, finding.classification,
        finding.confidence_score, finding.reasoning, JSON.stringify(finding.relevant_sow_sections), finding.request_type,
        finding.estimated_hours, cents(finding.estimated_revenue), finding.suggested_change_order, finding.billing_decision,
        finding.workflow_status, finding.approved_hours, finding.approved_amount_cents, finding.client_facing_explanation,

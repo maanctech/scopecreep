@@ -40,6 +40,7 @@ import type {
   ScopeFinding
 } from "@/lib/types";
 import { LocalStoreCorruptError, NotFoundError, VersionConflictError } from "@/lib/storeErrors";
+import type { AnalysisMetadata } from "@/lib/ai/types";
 import { usePostgresStorage } from "@/lib/runtimeStorage";
 import * as postgresStore from "@/lib/postgresStore";
 
@@ -629,6 +630,7 @@ export async function saveMessageWithFinding(input: {
   message_text: string;
   message_date?: string | null;
   analysis: AnalysisInput;
+  analysis_metadata?: AnalysisMetadata;
 }) {
   if (usePostgresStorage()) return postgresStore.saveMessageWithFinding(input);
   return mutateLocalStore((store) => {
