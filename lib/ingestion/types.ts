@@ -12,7 +12,7 @@ export type NormalizedCommunication = {
 };
 
 export type ImportPreview = {
-  format: "Text" | "CSV" | "JSON";
+  format: "Text" | "CSV" | "JSON" | "Transcript";
   messages: NormalizedCommunication[];
   warnings: string[];
 };

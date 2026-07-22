@@ -49,4 +49,17 @@ describe("manual communication import", () => {
       }),
     ).toThrow(/5 MB/);
   });
+
+  it("normalizes WebVTT and SRT transcript cues into speaker messages", () => {
+    const result = parseManualImport({
+      format: "Transcript",
+      content:
+        "WEBVTT\n\n00:00:01.000 --> 00:00:04.000\nMorgan Lee: Could we add customer SSO?\n\n2\n00:00:05,000 --> 00:00:08,000\nAlex: I will check the agreement.",
+    });
+    expect(result.messages).toHaveLength(2);
+    expect(result.messages[0]).toMatchObject({
+      sender: "Morgan Lee",
+      text: "Could we add customer SSO?",
+    });
+  });
 });

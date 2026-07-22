@@ -7,7 +7,7 @@ import { importManualMessages } from "@/lib/ingestion/service";
 const schema = z
   .object({
     projectId: z.string().uuid(),
-    format: z.enum(["Text", "CSV", "JSON"]),
+    format: z.enum(["Text", "CSV", "JSON", "Transcript"]),
     content: z.string().min(1),
     action: z.enum(["preview", "import"]),
   })

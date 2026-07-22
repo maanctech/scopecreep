@@ -23,6 +23,9 @@ const rowSchema = z
     date: z.string().optional().nullable(),
     edited_at: z.string().optional().nullable(),
     subject: z.string().optional().nullable(),
+    channel: z.string().optional().nullable(),
+    provider: z.string().optional().nullable(),
+    transcript_timing: z.string().optional().nullable(),
     message: z.string().optional().nullable(),
     message_text: z.string().optional().nullable(),
     text: z.string().optional().nullable(),
@@ -93,19 +96,27 @@ function normalizeRow(
     editedTimestamp: timestamp(row.edited_at, warnings, rowNumber),
     subject: row.subject?.trim() || null,
     text,
-    rawMetadata: {},
+    rawMetadata: {
+      ...(row.channel ? { channel: row.channel } : {}),
+      ...(row.provider ? { provider: row.provider } : {}),
+      ...(row.transcript_timing
+        ? { transcriptTiming: row.transcript_timing }
+        : {}),
+    },
   };
 }
 
 export function parseManualImport(input: {
   content: string;
-  format: "Text" | "CSV" | "JSON";
+  format: "Text" | "CSV" | "JSON" | "Transcript";
 }): ImportPreview {
   if (Buffer.byteLength(input.content, "utf8") > MAX_IMPORT_BYTES)
     throw new Error("Imports must be 5 MB or smaller.");
   const warnings: string[] = [];
   let rows: unknown[];
-  if (input.format === "Text") {
+  if (input.format === "Transcript") {
+    rows = parseTranscript(input.content);
+  } else if (input.format === "Text") {
     rows = input.content.split(/\n\s*---+\s*\n/).map((text) => ({ text }));
   } else if (input.format === "CSV") {
     rows = parse(input.content, {
@@ -135,4 +146,34 @@ export function parseManualImport(input: {
   if (!messages.length)
     throw new Error("No valid messages were found in the import.");
   return { format: input.format, messages, warnings };
+}
+
+function parseTranscript(content: string) {
+  const blocks = content
+    .replace(/^WEBVTT[^\n]*\n/i, "")
+    .split(/\n\s*\n/)
+    .map((block) => block.trim())
+    .filter(Boolean);
+  const rows: Array<Record<string, unknown>> = [];
+  for (const [index, block] of blocks.entries()) {
+    const lines = block.split(/\r?\n/).map((line) => line.trim());
+    if (/^\d+$/.test(lines[0] || "")) lines.shift();
+    const timing = lines[0]?.match(
+      /^(\d{2}:)?\d{2}:\d{2}[.,]\d{3}\s+-->\s+(\d{2}:)?\d{2}:\d{2}[.,]\d{3}/,
+    );
+    if (timing) lines.shift();
+    const text = lines
+      .join(" ")
+      .replace(/<[^>]+>/g, "")
+      .trim();
+    if (!text) continue;
+    const speaker = text.match(/^([^:]{1,100}):\s+(.+)$/);
+    rows.push({
+      external_id: `transcript-cue-${index + 1}`,
+      sender: speaker?.[1] || null,
+      text: speaker?.[2] || text,
+      transcript_timing: timing?.[0] || null,
+    });
+  }
+  return rows.length ? rows : [{ text: content }];
 }

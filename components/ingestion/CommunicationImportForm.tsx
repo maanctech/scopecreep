@@ -12,7 +12,7 @@ export function CommunicationImportForm({
   const [preview, setPreview] = useState<ImportPreview | null>(null);
   const [payload, setPayload] = useState<{
     projectId: string;
-    format: "Text" | "CSV" | "JSON";
+    format: "Text" | "CSV" | "JSON" | "Transcript";
     content: string;
   } | null>(null);
   const [busy, setBusy] = useState(false);
@@ -28,7 +28,11 @@ export function CommunicationImportForm({
     const file = form.get("file");
     const next = {
       projectId: String(form.get("projectId")),
-      format: String(form.get("format")) as "Text" | "CSV" | "JSON",
+      format: String(form.get("format")) as
+        | "Text"
+        | "CSV"
+        | "JSON"
+        | "Transcript",
       content:
         file instanceof File && file.size
           ? await file.text()
@@ -122,6 +126,7 @@ export function CommunicationImportForm({
             <option>Text</option>
             <option>CSV</option>
             <option>JSON</option>
+            <option>Transcript</option>
           </select>
         </label>
         <label>
@@ -140,7 +145,7 @@ export function CommunicationImportForm({
           <input
             name="file"
             type="file"
-            accept=".csv,.json,.txt,text/csv,application/json,text/plain"
+            accept=".csv,.json,.txt,.vtt,.srt,text/csv,application/json,text/plain,text/vtt"
             className="mt-2 block w-full rounded-md border border-audit-border p-3"
           />
         </label>

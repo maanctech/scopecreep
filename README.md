@@ -59,6 +59,7 @@ Local authentication includes:
 - `/app/findings` - All scope findings across projects, with filters.
 - `/app/billing` - Append-only billing event history, summary totals, filters, and CSV export.
 - `/app/import` - Preview manual communication imports and review ingestion job outcomes.
+- `/app/integrations` - Configure, test, sync, and disconnect private communication sources with truthful connection states.
 - `/app/projects/new` - Create a project and paste the SOW.
 - `/app/projects/[id]` - Project detail, message submission, and finding review (decisions, amounts, notes, history).
 - `/app/projects/[id]/sow` - Agreement versions, extracted sections, risk review, evidence-linked boundaries, and professional approval.
@@ -332,7 +333,9 @@ Manual import is available at `/app/import`. CSV and JSON rows accept `external_
 
 Webhook connections return a signing secret once. Send `X-ScopeLedger-Timestamp` (Unix seconds), `X-ScopeLedger-Delivery-Id` (unique per delivery), and `X-ScopeLedger-Signature` (`sha256=` plus the HMAC-SHA256 of `<timestamp>.<raw-body>`). Connections remain `Credentials Required` until the first valid delivery.
 
-IMAP configuration is available through the authenticated ingestion API and will be surfaced in the Integration Hub next. TLS is required by default. Private/local mail hosts require the explicit `ALLOW_PRIVATE_INTEGRATION_HOSTS=true` trust decision; insecure test servers additionally require `ALLOW_INSECURE_IMAP=true`. Credentials are encrypted and never returned after saving.
+IMAP configuration and controls are available in the Integration Hub. TLS is required by default. Private/local mail hosts require the explicit `ALLOW_PRIVATE_INTEGRATION_HOSTS=true` trust decision; insecure test servers additionally require `ALLOW_INSECURE_IMAP=true`. Credentials are encrypted and never returned after saving.
+
+The Integration Hub now surfaces IMAP, signed webhook, Slack, Google Gmail, Microsoft 365, manual import, and transcript import. Slack, Google, and Microsoft are credential-ready and covered by mocked contract tests, but are not represented as live-verified without customer-created provider applications. See [Integration Setup](docs/integration-setup.md) for exact scopes, redirect URIs, and verification status.
 
 ## How to Test
 

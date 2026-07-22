@@ -4,6 +4,7 @@ import { PGlite } from "@electric-sql/pglite";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { buildDemoStore } from "@/lib/demoData";
 import { executeJsonImport, prepareJsonImport } from "@/lib/db/jsonImport";
+import { persistConnectorSync } from "@/lib/connectors/persistence";
 
 const ORGANIZATION_ID = "10000000-0000-4000-8000-000000000001";
 let db: PGlite;
@@ -34,6 +35,7 @@ describe("commercial PostgreSQL foundation", () => {
     );
     const tables = new Set(result.rows.map((row) => row.table_name));
     expect(tables.has("organizations")).toBe(true);
+    expect(tables.has("oauth_authorization_requests")).toBe(true);
     expect(tables.has("sow_versions")).toBe(true);
     expect(tables.has("communication_connections")).toBe(true);
     expect(tables.has("analysis_jobs")).toBe(true);
@@ -200,5 +202,66 @@ describe("commercial PostgreSQL foundation", () => {
         event.rows[0].id,
       ]),
     ).rejects.toThrow(/append-only/);
+  });
+
+  it("persists provider messages idempotently and applies later edits", async () => {
+    const project = await db.query<{ id: string }>(
+      "SELECT id FROM projects WHERE organization_id=$1 LIMIT 1",
+      [ORGANIZATION_ID],
+    );
+    const connectionId = "20000000-0000-4000-8000-000000000020";
+    await db.query(
+      "INSERT INTO communication_connections (id,organization_id,provider,name,status) VALUES ($1,$2,'Slack','Client Slack','Connected')",
+      [connectionId, ORGANIZATION_ID],
+    );
+    const message = {
+      externalId: "slack-1",
+      externalThreadId: "thread-1",
+      sender: "Client",
+      senderEmail: "client@example.com",
+      recipients: [],
+      timestamp: "2026-07-22T12:00:00.000Z",
+      editedTimestamp: null,
+      deletedTimestamp: null,
+      subject: "Delivery",
+      text: "Please add a portal",
+      rawMetadata: { channelId: "C1" },
+    };
+    const first = await db.transaction((client) =>
+      persistConnectorSync({
+        client: client as never,
+        organizationId: ORGANIZATION_ID,
+        connectionId,
+        projectId: project.rows[0].id,
+        provider: "Slack",
+        messages: [message],
+      }),
+    );
+    const second = await db.transaction((client) =>
+      persistConnectorSync({
+        client: client as never,
+        organizationId: ORGANIZATION_ID,
+        connectionId,
+        projectId: project.rows[0].id,
+        provider: "Slack",
+        messages: [
+          {
+            ...message,
+            text: "Please add a portal and SSO",
+            editedTimestamp: "2026-07-22T12:05:00.000Z",
+          },
+        ],
+      }),
+    );
+    expect(first).toMatchObject({ inserted: 1, updated: 0 });
+    expect(second).toMatchObject({ inserted: 0, updated: 1 });
+    const stored = await db.query<{ count: number; message_text: string }>(
+      "SELECT count(*)::int AS count,max(message_text) AS message_text FROM client_messages WHERE organization_id=$1 AND source='Slack' AND external_id='slack-1'",
+      [ORGANIZATION_ID],
+    );
+    expect(stored.rows[0]).toMatchObject({
+      count: 1,
+      message_text: "Please add a portal and SSO",
+    });
   });
 });
