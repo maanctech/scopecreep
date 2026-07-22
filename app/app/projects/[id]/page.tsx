@@ -71,6 +71,7 @@ export default async function ProjectPage({ params, searchParams }: ProjectPageP
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
+          <Link href={`/app/projects/${detail.project.id}/analysis`} className="inline-flex h-11 items-center justify-center rounded-md border border-ink px-4 text-sm font-semibold hover:bg-audit-soft">Analyze imported messages</Link>
           <Link href={`/app/projects/${detail.project.id}/sow`} className="inline-flex h-11 items-center justify-center rounded-md border border-ink px-4 text-sm font-semibold hover:bg-audit-soft">Review SOW</Link>
           <Link href={`/app/projects/${detail.project.id}/report`} className="inline-flex h-11 items-center justify-center rounded-md bg-ink px-4 text-sm font-semibold text-white hover:bg-zinc-800">View audit report</Link>
         </div>

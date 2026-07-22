@@ -6,6 +6,7 @@ import { configuredProviderName } from "@/lib/ai/providers";
 const originalProvider = process.env.AI_PROVIDER;
 const originalModel = process.env.OLLAMA_MODEL;
 const originalAttempts = process.env.AI_MAX_ATTEMPTS;
+const originalOpenAiKey = process.env.OPENAI_API_KEY;
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -15,6 +16,8 @@ afterEach(() => {
   else process.env.OLLAMA_MODEL = originalModel;
   if (originalAttempts === undefined) delete process.env.AI_MAX_ATTEMPTS;
   else process.env.AI_MAX_ATTEMPTS = originalAttempts;
+  if (originalOpenAiKey === undefined) delete process.env.OPENAI_API_KEY;
+  else process.env.OPENAI_API_KEY = originalOpenAiKey;
 });
 
 describe("Ollama provider", () => {
@@ -84,5 +87,29 @@ describe("provider configuration", () => {
   it("uses deterministic demo analysis by default in tests", () => {
     delete process.env.AI_PROVIDER;
     expect(configuredProviderName()).toBe("demo");
+  });
+});
+
+describe("provider cancellation", () => {
+  it("does not start or retry a provider request after cancellation", async () => {
+    process.env.AI_PROVIDER = "openai";
+    process.env.OPENAI_API_KEY = "test-only-key";
+    process.env.AI_MAX_ATTEMPTS = "3";
+    const fetcher = vi.fn();
+    vi.stubGlobal("fetch", fetcher);
+    const controller = new AbortController();
+    controller.abort();
+
+    const result = await analyzeClientRequestDetailed({
+      sowText: "The project includes five website pages.",
+      boundaryMapText: "Included: five website pages.",
+      messageText: "Can we add a sixth page?",
+      hourlyRate: 175,
+      signal: controller.signal,
+    });
+
+    expect(fetcher).not.toHaveBeenCalled();
+    expect(result.metadata.status).toBe("Failed");
+    expect(result.metadata.attempts).toBe(0);
   });
 });

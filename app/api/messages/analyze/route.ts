@@ -5,6 +5,8 @@ import { MAX_MESSAGE_LENGTH } from "@/lib/limits";
 import { getProjectDetail, saveMessageWithFinding } from "@/lib/store";
 import { MESSAGE_SOURCES } from "@/lib/types";
 import { authErrorResponse, requireApiPermission } from "@/lib/auth/api";
+import { approvedAnalysisContext } from "@/lib/analysisJobs/service";
+import { usePostgresStorage } from "@/lib/runtimeStorage";
 
 export const runtime = "nodejs";
 
@@ -43,11 +45,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Project not found." }, { status: 404 });
     }
 
+    const approved = usePostgresStorage() ? await approvedAnalysisContext(body.projectId) : null;
     const analyzed = await analyzeClientRequestDetailed({
       sowText: projectDetail.project.sow_text,
+      boundaryMapText: approved?.boundaryMapText,
       messageText: body.messageText,
       hourlyRate: projectDetail.project.hourly_rate
     });
+    if (analyzed.metadata.status === "Failed") {
+      return NextResponse.json(
+        { error: "AI analysis did not return a valid evidence-based result. No message or finding was saved. Check AI diagnostics and try again." },
+        { status: 503 }
+      );
+    }
     const analysis = validateAnalysisResult(
       analyzed.analysis,
       projectDetail.project.hourly_rate
@@ -60,7 +70,9 @@ export async function POST(request: Request) {
       message_text: body.messageText,
       message_date: body.messageDate,
       analysis,
-      analysis_metadata: analyzed.metadata
+      analysis_metadata: analyzed.metadata,
+      sow_version_id: approved?.sowVersionId,
+      boundary_map_id: approved?.boundaryMapId
     });
 
     return NextResponse.json(
@@ -79,13 +91,16 @@ export async function POST(request: Request) {
   } catch (error) {
     const authResponse = authErrorResponse(error);
     if (authResponse) return authResponse;
-    const status = error instanceof z.ZodError ? 400 : 500;
+    const boundaryError = error instanceof Error && /Approve a Scope Boundary Map|has no boundary items/.test(error.message);
+    const status = error instanceof z.ZodError ? 400 : boundaryError ? 422 : 500;
     return NextResponse.json(
       {
         error:
           error instanceof z.ZodError
             ? validationMessage(error)
-            : "Failed to analyze message. Please try again."
+            : boundaryError
+              ? error.message
+              : "Failed to analyze message. Please try again."
       },
       { status }
     );

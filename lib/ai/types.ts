@@ -9,6 +9,7 @@ export type AiRequest = {
   timeoutMs: number;
   jsonSchema?: Record<string, unknown>;
   maxOutputTokens?: number;
+  signal?: AbortSignal;
 };
 
 export type AiRawResponse = {

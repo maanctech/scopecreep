@@ -631,6 +631,8 @@ export async function saveMessageWithFinding(input: {
   message_date?: string | null;
   analysis: AnalysisInput;
   analysis_metadata?: AnalysisMetadata;
+  sow_version_id?: string;
+  boundary_map_id?: string;
 }) {
   if (usePostgresStorage()) return postgresStore.saveMessageWithFinding(input);
   return mutateLocalStore((store) => {

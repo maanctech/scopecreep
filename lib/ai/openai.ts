@@ -8,6 +8,9 @@ export class OpenAiProvider implements AiProvider {
     const model = process.env.OPENAI_MODEL?.trim() || "gpt-4.1-mini";
     if (!apiKey) throw new Error("OPENAI_API_KEY is not configured.");
     const controller = new AbortController();
+    const abort = () => controller.abort();
+    if (request.signal?.aborted) controller.abort();
+    request.signal?.addEventListener("abort", abort, { once: true });
     const timeout = setTimeout(() => controller.abort(), request.timeoutMs);
     try {
       const response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -34,6 +37,7 @@ export class OpenAiProvider implements AiProvider {
       return { content, model };
     } finally {
       clearTimeout(timeout);
+      request.signal?.removeEventListener("abort", abort);
     }
   }
 

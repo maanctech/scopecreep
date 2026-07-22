@@ -7,13 +7,17 @@ function baseUrl() {
   return (process.env.OLLAMA_BASE_URL?.trim() || "http://127.0.0.1:11434").replace(/\/$/, "");
 }
 
-async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: number) {
+async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: number, externalSignal?: AbortSignal) {
   const controller = new AbortController();
+  const abort = () => controller.abort();
+  if (externalSignal?.aborted) controller.abort();
+  externalSignal?.addEventListener("abort", abort, { once: true });
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
     return await fetch(url, { ...init, signal: controller.signal });
   } finally {
     clearTimeout(timeout);
+    externalSignal?.removeEventListener("abort", abort);
   }
 }
 
@@ -57,7 +61,8 @@ export class OllamaProvider implements AiProvider {
           ]
         })
       },
-      request.timeoutMs
+      request.timeoutMs,
+      request.signal
     );
     if (!response.ok) throw new Error(`Ollama analysis returned ${response.status}.`);
     const payload = (await response.json()) as { model?: string; message?: { content?: string } };

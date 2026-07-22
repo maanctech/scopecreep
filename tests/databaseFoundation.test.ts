@@ -153,6 +153,33 @@ describe("commercial PostgreSQL foundation", () => {
     ).rejects.toThrow();
   });
 
+  it("allows only one analysis job record per communication", async () => {
+    const project = await db.query<{ id: string }>(
+      "SELECT id FROM projects WHERE organization_id=$1 LIMIT 1",
+      [ORGANIZATION_ID],
+    );
+    const messageId = "20000000-0000-4000-8000-000000000030";
+    await db.query(
+      `INSERT INTO client_messages (id,organization_id,project_id,source,message_text,content_sha256)
+       VALUES ($1,$2,$3,'Manual','Analyze this once.','analysis-once')`,
+      [messageId, ORGANIZATION_ID, project.rows[0].id],
+    );
+    await db.query(
+      `INSERT INTO analysis_jobs
+       (id,organization_id,project_id,client_message_id,provider,model,prompt_version,status,input_sha256)
+       VALUES ('20000000-0000-4000-8000-000000000031',$1,$2,$3,'demo','deterministic','test','Failed','job-one')`,
+      [ORGANIZATION_ID, project.rows[0].id, messageId],
+    );
+    await expect(
+      db.query(
+        `INSERT INTO analysis_jobs
+         (id,organization_id,project_id,client_message_id,provider,model,prompt_version,status,input_sha256)
+         VALUES ('20000000-0000-4000-8000-000000000032',$1,$2,$3,'demo','deterministic','test','Queued','job-two')`,
+        [ORGANIZATION_ID, project.rows[0].id, messageId],
+      ),
+    ).rejects.toThrow();
+  });
+
   it("rejects cross-organization webhook deliveries", async () => {
     const secondOrganization = "10000000-0000-4000-8000-000000000002";
     const connectionId = "20000000-0000-4000-8000-000000000010";

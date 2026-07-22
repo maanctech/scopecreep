@@ -553,6 +553,7 @@ async function insertBillingEvent(client: PoolClient, organizationId: string, ev
 export async function saveMessageWithFinding(input: {
   project_id: string; source: MessageSource; sender?: string | null; message_text: string;
   message_date?: string | null; analysis: AnalysisInput; analysis_metadata?: AnalysisMetadata;
+  sow_version_id?: string; boundary_map_id?: string;
 }) {
   const context = await requireContext();
   return transaction(async (client) => {
@@ -578,13 +579,15 @@ export async function saveMessageWithFinding(input: {
         `INSERT INTO analysis_jobs
          (id, organization_id, project_id, client_message_id, provider, model, prompt_version,
           status, input_sha256, error_message, attempt_count, latency_ms, input_character_count,
+          sow_version_id, boundary_map_id,
           output_character_count, started_at, completed_at, created_at, updated_at)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$15,$15,$15)`,
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$17,$17,$17)`,
         [analysisJobId, context.organizationId, input.project_id, message.id, input.analysis_metadata.provider,
          input.analysis_metadata.model, input.analysis_metadata.promptVersion, input.analysis_metadata.status,
          input.analysis_metadata.inputHash,
          input.analysis_metadata.errorMessage, input.analysis_metadata.attempts, input.analysis_metadata.latencyMs,
-         input.analysis_metadata.inputCharacters, input.analysis_metadata.outputCharacters, timestamp]
+         input.analysis_metadata.inputCharacters, input.sow_version_id || null, input.boundary_map_id || null,
+         input.analysis_metadata.outputCharacters, timestamp]
       );
     }
     const finding: ScopeFinding = {

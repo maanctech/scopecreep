@@ -146,7 +146,8 @@ function findExplicitExclusion(sow: string, term: string) {
     new RegExp(`does\\s+not\\s+include[^.]*\\b${escaped}\\b`, "i"),
     new RegExp(`excludes?[^.]*\\b${escaped}\\b`, "i"),
     new RegExp(`not\\s+included[^.]*\\b${escaped}\\b`, "i"),
-    new RegExp(`outside\\s+(?:the\\s+)?scope[^.]*\\b${escaped}\\b`, "i")
+    new RegExp(`outside\\s+(?:the\\s+)?scope[^.]*\\b${escaped}\\b`, "i"),
+    new RegExp(`\\b${escaped}\\b[^.]{0,160}\\b(?:is|are)?\\s*(?:excluded|not\\s+included)\\b`, "i")
   ];
 
   return patterns.find((pattern) => pattern.test(sow))?.exec(sow)?.[0] ?? null;
@@ -271,6 +272,8 @@ export async function analyzeClientRequestDetailed(input: {
   sowText: string;
   messageText: string;
   hourlyRate: number;
+  boundaryMapText?: string;
+  signal?: AbortSignal;
 }): Promise<DetailedAnalysis> {
   const userPrompt = buildAnalysisPrompt(input);
   const inputHash = createHash("sha256")
@@ -310,10 +313,11 @@ export async function analyzeClientRequestDetailed(input: {
   let lastModel = "unavailable";
   let lastError = "AI provider unavailable.";
 
-  for (const providerName of providerNames) {
+  providerLoop: for (const providerName of providerNames) {
     const provider = providerFor(providerName);
     lastProvider = providerName;
     for (let providerAttempt = 1; providerAttempt <= maxAttempts; providerAttempt += 1) {
+      if (input.signal?.aborted) break providerLoop;
       attempts += 1;
       try {
         const correction = providerAttempt > 1
@@ -322,7 +326,8 @@ export async function analyzeClientRequestDetailed(input: {
         const response = await provider.generate({
           systemPrompt: AI_SYSTEM_PROMPT,
           userPrompt: `${userPrompt}${correction}`,
-          timeoutMs
+          timeoutMs,
+          signal: input.signal
         });
         lastModel = response.model;
         return {
@@ -341,6 +346,7 @@ export async function analyzeClientRequestDetailed(input: {
           }
         };
       } catch (error) {
+        if (input.signal?.aborted) break providerLoop;
         lastError = error instanceof Error ? error.message.slice(0, 500) : "Unknown AI provider error.";
       }
     }
