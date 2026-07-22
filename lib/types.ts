@@ -121,6 +121,8 @@ export type Project = {
   project_value: number | null;
   sow_text: string;
   created_at: string;
+  /** True for the fictional Northstar/ApertureOps demonstration project. */
+  is_demo: boolean;
 };
 
 export type ClientMessage = {
@@ -133,8 +135,61 @@ export type ClientMessage = {
   created_at: string;
 };
 
-export type ScopeAnalysis = {
+export const BILLING_DECISIONS = [
+  "Undecided",
+  "Bill Separately",
+  "Include In Retainer",
+  "Absorb Courtesy",
+  "Discuss With Client",
+  "Reject Finding"
+] as const;
+
+export type BillingDecision = (typeof BILLING_DECISIONS)[number];
+
+/**
+ * Internal workflow statuses. The status can never contradict the billing
+ * decision because both are only ever changed together through the single
+ * transition service in lib/domain/findingTransitions.ts.
+ *
+ * - New: finding just created, not yet surfaced for review (in-scope findings stay here).
+ * - Needs Review: flagged finding waiting for a human billing decision.
+ * - Decided: a billing decision was made (Bill Separately or Include In Retainer).
+ * - Discussing: the professional chose to discuss the finding with the client first.
+ * - Invoiced: the professional recorded that they invoiced the client themselves.
+ * - Paid: the professional recorded that the invoice was paid. Internal tracking only.
+ * - Closed: terminal state for rejected or courtesy-absorbed findings.
+ *
+ * "Archived" from the Phase 1 suggestion list was intentionally deferred: no
+ * Phase 1 action produces it, and keeping unreachable states in the model
+ * would make the transition table dishonest.
+ */
+export const WORKFLOW_STATUSES = [
+  "New",
+  "Needs Review",
+  "Decided",
+  "Discussing",
+  "Invoiced",
+  "Paid",
+  "Closed"
+] as const;
+
+export type WorkflowStatus = (typeof WORKFLOW_STATUSES)[number];
+
+/**
+ * A Scope Finding is the reviewed, human-controlled evolution of the old
+ * AI-only ScopeAnalysis record. It keeps every AI-produced field and adds the
+ * professional's billing decision, workflow status, approved amounts, and
+ * review metadata.
+ *
+ * Money units:
+ * - estimated_revenue is a LEGACY value stored in DOLLARS (AI suggestion,
+ *   "potential revenue"). It is never mixed with approved amounts.
+ * - approved_amount_cents is stored in INTEGER CENTS and is the only value
+ *   used for approved/invoiced/paid totals.
+ */
+export type ScopeFinding = {
   id: string;
+  project_id: string;
   client_message_id: string;
   classification: Classification;
   confidence_score: number;
@@ -142,13 +197,79 @@ export type ScopeAnalysis = {
   relevant_sow_sections: string[];
   request_type: RequestType;
   estimated_hours: number;
+  /** Legacy AI-estimated potential revenue in DOLLARS. Not billable as-is. */
   estimated_revenue: number;
   suggested_change_order: string;
+  billing_decision: BillingDecision;
+  workflow_status: WorkflowStatus;
+  /** Human-approved hours. Null until the professional makes a billing decision. */
+  approved_hours: number | null;
+  /** Human-approved amount in INTEGER CENTS. Null until a billing decision. */
+  approved_amount_cents: number | null;
+  /** Editable client-facing draft. Nothing is ever sent automatically. */
+  client_facing_explanation: string;
   internal_note: string | null;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
   created_at: string;
+  updated_at: string;
+  /** Optimistic-concurrency version. Stale updates are rejected with 409. */
+  version: number;
+  /** True for fictional Northstar/ApertureOps demonstration records. */
+  is_demo: boolean;
 };
 
-export type AnalysisInput = Omit<ScopeAnalysis, "id" | "client_message_id" | "created_at">;
+export type AnalysisInput = Pick<
+  ScopeFinding,
+  | "classification"
+  | "confidence_score"
+  | "reasoning"
+  | "relevant_sow_sections"
+  | "request_type"
+  | "estimated_hours"
+  | "estimated_revenue"
+  | "suggested_change_order"
+  | "internal_note"
+>;
+
+export const BILLING_EVENT_TYPES = [
+  "Finding Created",
+  "Estimate Updated",
+  "Decision Updated",
+  "Approved Internally",
+  "Discussing With Client",
+  "Included In Retainer",
+  "Invoiced",
+  "Paid",
+  "Absorbed",
+  "Rejected",
+  "Reopened"
+] as const;
+
+export type BillingEventType = (typeof BILLING_EVENT_TYPES)[number];
+
+/**
+ * Append-only billing history. Events are only ever created; normal store
+ * operations never edit or delete them.
+ */
+export type BillingEvent = {
+  id: string;
+  project_id: string;
+  scope_finding_id: string;
+  event_type: BillingEventType;
+  /** Approved amount in cents at the time of the event, when relevant. */
+  amount_cents: number | null;
+  previous_amount_cents: number | null;
+  new_amount_cents: number | null;
+  previous_status: WorkflowStatus | null;
+  new_status: WorkflowStatus | null;
+  previous_decision: BillingDecision | null;
+  new_decision: BillingDecision | null;
+  note: string | null;
+  actor: string;
+  created_at: string;
+  is_demo: boolean;
+};
 
 export type Report = {
   id: string;
@@ -170,20 +291,32 @@ export type SalesTemplate = {
   updated_at: string;
 };
 
-export type MessageWithAnalysis = {
+export type MessageWithFinding = {
   message: ClientMessage;
-  analysis: ScopeAnalysis | null;
+  finding: ScopeFinding | null;
 };
 
 export type ProjectDetail = {
   project: Project;
-  messages: MessageWithAnalysis[];
+  messages: MessageWithFinding[];
 };
 
 export type ProjectSummary = Project & {
   messages_analyzed: number;
   out_of_scope_count: number;
   potential_recovered_revenue: number;
+};
+
+export type FindingWithContext = {
+  finding: ScopeFinding;
+  message: ClientMessage | null;
+  project: Project | null;
+};
+
+export type BillingEventWithContext = {
+  event: BillingEvent;
+  finding: ScopeFinding | null;
+  project: Project | null;
 };
 
 export type BusinessDashboard = {

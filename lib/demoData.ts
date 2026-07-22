@@ -1,15 +1,17 @@
 import type {
   AnalysisInput,
   AuditRequest,
+  BillingDecision,
+  BillingEvent,
   ClientMessage,
   Company,
   Lead,
   LeadStatusHistory,
   Project,
-  Report,
   SalesTemplate,
-  ScopeAnalysis,
-  User
+  ScopeFinding,
+  User,
+  WorkflowStatus
 } from "@/lib/types";
 
 export const DEMO_USER_ID = "11111111-1111-4111-8111-111111111111";
@@ -136,7 +138,8 @@ export const demoProject: Project = {
   hourly_rate: 175,
   project_value: 48000,
   sow_text: SAMPLE_SOW,
-  created_at: createdAt
+  created_at: createdAt,
+  is_demo: true
 };
 
 const demoMessageRows: Array<Omit<ClientMessage, "id" | "project_id" | "created_at"> & { id: string }> = [
@@ -428,23 +431,236 @@ const analysisByMessageId: Record<string, AnalysisInput> = {
   }
 };
 
-export const demoAnalyses: ScopeAnalysis[] = demoMessages.map((message, index) => ({
-  id: `44444444-4444-4444-8444-4444444444${String(index + 1).padStart(2, "0")}`,
-  client_message_id: message.id,
-  created_at: createdAt,
-  ...analysisByMessageId[message.id]
-}));
+/**
+ * Seeded workflow states demonstrate the Phase 1 review flow without changing
+ * the audit math: the total potential revenue across all flagged findings
+ * stays exactly $13,475. All records are fictional (is_demo: true).
+ */
+const demoReviewedAt = "2026-06-06T10:00:00.000Z";
 
-export const demoReport: Report = {
-  id: "77777777-7777-4777-8777-777777777777",
-  project_id: DEMO_PROJECT_ID,
-  title: "ApertureOps Scope Creep Audit",
-  markdown: "",
-  total_revenue_leakage: 13475,
-  analyzed_messages_count: 12,
-  out_of_scope_count: 5,
-  created_at: createdAt
+type DemoWorkflowSeed = {
+  billing_decision: BillingDecision;
+  workflow_status: WorkflowStatus;
+  approved_hours: number | null;
+  approved_amount_cents: number | null;
 };
+
+const workflowSeedByMessageId: Record<string, DemoWorkflowSeed> = {
+  // ROI calculator ($4,900 potential): approved and invoiced.
+  "33333333-3333-4333-8333-333333333334": {
+    billing_decision: "Bill Separately",
+    workflow_status: "Invoiced",
+    approved_hours: 28,
+    approved_amount_cents: 490000
+  },
+  // HubSpot workflow ($1,750 potential): approved, not yet invoiced.
+  "33333333-3333-4333-8333-333333333335": {
+    billing_decision: "Bill Separately",
+    workflow_status: "Decided",
+    approved_hours: 10,
+    approved_amount_cents: 175000
+  },
+  // SEO articles ($2,100 potential): being discussed with the client.
+  "33333333-3333-4333-8333-333333333336": {
+    billing_decision: "Discuss With Client",
+    workflow_status: "Discussing",
+    approved_hours: null,
+    approved_amount_cents: null
+  },
+  // Spanish localization ($1,400 potential): absorbed as a courtesy.
+  "33333333-3333-4333-8333-333333333337": {
+    billing_decision: "Absorb Courtesy",
+    workflow_status: "Closed",
+    approved_hours: null,
+    approved_amount_cents: null
+  },
+  // Customer login area ($2,100 potential): invoiced and paid.
+  "33333333-3333-4333-8333-333333333338": {
+    billing_decision: "Bill Separately",
+    workflow_status: "Paid",
+    approved_hours: 12,
+    approved_amount_cents: 210000
+  }
+};
+
+export const demoFindings: ScopeFinding[] = demoMessages.map((message, index) => {
+  const analysis = analysisByMessageId[message.id];
+  const seed = workflowSeedByMessageId[message.id];
+  const reviewed = Boolean(seed);
+
+  return {
+    id: `44444444-4444-4444-8444-4444444444${String(index + 1).padStart(2, "0")}`,
+    project_id: DEMO_PROJECT_ID,
+    client_message_id: message.id,
+    ...analysis,
+    billing_decision: seed?.billing_decision ?? "Undecided",
+    workflow_status:
+      seed?.workflow_status ?? (analysis.classification === "In Scope" ? "New" : "Needs Review"),
+    approved_hours: seed?.approved_hours ?? null,
+    approved_amount_cents: seed?.approved_amount_cents ?? null,
+    client_facing_explanation: analysis.suggested_change_order,
+    reviewed_by: reviewed ? "Professional" : null,
+    reviewed_at: reviewed ? demoReviewedAt : null,
+    created_at: createdAt,
+    updated_at: reviewed ? demoReviewedAt : createdAt,
+    version: 1,
+    is_demo: true
+  };
+});
+
+const demoFindingByMessageId = new Map(
+  demoFindings.map((finding) => [finding.client_message_id, finding])
+);
+
+let demoEventSequence = 0;
+
+function demoEvent(
+  finding: ScopeFinding,
+  input: Pick<
+    BillingEvent,
+    | "event_type"
+    | "amount_cents"
+    | "previous_amount_cents"
+    | "new_amount_cents"
+    | "previous_status"
+    | "new_status"
+    | "previous_decision"
+    | "new_decision"
+    | "note"
+    | "actor"
+    | "created_at"
+  >
+): BillingEvent {
+  demoEventSequence += 1;
+  return {
+    id: `88888888-8888-4888-8888-8888888888${String(demoEventSequence).padStart(2, "0")}`,
+    project_id: finding.project_id,
+    scope_finding_id: finding.id,
+    is_demo: true,
+    ...input
+  };
+}
+
+function demoCreatedEvent(finding: ScopeFinding): BillingEvent {
+  return demoEvent(finding, {
+    event_type: "Finding Created",
+    amount_cents: null,
+    previous_amount_cents: null,
+    new_amount_cents: null,
+    previous_status: null,
+    new_status: finding.classification === "In Scope" ? "New" : "Needs Review",
+    previous_decision: null,
+    new_decision: "Undecided",
+    note: "Seeded demo finding.",
+    actor: "Demo Seed",
+    created_at: createdAt
+  });
+}
+
+function demoDecisionChain(
+  messageId: string,
+  steps: Array<{
+    event_type: BillingEvent["event_type"];
+    previous_status: WorkflowStatus;
+    new_status: WorkflowStatus;
+    previous_decision: BillingDecision;
+    new_decision: BillingDecision;
+    amount_cents: number | null;
+  }>
+): BillingEvent[] {
+  const finding = demoFindingByMessageId.get(messageId)!;
+  return steps.map((step) =>
+    demoEvent(finding, {
+      ...step,
+      previous_amount_cents: null,
+      new_amount_cents: step.amount_cents,
+      note: "Seeded demo billing decision.",
+      actor: "Professional",
+      created_at: demoReviewedAt
+    })
+  );
+}
+
+export const demoBillingEvents: BillingEvent[] = [
+  ...demoFindings.map(demoCreatedEvent),
+  ...demoDecisionChain("33333333-3333-4333-8333-333333333334", [
+    {
+      event_type: "Approved Internally",
+      previous_status: "Needs Review",
+      new_status: "Decided",
+      previous_decision: "Undecided",
+      new_decision: "Bill Separately",
+      amount_cents: 490000
+    },
+    {
+      event_type: "Invoiced",
+      previous_status: "Decided",
+      new_status: "Invoiced",
+      previous_decision: "Bill Separately",
+      new_decision: "Bill Separately",
+      amount_cents: 490000
+    }
+  ]),
+  ...demoDecisionChain("33333333-3333-4333-8333-333333333335", [
+    {
+      event_type: "Approved Internally",
+      previous_status: "Needs Review",
+      new_status: "Decided",
+      previous_decision: "Undecided",
+      new_decision: "Bill Separately",
+      amount_cents: 175000
+    }
+  ]),
+  ...demoDecisionChain("33333333-3333-4333-8333-333333333336", [
+    {
+      event_type: "Discussing With Client",
+      previous_status: "Needs Review",
+      new_status: "Discussing",
+      previous_decision: "Undecided",
+      new_decision: "Discuss With Client",
+      amount_cents: null
+    }
+  ]),
+  ...demoDecisionChain("33333333-3333-4333-8333-333333333337", [
+    {
+      event_type: "Absorbed",
+      previous_status: "Needs Review",
+      new_status: "Closed",
+      previous_decision: "Undecided",
+      new_decision: "Absorb Courtesy",
+      amount_cents: null
+    }
+  ]),
+  ...demoDecisionChain("33333333-3333-4333-8333-333333333338", [
+    {
+      event_type: "Approved Internally",
+      previous_status: "Needs Review",
+      new_status: "Decided",
+      previous_decision: "Undecided",
+      new_decision: "Bill Separately",
+      amount_cents: 210000
+    },
+    {
+      event_type: "Invoiced",
+      previous_status: "Decided",
+      new_status: "Invoiced",
+      previous_decision: "Bill Separately",
+      new_decision: "Bill Separately",
+      amount_cents: 210000
+    },
+    {
+      event_type: "Paid",
+      previous_status: "Invoiced",
+      new_status: "Paid",
+      previous_decision: "Bill Separately",
+      new_decision: "Bill Separately",
+      amount_cents: 210000
+    }
+  ])
+];
+
+// No report is seeded: reports are now generated only through the explicit
+// "Generate report" action, never as a side effect of reading a page.
 
 export const demoSalesTemplates: SalesTemplate[] = [
   {
@@ -514,6 +730,7 @@ export const demoSalesTemplates: SalesTemplate[] = [
 
 export function buildDemoStore() {
   return {
+    schema_version: 2,
     users: [demoUser],
     companies: [demoCompany],
     leads: [demoLead],
@@ -521,8 +738,9 @@ export function buildDemoStore() {
     auditRequests: [demoAuditRequest],
     projects: [demoProject],
     clientMessages: demoMessages,
-    scopeAnalyses: demoAnalyses,
-    reports: [demoReport],
+    scopeFindings: demoFindings,
+    billingEvents: demoBillingEvents,
+    reports: [],
     salesTemplates: demoSalesTemplates
   };
 }

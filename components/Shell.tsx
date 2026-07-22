@@ -1,11 +1,21 @@
 import Link from "next/link";
-import { BarChart3, Calculator, ClipboardList, FileText, ShieldCheck } from "lucide-react";
+import {
+  BarChart3,
+  Calculator,
+  ClipboardList,
+  FileText,
+  ListChecks,
+  Receipt,
+  ShieldCheck
+} from "lucide-react";
 
 export function Shell({ children }: { children: React.ReactNode }) {
   const navItems = [
     { href: "/request-audit", label: "Request Audit", icon: ClipboardList },
     { href: "/calculator", label: "Calculator", icon: Calculator },
     { href: "/app", label: "Audit Console", icon: BarChart3 },
+    { href: "/app/findings", label: "Findings", icon: ListChecks },
+    { href: "/app/billing", label: "Billing", icon: Receipt },
     { href: "/admin", label: "Admin", icon: ShieldCheck },
     { href: "/sales-assets", label: "Sales Assets", icon: FileText }
   ];

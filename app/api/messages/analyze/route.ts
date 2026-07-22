@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { analyzeClientRequest, validateAnalysisResult } from "@/lib/analysis";
 import { MAX_MESSAGE_LENGTH } from "@/lib/limits";
-import { getProjectDetail, saveMessageWithAnalysis } from "@/lib/store";
+import { getProjectDetail, saveMessageWithFinding } from "@/lib/store";
 import { MESSAGE_SOURCES } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -50,7 +50,7 @@ export async function POST(request: Request) {
       projectDetail.project.hourly_rate
     );
 
-    const saved = await saveMessageWithAnalysis({
+    const saved = await saveMessageWithFinding({
       project_id: projectDetail.project.id,
       source: body.source,
       sender: body.sender,

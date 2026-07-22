@@ -320,6 +320,210 @@ const analyses = [
   ...analysis
 }));
 
+// ---------------------------------------------------------------------------
+// Phase 1: analyses become reviewable Scope Findings (schema_version 2).
+// Seeded workflow states demonstrate the review flow without changing the
+// audit math: total potential revenue stays exactly $13,475.
+// Approved amounts are stored in INTEGER CENTS; estimated_revenue stays in
+// legacy dollars. All records are fictional (is_demo: true).
+// ---------------------------------------------------------------------------
+const demoReviewedAt = "2026-06-06T10:00:00.000Z";
+
+const workflowSeedByMessageId = {
+  // ROI calculator: approved and invoiced.
+  "33333333-3333-4333-8333-333333333334": {
+    billing_decision: "Bill Separately",
+    workflow_status: "Invoiced",
+    approved_hours: 28,
+    approved_amount_cents: 490000
+  },
+  // HubSpot workflow: approved, not yet invoiced.
+  "33333333-3333-4333-8333-333333333335": {
+    billing_decision: "Bill Separately",
+    workflow_status: "Decided",
+    approved_hours: 10,
+    approved_amount_cents: 175000
+  },
+  // SEO articles: being discussed with the client.
+  "33333333-3333-4333-8333-333333333336": {
+    billing_decision: "Discuss With Client",
+    workflow_status: "Discussing",
+    approved_hours: null,
+    approved_amount_cents: null
+  },
+  // Spanish localization: absorbed as a courtesy.
+  "33333333-3333-4333-8333-333333333337": {
+    billing_decision: "Absorb Courtesy",
+    workflow_status: "Closed",
+    approved_hours: null,
+    approved_amount_cents: null
+  },
+  // Customer login area: invoiced and paid.
+  "33333333-3333-4333-8333-333333333338": {
+    billing_decision: "Bill Separately",
+    workflow_status: "Paid",
+    approved_hours: 12,
+    approved_amount_cents: 210000
+  }
+};
+
+const scopeFindings = analyses.map((analysis) => {
+  const seed = workflowSeedByMessageId[analysis.client_message_id];
+  const reviewed = Boolean(seed);
+
+  return {
+    id: analysis.id,
+    project_id: DEMO_PROJECT_ID,
+    client_message_id: analysis.client_message_id,
+    classification: analysis.classification,
+    confidence_score: analysis.confidence_score,
+    reasoning: analysis.reasoning,
+    relevant_sow_sections: analysis.relevant_sow_sections,
+    request_type: analysis.request_type,
+    estimated_hours: analysis.estimated_hours,
+    estimated_revenue: analysis.estimated_revenue,
+    suggested_change_order: analysis.suggested_change_order,
+    billing_decision: seed ? seed.billing_decision : "Undecided",
+    workflow_status: seed
+      ? seed.workflow_status
+      : analysis.classification === "In Scope"
+        ? "New"
+        : "Needs Review",
+    approved_hours: seed ? seed.approved_hours : null,
+    approved_amount_cents: seed ? seed.approved_amount_cents : null,
+    client_facing_explanation: analysis.suggested_change_order,
+    internal_note: analysis.internal_note,
+    reviewed_by: reviewed ? "Professional" : null,
+    reviewed_at: reviewed ? demoReviewedAt : null,
+    created_at: createdAt,
+    updated_at: reviewed ? demoReviewedAt : createdAt,
+    version: 1,
+    is_demo: true
+  };
+});
+
+const findingByMessageId = new Map(
+  scopeFindings.map((finding) => [finding.client_message_id, finding])
+);
+
+let eventSequence = 0;
+function seedEvent(finding, input) {
+  eventSequence += 1;
+  return {
+    id: `88888888-8888-4888-8888-8888888888${String(eventSequence).padStart(2, "0")}`,
+    project_id: finding.project_id,
+    scope_finding_id: finding.id,
+    is_demo: true,
+    ...input
+  };
+}
+
+function seedDecisionChain(messageId, steps) {
+  const finding = findingByMessageId.get(messageId);
+  return steps.map((step) =>
+    seedEvent(finding, {
+      ...step,
+      previous_amount_cents: null,
+      new_amount_cents: step.amount_cents,
+      note: "Seeded demo billing decision.",
+      actor: "Professional",
+      created_at: demoReviewedAt
+    })
+  );
+}
+
+const billingEvents = [
+  ...scopeFindings.map((finding) =>
+    seedEvent(finding, {
+      event_type: "Finding Created",
+      amount_cents: null,
+      previous_amount_cents: null,
+      new_amount_cents: null,
+      previous_status: null,
+      new_status: finding.classification === "In Scope" ? "New" : "Needs Review",
+      previous_decision: null,
+      new_decision: "Undecided",
+      note: "Seeded demo finding.",
+      actor: "Demo Seed",
+      created_at: createdAt
+    })
+  ),
+  ...seedDecisionChain("33333333-3333-4333-8333-333333333334", [
+    {
+      event_type: "Approved Internally",
+      previous_status: "Needs Review",
+      new_status: "Decided",
+      previous_decision: "Undecided",
+      new_decision: "Bill Separately",
+      amount_cents: 490000
+    },
+    {
+      event_type: "Invoiced",
+      previous_status: "Decided",
+      new_status: "Invoiced",
+      previous_decision: "Bill Separately",
+      new_decision: "Bill Separately",
+      amount_cents: 490000
+    }
+  ]),
+  ...seedDecisionChain("33333333-3333-4333-8333-333333333335", [
+    {
+      event_type: "Approved Internally",
+      previous_status: "Needs Review",
+      new_status: "Decided",
+      previous_decision: "Undecided",
+      new_decision: "Bill Separately",
+      amount_cents: 175000
+    }
+  ]),
+  ...seedDecisionChain("33333333-3333-4333-8333-333333333336", [
+    {
+      event_type: "Discussing With Client",
+      previous_status: "Needs Review",
+      new_status: "Discussing",
+      previous_decision: "Undecided",
+      new_decision: "Discuss With Client",
+      amount_cents: null
+    }
+  ]),
+  ...seedDecisionChain("33333333-3333-4333-8333-333333333337", [
+    {
+      event_type: "Absorbed",
+      previous_status: "Needs Review",
+      new_status: "Closed",
+      previous_decision: "Undecided",
+      new_decision: "Absorb Courtesy",
+      amount_cents: null
+    }
+  ]),
+  ...seedDecisionChain("33333333-3333-4333-8333-333333333338", [
+    {
+      event_type: "Approved Internally",
+      previous_status: "Needs Review",
+      new_status: "Decided",
+      previous_decision: "Undecided",
+      new_decision: "Bill Separately",
+      amount_cents: 210000
+    },
+    {
+      event_type: "Invoiced",
+      previous_status: "Decided",
+      new_status: "Invoiced",
+      previous_decision: "Bill Separately",
+      new_decision: "Bill Separately",
+      amount_cents: 210000
+    },
+    {
+      event_type: "Paid",
+      previous_status: "Invoiced",
+      new_status: "Paid",
+      previous_decision: "Bill Separately",
+      new_decision: "Bill Separately",
+      amount_cents: 210000
+    }
+  ])
+];
+
 const salesTemplates = [
   [
     "Cold Email",
@@ -366,6 +570,7 @@ const salesTemplates = [
 }));
 
 const store = {
+  schema_version: 2,
   users: [
     {
       id: DEMO_USER_ID,
@@ -448,23 +653,15 @@ const store = {
       hourly_rate: 175,
       project_value: 48000,
       sow_text: sowText,
-      created_at: createdAt
+      created_at: createdAt,
+      is_demo: true
     }
   ],
   clientMessages: messages,
-  scopeAnalyses: analyses,
-  reports: [
-    {
-      id: "77777777-7777-4777-8777-777777777777",
-      project_id: DEMO_PROJECT_ID,
-      title: "ApertureOps Scope Creep Audit",
-      markdown: "",
-      total_revenue_leakage: 13475,
-      analyzed_messages_count: 12,
-      out_of_scope_count: 5,
-      created_at: createdAt
-    }
-  ],
+  scopeFindings,
+  billingEvents,
+  // Reports are only created through the explicit "Generate report" action.
+  reports: [],
   salesTemplates
 };
 
