@@ -11,13 +11,15 @@ let db: PGlite;
 beforeAll(async () => {
   db = new PGlite();
   const directory = path.join(process.cwd(), "db", "migrations");
-  const migrations = (await fs.readdir(directory)).filter((name) => name.endsWith(".sql")).sort();
+  const migrations = (await fs.readdir(directory))
+    .filter((name) => name.endsWith(".sql"))
+    .sort();
   for (const filename of migrations) {
     await db.exec(await fs.readFile(path.join(directory, filename), "utf8"));
   }
   await db.query(
     "INSERT INTO organizations (id, name, slug) VALUES ($1, $2, $3)",
-    [ORGANIZATION_ID, "ScopeLedger Test", "scopeledger-test"]
+    [ORGANIZATION_ID, "ScopeLedger Test", "scopeledger-test"],
   );
 });
 
@@ -28,7 +30,7 @@ afterAll(async () => {
 describe("commercial PostgreSQL foundation", () => {
   it("creates the complete normalized schema", async () => {
     const result = await db.query<{ table_name: string }>(
-      "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'"
+      "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'",
     );
     const tables = new Set(result.rows.map((row) => row.table_name));
     expect(tables.has("organizations")).toBe(true);
@@ -56,13 +58,13 @@ describe("commercial PostgreSQL foundation", () => {
     const totals = await db.query<{ total: number; count: number }>(
       `SELECT COALESCE(sum(estimated_revenue_cents), 0)::int AS total, count(*)::int AS count
        FROM scope_findings WHERE organization_id = $1 AND classification <> 'In Scope'`,
-      [ORGANIZATION_ID]
+      [ORGANIZATION_ID],
     );
     expect(totals.rows[0]).toEqual({ total: 1_347_500, count: 8 });
 
     const sow = await db.query<{ count: number }>(
       "SELECT count(*)::int AS count FROM sow_versions WHERE organization_id = $1",
-      [ORGANIZATION_ID]
+      [ORGANIZATION_ID],
     );
     expect(sow.rows[0].count).toBe(1);
     const workspace = await db.query<{ active: boolean; sections: number }>(
@@ -70,7 +72,7 @@ describe("commercial PostgreSQL foundation", () => {
               (SELECT count(*)::int FROM sow_sections s WHERE s.sow_version_id = v.id) AS sections
        FROM projects p JOIN sow_versions v ON v.id = p.active_sow_version_id
        WHERE p.organization_id = $1`,
-      [ORGANIZATION_ID]
+      [ORGANIZATION_ID],
     );
     expect(workspace.rows[0].active).toBe(true);
     expect(workspace.rows[0].sections).toBeGreaterThan(0);
@@ -83,7 +85,7 @@ describe("commercial PostgreSQL foundation", () => {
     });
     const result = await db.query<{ count: number }>(
       "SELECT count(*)::int AS count FROM scope_findings WHERE organization_id = $1",
-      [ORGANIZATION_ID]
+      [ORGANIZATION_ID],
     );
     expect(result.rows[0].count).toBe(12);
   });
@@ -92,14 +94,14 @@ describe("commercial PostgreSQL foundation", () => {
     const secondOrganization = "10000000-0000-4000-8000-000000000002";
     await db.query(
       "INSERT INTO organizations (id, name, slug) VALUES ($1, 'Second Workspace', 'second-workspace')",
-      [secondOrganization]
+      [secondOrganization],
     );
     const plan = prepareJsonImport(buildDemoStore());
     await db.transaction(async (transaction) => {
       await executeJsonImport(transaction as never, secondOrganization, plan);
     });
     const ids = await db.query<{ organization_id: string; id: string }>(
-      "SELECT organization_id, id FROM projects ORDER BY organization_id"
+      "SELECT organization_id, id FROM projects ORDER BY organization_id",
     );
     expect(ids.rows).toHaveLength(2);
     expect(ids.rows[0].id).not.toBe(ids.rows[1].id);
@@ -107,7 +109,7 @@ describe("commercial PostgreSQL foundation", () => {
 
   it("rejects cross-organization relationships at the database boundary", async () => {
     const projects = await db.query<{ organization_id: string; id: string }>(
-      "SELECT organization_id, id FROM projects ORDER BY organization_id"
+      "SELECT organization_id, id FROM projects ORDER BY organization_id",
     );
     const firstOrganization = projects.rows[0].organization_id;
     const secondOrganizationProject = projects.rows[1].id;
@@ -116,8 +118,51 @@ describe("commercial PostgreSQL foundation", () => {
         `INSERT INTO client_messages
          (id, organization_id, project_id, source, message_text)
          VALUES ('10000000-0000-4000-8000-000000000099', $1, $2, 'Other', 'cross organization')`,
-        [firstOrganization, secondOrganizationProject]
-      )
+        [firstOrganization, secondOrganizationProject],
+      ),
+    ).rejects.toThrow();
+  });
+
+  it("enforces communication deduplication and ingestion idempotency", async () => {
+    const project = await db.query<{ id: string }>(
+      "SELECT id FROM projects WHERE organization_id=$1 LIMIT 1",
+      [ORGANIZATION_ID],
+    );
+    const projectId = project.rows[0].id;
+    await db.query(
+      `INSERT INTO client_messages (id,organization_id,project_id,source,message_text,content_sha256) VALUES ('20000000-0000-4000-8000-000000000001',$1,$2,'Other','same request','same-hash')`,
+      [ORGANIZATION_ID, projectId],
+    );
+    await expect(
+      db.query(
+        `INSERT INTO client_messages (id,organization_id,project_id,source,message_text,content_sha256) VALUES ('20000000-0000-4000-8000-000000000002',$1,$2,'Other','same request','same-hash')`,
+        [ORGANIZATION_ID, projectId],
+      ),
+    ).rejects.toThrow();
+    await db.query(
+      `INSERT INTO ingestion_jobs (id,organization_id,project_id,job_type,status,idempotency_key) VALUES ('20000000-0000-4000-8000-000000000003',$1,$2,'Manual Import','Queued','same-import')`,
+      [ORGANIZATION_ID, projectId],
+    );
+    await expect(
+      db.query(
+        `INSERT INTO ingestion_jobs (id,organization_id,project_id,job_type,status,idempotency_key) VALUES ('20000000-0000-4000-8000-000000000004',$1,$2,'Manual Import','Queued','same-import')`,
+        [ORGANIZATION_ID, projectId],
+      ),
+    ).rejects.toThrow();
+  });
+
+  it("rejects cross-organization webhook deliveries", async () => {
+    const secondOrganization = "10000000-0000-4000-8000-000000000002";
+    const connectionId = "20000000-0000-4000-8000-000000000010";
+    await db.query(
+      `INSERT INTO communication_connections (id,organization_id,provider,name,status) VALUES ($1,$2,'Webhook','Test webhook','Not Configured')`,
+      [connectionId, secondOrganization],
+    );
+    await expect(
+      db.query(
+        `INSERT INTO webhook_deliveries (id,organization_id,connection_id,delivery_id,payload_sha256) VALUES ('20000000-0000-4000-8000-000000000011',$1,$2,'cross-org','hash')`,
+        [ORGANIZATION_ID, connectionId],
+      ),
     ).rejects.toThrow();
   });
 
@@ -125,18 +170,22 @@ describe("commercial PostgreSQL foundation", () => {
     const rollbackOrganization = "10000000-0000-4000-8000-000000000003";
     await db.query(
       "INSERT INTO organizations (id, name, slug) VALUES ($1, 'Rollback Workspace', 'rollback-workspace')",
-      [rollbackOrganization]
+      [rollbackOrganization],
     );
     const plan = prepareJsonImport(buildDemoStore());
     await expect(
       db.transaction(async (transaction) => {
-        await executeJsonImport(transaction as never, rollbackOrganization, plan);
+        await executeJsonImport(
+          transaction as never,
+          rollbackOrganization,
+          plan,
+        );
         throw new Error("forced rollback");
-      })
+      }),
     ).rejects.toThrow("forced rollback");
     const result = await db.query<{ count: number }>(
       "SELECT count(*)::int AS count FROM projects WHERE organization_id = $1",
-      [rollbackOrganization]
+      [rollbackOrganization],
     );
     expect(result.rows[0].count).toBe(0);
   });
@@ -144,10 +193,12 @@ describe("commercial PostgreSQL foundation", () => {
   it("enforces append-only billing events in the database", async () => {
     const event = await db.query<{ id: string }>(
       "SELECT id FROM billing_events WHERE organization_id = $1 LIMIT 1",
-      [ORGANIZATION_ID]
+      [ORGANIZATION_ID],
     );
     await expect(
-      db.query("UPDATE billing_events SET note = 'tampered' WHERE id = $1", [event.rows[0].id])
+      db.query("UPDATE billing_events SET note = 'tampered' WHERE id = $1", [
+        event.rows[0].id,
+      ]),
     ).rejects.toThrow(/append-only/);
   });
 });

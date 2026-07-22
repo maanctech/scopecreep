@@ -36,6 +36,9 @@ Local authentication includes:
 - Client onboarding form for pasted SOW text, pasted client message exports, hourly rate, project value, client name, and notes.
 - Internal audit console for creating projects, pasting SOWs, submitting client messages, and running AI scope analysis.
 - Professional SOW workspace with immutable versions, paste/TXT/DOCX/text-PDF intake, safe local originals, extracted sections, AI-assisted risk review, and a human-approved Scope Boundary Map.
+- Preview-first text/CSV/JSON communication imports with normalized records, provider/content deduplication, visible ingestion jobs, and no automatic analysis.
+- Signed generic inbound webhooks with one-time secrets, encrypted storage, timestamp validation, replay protection, and truthful connection verification.
+- Credential-ready self-hosted IMAP ingestion with TLS, sender-domain routing, UID checkpoints, thread reconstruction, and attachment metadata.
 - Reviewable Scope Findings: every AI analysis becomes a finding card with classification, confidence, SOW evidence, estimated hours, estimated potential revenue, an editable client-facing draft, an internal note, and full history.
 - Professional-only billing workflow: Mark as Billable, Include in Retainer, Discuss With Client, Mark as Courtesy, Reject Finding, Mark as Invoiced, Mark as Paid, and Reopen Finding, all validated by a central transition service.
 - Approved hours and approved amounts tracked in integer cents, separate from AI-estimated potential revenue.
@@ -55,6 +58,7 @@ Local authentication includes:
 - `/app` - Internal revenue workflow dashboard (totals, attention list, recent decisions and events, revenue by project and client).
 - `/app/findings` - All scope findings across projects, with filters.
 - `/app/billing` - Append-only billing event history, summary totals, filters, and CSV export.
+- `/app/import` - Preview manual communication imports and review ingestion job outcomes.
 - `/app/projects/new` - Create a project and paste the SOW.
 - `/app/projects/[id]` - Project detail, message submission, and finding review (decisions, amounts, notes, history).
 - `/app/projects/[id]/sow` - Agreement versions, extracted sections, risk review, evidence-linked boundaries, and professional approval.
@@ -78,6 +82,11 @@ Local authentication includes:
 - `GET|POST /api/projects/[id]/sow` - Read the SOW workspace or add a pasted/uploaded agreement version.
 - `POST /api/projects/[id]/sow/analyze` - Generate a private draft risk review and boundary map.
 - `PUT /api/projects/[id]/sow/boundary` - Save or explicitly approve a reviewed boundary map.
+- `POST /api/ingestion/manual` - Preview or transactionally import normalized text, CSV, or JSON messages.
+- `GET /api/ingestion/jobs` - Read recent organization-scoped ingestion outcomes.
+- `POST /api/ingestion/webhook` - Create a signed webhook connection and return its secret once.
+- `POST /api/webhooks/[connectionId]` - Receive timestamped HMAC-verified webhook deliveries with replay protection.
+- `POST /api/ingestion/email` - Configure, test, or incrementally sync a self-hosted IMAP connection.
 - `GET /api/findings` - List all findings with client/project context.
 - `GET /api/findings/[id]` - Read one finding with its full history.
 - `PATCH /api/findings/[id]` - Update approved hours/amount (integer cents), client-facing explanation, or internal note. Requires `expected_version`; stale versions get 409.
@@ -204,7 +213,7 @@ The local JSON store is versioned with `schema_version` (currently 2). Files wri
 
 ## Security Status
 
-The app has local authentication, organization scoping, role-based authorization, secure password/session handling, same-origin mutation checks, security headers, and append-only database protections for billing events and audit logs. It is still a private-beta build: deployment hardening, encrypted integration credentials, restore drills, and external security review remain release gates before use with high-risk confidential data.
+The app has local authentication, organization scoping, role-based authorization, secure password/session handling, same-origin mutation checks, security headers, encrypted integration credentials, signed webhooks, SSRF-aware mail host validation, and append-only database protections for billing events and audit logs. It is still a private-beta build: deployment hardening, restore drills, and external security review remain release gates before use with high-risk confidential data.
 
 The older `supabase/schema.sql` is retained as historical MVP material. The active commercial schema is the versioned migration in `db/migrations` and does not require Supabase.
 
@@ -218,6 +227,7 @@ DATABASE_POOL_SIZE=10
 DATABASE_SSL=disable
 APP_URL=http://127.0.0.1:3000
 SCOPELEDGER_DOCUMENT_DIR=./data/documents
+SCOPELEDGER_MASTER_KEY=<base64-encoded-32-byte-key>
 ```
 
 Notes:
@@ -228,6 +238,7 @@ Notes:
 - The owner/user password environment variables are consumed only by administrative setup commands.
 - Ollama is the default AI provider. OpenAI is used only when explicitly selected or configured as a fallback.
 - `SCOPELEDGER_DOCUMENT_DIR` stores private source documents locally. Include it in installation backups and restrict host access.
+- Generate `SCOPELEDGER_MASTER_KEY` with `openssl rand -base64 32` before saving any integration secret. Losing this key makes stored credentials unrecoverable.
 - Do not commit `.env`, `.env.local`, API keys, private SOWs, private message exports, or local JSON data.
 
 ## How to Run Locally
@@ -315,6 +326,14 @@ Every provider response is constrained to a JSON schema and validated again with
 
 Provider, model, prompt version, attempt count, status, and a bounded internal error are saved in `analysis_jobs` for PostgreSQL-backed analyses. Raw prompts and SOW text are not written to provider diagnostics.
 
+## Communication Ingestion
+
+Manual import is available at `/app/import`. CSV and JSON rows accept `external_id`, `thread_id`, `sender`, `sender_email`, `recipients`, `timestamp`, `subject`, and `message_text`/`message`/`text`. Plain text uses a line containing `---` between messages. Previewing never writes data; importing never starts AI analysis.
+
+Webhook connections return a signing secret once. Send `X-ScopeLedger-Timestamp` (Unix seconds), `X-ScopeLedger-Delivery-Id` (unique per delivery), and `X-ScopeLedger-Signature` (`sha256=` plus the HMAC-SHA256 of `<timestamp>.<raw-body>`). Connections remain `Credentials Required` until the first valid delivery.
+
+IMAP configuration is available through the authenticated ingestion API and will be surfaced in the Integration Hub next. TLS is required by default. Private/local mail hosts require the explicit `ALLOW_PRIVATE_INTEGRATION_HOSTS=true` trust decision; insecure test servers additionally require `ALLOW_INSECURE_IMAP=true`. Credentials are encrypted and never returned after saving.
+
 ## How to Test
 
 ```bash
@@ -353,7 +372,7 @@ npm run build
 - No WhatsApp or Telegram integration.
 - No QuickBooks integration.
 - Text-based PDFs are supported. Scanned/image-only PDFs require manual paste or a separately configured local OCR workflow; ScopeLedger never claims OCR succeeded.
-- No communication-provider integrations or background ingestion workers yet.
+- Manual imports and signed webhooks are verified locally. IMAP is credential-ready and contract-tested but not verified against a real mailbox in this repository.
 - No Docker packaging, automated PostgreSQL backup restore, or production deployment guide yet.
 - Organization switching and browser-based member administration are not implemented; server administrators provision users with the documented command.
 - The security controls have not received an independent penetration test.
@@ -370,7 +389,6 @@ npm run build
 
 ## Planned Next Phase
 
-- Normalized manual/webhook/email communication ingestion with visible jobs and diagnostics.
 - Professional-only integration hub and notification mock mode.
 - Docker packaging, backup/restore drills, and private-beta operations documentation.
 

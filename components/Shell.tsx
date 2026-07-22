@@ -5,10 +5,11 @@ import {
   Calculator,
   ClipboardList,
   FileText,
+  Import,
   ListChecks,
   Receipt,
   ShieldCheck,
-  UserRound
+  UserRound,
 } from "lucide-react";
 
 export function Shell({ children }: { children: React.ReactNode }) {
@@ -17,11 +18,12 @@ export function Shell({ children }: { children: React.ReactNode }) {
     { href: "/calculator", label: "Calculator", icon: Calculator },
     { href: "/app", label: "Audit Console", icon: BarChart3 },
     { href: "/app/findings", label: "Findings", icon: ListChecks },
+    { href: "/app/import", label: "Import", icon: Import },
     { href: "/app/billing", label: "Billing", icon: Receipt },
     { href: "/admin", label: "Admin", icon: ShieldCheck },
     { href: "/sales-assets", label: "Sales Assets", icon: FileText },
     { href: "/account", label: "Account", icon: UserRound },
-    { href: "/app/settings/ai", label: "AI Status", icon: Activity }
+    { href: "/app/settings/ai", label: "AI Status", icon: Activity },
   ];
 
   return (
@@ -32,7 +34,9 @@ export function Shell({ children }: { children: React.ReactNode }) {
             <div className="text-sm font-semibold uppercase tracking-[0.16em] text-audit-muted">
               ScopeLedger
             </div>
-            <div className="text-lg font-semibold text-ink sm:text-xl">Revenue Recovery Workspace</div>
+            <div className="text-lg font-semibold text-ink sm:text-xl">
+              Revenue Recovery Workspace
+            </div>
           </Link>
           <nav className="flex flex-wrap items-center gap-2">
             {navItems.map((item) => {
@@ -51,7 +55,9 @@ export function Shell({ children }: { children: React.ReactNode }) {
           </nav>
         </div>
       </header>
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">{children}</main>
+      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        {children}
+      </main>
     </div>
   );
 }
