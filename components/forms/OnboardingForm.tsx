@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { MAX_MESSAGE_LENGTH, MAX_SOW_LENGTH } from "@/lib/limits";
 
 export function OnboardingForm({ leadId }: { leadId?: string }) {
   const router = useRouter();
@@ -30,12 +31,15 @@ export function OnboardingForm({ leadId }: { leadId?: string }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       });
-      const json = (await response.json()) as { project?: { id: string }; error?: string };
-      if (!response.ok || !json.project) {
-        throw new Error(json.error || "Failed to submit audit intake.");
+      const json = (await response.json().catch(() => null)) as {
+        ok?: boolean;
+        error?: string;
+      } | null;
+      if (!response.ok || !json?.ok) {
+        throw new Error(json?.error || "Failed to submit audit intake. Please try again.");
       }
 
-      router.push(`/app/projects/${encodeURIComponent(json.project.id)}?created=audit`);
+      router.replace("/onboarding?submitted=audit");
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : "Failed to submit audit intake.");
     } finally {
@@ -48,13 +52,16 @@ export function OnboardingForm({ leadId }: { leadId?: string }) {
       <div className="grid gap-4 sm:grid-cols-3">
         <label className="block sm:col-span-1">
           <span className="text-sm font-medium">Client name</span>
-          <input name="client_name" className="mt-2 w-full rounded-md border border-audit-border px-3 py-2" required />
+          <input name="client_name" maxLength={160} className="mt-2 w-full rounded-md border border-audit-border px-3 py-2" required />
         </label>
         <label className="block">
           <span className="text-sm font-medium">Hourly or blended rate</span>
           <input
             name="hourly_rate"
+            type="number"
             inputMode="decimal"
+            min="0.01"
+            step="0.01"
             className="mt-2 w-full rounded-md border border-audit-border px-3 py-2"
             required
           />
@@ -63,7 +70,10 @@ export function OnboardingForm({ leadId }: { leadId?: string }) {
           <span className="text-sm font-medium">Project value</span>
           <input
             name="project_value"
+            type="number"
             inputMode="decimal"
+            min="0"
+            step="0.01"
             className="mt-2 w-full rounded-md border border-audit-border px-3 py-2"
           />
         </label>
@@ -74,6 +84,7 @@ export function OnboardingForm({ leadId }: { leadId?: string }) {
         <textarea
           name="sow_text"
           rows={8}
+          maxLength={MAX_SOW_LENGTH}
           className="mt-2 w-full rounded-md border border-audit-border px-3 py-2"
           required
         />
@@ -84,6 +95,7 @@ export function OnboardingForm({ leadId }: { leadId?: string }) {
         <textarea
           name="message_export_text"
           rows={8}
+          maxLength={MAX_MESSAGE_LENGTH * 6}
           className="mt-2 w-full rounded-md border border-audit-border px-3 py-2"
           required
         />
@@ -94,11 +106,14 @@ export function OnboardingForm({ leadId }: { leadId?: string }) {
         <textarea
           name="suspected_scope_creep_notes"
           rows={4}
+          maxLength={2000}
           className="mt-2 w-full rounded-md border border-audit-border px-3 py-2"
         />
       </label>
 
-      {error ? <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div> : null}
+      <div aria-live="polite">
+        {error ? <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div> : null}
+      </div>
 
       <button
         type="submit"

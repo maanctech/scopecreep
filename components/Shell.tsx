@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   Activity,
   BarChart3,
@@ -12,10 +15,16 @@ import {
   ShieldCheck,
   Settings,
   UserRound,
+  LockKeyhole,
+  Workflow,
 } from "lucide-react";
 
 export function Shell({ children }: { children: React.ReactNode }) {
-  const navItems = [
+  const pathname = usePathname();
+  const internal = ["/app", "/admin", "/sales-assets", "/account"].some(
+    (path) => pathname === path || pathname.startsWith(`${path}/`)
+  );
+  const internalNav = [
     { href: "/request-audit", label: "Request Audit", icon: ClipboardList },
     { href: "/calculator", label: "Calculator", icon: Calculator },
     { href: "/app", label: "Audit Console", icon: BarChart3 },
@@ -29,6 +38,15 @@ export function Shell({ children }: { children: React.ReactNode }) {
     { href: "/app/settings/ai", label: "AI Status", icon: Activity },
     { href: "/app/settings/system", label: "System", icon: Settings },
   ];
+  const publicNav = [
+    { href: "/#workflow", label: "Workflow", icon: Workflow },
+    { href: "/#connections", label: "Connections", icon: Plug },
+    { href: "/#pricing", label: "Pricing", icon: Receipt },
+    { href: "/#security", label: "Security", icon: ShieldCheck },
+    { href: "/request-audit", label: "Request Audit", icon: ClipboardList },
+    { href: "/login", label: "Professional Sign In", icon: LockKeyhole },
+  ];
+  const navItems = internal ? internalNav : publicNav;
 
   return (
     <div className="min-h-screen bg-paper text-ink">
@@ -39,7 +57,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
               ScopeLedger
             </div>
             <div className="text-lg font-semibold text-ink sm:text-xl">
-              Revenue Recovery Workspace
+              {internal ? "Revenue Recovery Workspace" : "Private Beta Revenue Control"}
             </div>
           </Link>
           <nav className="flex flex-wrap items-center gap-2">

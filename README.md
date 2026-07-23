@@ -56,6 +56,7 @@ Local authentication includes:
 - `/calculator` - ROI calculator.
 - `/request-audit` - Free audit lead capture form.
 - `/onboarding` - Manual client onboarding flow for pasted audit materials.
+- `/privacy` - Public private-beta data handling and operator-responsibility overview.
 - `/app` - Internal revenue workflow dashboard (totals, attention list, recent decisions and events, revenue by project and client).
 - `/app/findings` - All scope findings across projects, with filters.
 - `/app/billing` - Append-only billing event history, summary totals, filters, and CSV export.
@@ -388,7 +389,7 @@ npm run build
 - No automatic emails.
 - No billing or invoicing automation.
 - No Stripe.
-- No Slack integration.
+- No live-verified Slack connection in this repository. The private-beta adapter requires a customer-created Slack app and workspace approval.
 - No WhatsApp or Telegram integration.
 - No QuickBooks integration.
 - Text-based PDFs are supported. Scanned/image-only PDFs require manual paste or a separately configured local OCR workflow; ScopeLedger never claims OCR succeeded.
@@ -398,7 +399,13 @@ npm run build
 - The security controls have not received an independent penetration test.
 - AI output must be reviewed by a human before any client billing decision.
 
-Operational guides: [Self-Hosted Installation](docs/installation.md), [Ollama Setup](docs/ollama-setup.md), [Backup and Restore](docs/backup-and-restore.md), [Diagnostics](docs/diagnostics.md), [Security Model](docs/security-model.md), and [Integration Setup](docs/integration-setup.md).
+## Documentation
+
+- Product and evidence: [Architecture](docs/architecture.md), [Status Matrix](docs/status-matrix.md), [User Guide](docs/user-guide.md), and [Known Limitations](docs/KNOWN_LIMITATIONS.md).
+- Installation and AI: [Self-Hosted Installation](docs/installation.md), [Ollama Setup](docs/ollama-setup.md), [Model Selection](docs/model-selection.md), [Migration Guide](docs/migration-guide.md), and [Troubleshooting](docs/troubleshooting.md).
+- Connections: [Integration Setup](docs/integration-setup.md), [Slack](docs/slack-setup.md), [Google Gmail](docs/google-setup.md), [Microsoft 365](docs/microsoft-setup.md), [IMAP](docs/imap-setup.md), and [Signed Webhook](docs/webhook-setup.md).
+- Security and operations: [Security Model](docs/security-model.md), [Privacy Model](docs/privacy-model.md), [Administrator Guide](docs/admin-guide.md), [Backup and Restore](docs/backup-and-restore.md), and [Diagnostics](docs/diagnostics.md).
+- Release and commercial use: [Release Gates](docs/RELEASE_GATES.md), [Release Checklist](docs/release-checklist.md), [Change Log](docs/changelog.md), and [Private-Beta Sales Guide](docs/private-beta-sales-guide.md).
 
 ## Product Decisions
 
@@ -412,7 +419,8 @@ Operational guides: [Self-Hosted Installation](docs/installation.md), [Ollama Se
 ## Planned Next Phase
 
 - A real containerized backup/restore drill on a host with Docker installed.
-- Professional-only email notification mock mode and private-beta release documentation.
+- A real Ollama structured-analysis fixture on representative release hardware.
+- Professional-only email notification mock mode after the private-beta release gates are closed.
 
 ## Cursor/Fable Handoff
 

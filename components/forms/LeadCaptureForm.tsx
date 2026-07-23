@@ -36,9 +36,12 @@ export function LeadCaptureForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       });
-      const json = (await response.json()) as { lead?: { id: string }; error?: string };
-      if (!response.ok || !json.lead) {
-        throw new Error(json.error || "Failed to submit audit request.");
+      const json = (await response.json().catch(() => null)) as {
+        lead?: { id: string };
+        error?: string;
+      } | null;
+      if (!response.ok || !json?.lead) {
+        throw new Error(json?.error || "Failed to submit audit request. Please try again.");
       }
 
       router.push(`/onboarding?leadId=${encodeURIComponent(json.lead.id)}&submitted=lead`);
@@ -54,24 +57,26 @@ export function LeadCaptureForm() {
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="block">
           <span className="text-sm font-medium">Name</span>
-          <input name="name" className="mt-2 w-full rounded-md border border-audit-border px-3 py-2" required />
+          <input name="name" autoComplete="name" maxLength={120} className="mt-2 w-full rounded-md border border-audit-border px-3 py-2" required />
         </label>
         <label className="block">
           <span className="text-sm font-medium">Email</span>
           <input
             name="email"
             type="email"
+            autoComplete="email"
+            maxLength={200}
             className="mt-2 w-full rounded-md border border-audit-border px-3 py-2"
             required
           />
         </label>
         <label className="block">
           <span className="text-sm font-medium">Company</span>
-          <input name="company" className="mt-2 w-full rounded-md border border-audit-border px-3 py-2" required />
+          <input name="company" autoComplete="organization" maxLength={160} className="mt-2 w-full rounded-md border border-audit-border px-3 py-2" required />
         </label>
         <label className="block">
           <span className="text-sm font-medium">Website</span>
-          <input name="website" className="mt-2 w-full rounded-md border border-audit-border px-3 py-2" />
+          <input name="website" type="url" autoComplete="url" maxLength={240} placeholder="https://" className="mt-2 w-full rounded-md border border-audit-border px-3 py-2" />
         </label>
         <label className="block">
           <span className="text-sm font-medium">Type of business</span>
@@ -93,7 +98,10 @@ export function LeadCaptureForm() {
           <span className="text-sm font-medium">Average project value</span>
           <input
             name="average_project_value"
+            type="number"
             inputMode="decimal"
+            min="0"
+            step="0.01"
             className="mt-2 w-full rounded-md border border-audit-border px-3 py-2"
             placeholder="45000"
           />
@@ -102,7 +110,10 @@ export function LeadCaptureForm() {
           <span className="text-sm font-medium">Hourly or blended rate</span>
           <input
             name="hourly_rate"
+            type="number"
             inputMode="decimal"
+            min="0.01"
+            step="0.01"
             className="mt-2 w-full rounded-md border border-audit-border px-3 py-2"
             placeholder="150"
           />
@@ -114,6 +125,7 @@ export function LeadCaptureForm() {
         <textarea
           name="pain_point"
           rows={5}
+          maxLength={2000}
           className="mt-2 w-full rounded-md border border-audit-border px-3 py-2"
           required
         />
@@ -124,7 +136,9 @@ export function LeadCaptureForm() {
         <span>I agree to be contacted about the free scope creep revenue leakage audit.</span>
       </label>
 
-      {error ? <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div> : null}
+      <div aria-live="polite">
+        {error ? <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div> : null}
+      </div>
 
       <button
         type="submit"

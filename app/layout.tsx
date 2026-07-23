@@ -3,9 +3,9 @@ import "./globals.css";
 import { Shell } from "@/components/Shell";
 
 export const metadata: Metadata = {
-  title: "Scope Creep Revenue Recovery",
+  title: "ScopeLedger | Scope Creep Revenue Recovery",
   description:
-    "Business MVP for detecting unbilled out-of-scope work and producing revenue leakage audits."
+    "Professional-controlled revenue audits that detect out-of-scope client requests before they become free work."
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -8,12 +8,29 @@ import { assertSameOrigin, checkRateLimit } from "@/lib/auth/security";
 export const runtime = "nodejs";
 
 const blankToUndefined = (value: unknown) => (value === "" || value == null ? undefined : value);
+const isHttpWebsite = (value: string) => {
+  try {
+    const protocol = new URL(value).protocol;
+    return protocol === "http:" || protocol === "https:";
+  } catch {
+    return false;
+  }
+};
 
 const leadSchema = z.object({
   name: z.string().trim().min(2, "Name is required.").max(120),
   email: z.string().trim().email("A valid email is required.").max(200),
   company: z.string().trim().min(2, "Company is required.").max(160),
-  website: z.string().trim().max(240).optional().nullable(),
+  website: z.preprocess(
+    blankToUndefined,
+    z
+      .string()
+      .trim()
+      .url("Website must be a valid URL.")
+      .max(240)
+      .refine(isHttpWebsite, "Website must start with http:// or https://.")
+      .optional()
+  ),
   business_type: z.string().trim().min(2, "Business type is required.").max(80),
   team_size: z.string().trim().min(1, "Team size is required.").max(80),
   average_project_value: z.preprocess(
@@ -51,7 +68,7 @@ export async function POST(request: Request) {
       hourly_rate: body.hourly_rate ?? null
     });
 
-    return NextResponse.json({ lead }, { status: 201 });
+    return NextResponse.json({ lead: { id: lead.id } }, { status: 201 });
   } catch (error) {
     const authResponse = authErrorResponse(error);
     if (authResponse) return authResponse;

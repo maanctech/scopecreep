@@ -31,6 +31,7 @@ import type { AppDashboard } from "@/lib/store";
 import type { AnalysisMetadata } from "@/lib/ai/types";
 import { splitSowSections } from "@/lib/sow/extraction";
 import { generateFindingsCsv, generateReportDocument } from "@/lib/reports/generator";
+import { requireSinglePublicOrganization } from "@/lib/publicIntake";
 
 type Context = { organizationId: string; userId: string; actor: string };
 type DbRow = Record<string, unknown>;
@@ -67,10 +68,9 @@ async function publicOrganizationId() {
     `SELECT o.id FROM organizations o
      JOIN organization_settings s ON s.organization_id = o.id
      WHERE COALESCE((s.settings->>'publicLeadCapture')::boolean, false) = true
-     ORDER BY o.created_at LIMIT 1`
+     ORDER BY o.created_at LIMIT 2`
   );
-  if (!result.rows[0]) throw new Error("Public audit intake is not configured.");
-  return result.rows[0].id;
+  return requireSinglePublicOrganization(result.rows);
 }
 
 function mapCompany(row: DbRow): Company {
@@ -428,16 +428,17 @@ export async function createAuditRequest(input: {
   lead_id?: string | null; client_name: string; project_value?: number | null; hourly_rate: number;
   sow_text: string; message_export_text: string; suspected_scope_creep_notes?: string | null;
 }) {
+  const publicOrganization = await publicOrganizationId();
   return transaction(async (client) => {
-    let organizationId: string;
+    const organizationId = publicOrganization;
     let lead: DbRow | null = null;
     if (input.lead_id) {
-      const found = await client.query<DbRow>("SELECT * FROM leads WHERE id = $1", [input.lead_id]);
+      const found = await client.query<DbRow>(
+        "SELECT * FROM leads WHERE id = $1 AND organization_id = $2",
+        [input.lead_id, organizationId]
+      );
       lead = found.rows[0] ?? null;
-      if (!lead) throw new Error("Lead not found.");
-      organizationId = String(lead.organization_id);
-    } else {
-      organizationId = await publicOrganizationId();
+      if (!lead) throw new NotFoundError("Audit link is invalid or expired.");
     }
     const companyId = lead?.company_id
       ? String(lead.company_id)

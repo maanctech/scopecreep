@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { MAX_HOURLY_RATE, MAX_MESSAGE_LENGTH, MAX_SOW_LENGTH } from "@/lib/limits";
 import { createAuditRequest } from "@/lib/store";
+import { NotFoundError } from "@/lib/storeErrors";
 import { authErrorResponse, requestIp } from "@/lib/auth/api";
 import { assertSameOrigin, checkRateLimit } from "@/lib/auth/security";
 
@@ -10,7 +11,7 @@ export const runtime = "nodejs";
 const blankToUndefined = (value: unknown) => (value === "" || value == null ? undefined : value);
 
 const auditRequestSchema = z.object({
-  lead_id: z.string().trim().optional().nullable(),
+  lead_id: z.string().trim().uuid("Audit link is invalid.").optional().nullable(),
   client_name: z.string().trim().min(2, "Client name is required.").max(160),
   project_value: z.preprocess(
     blankToUndefined,
@@ -50,23 +51,26 @@ export async function POST(request: Request) {
     }
 
     const body = auditRequestSchema.parse(json);
-    const result = await createAuditRequest({
+    await createAuditRequest({
       ...body,
       lead_id: body.lead_id || null,
       project_value: body.project_value ?? null,
       suspected_scope_creep_notes: body.suspected_scope_creep_notes || null
     });
 
-    return NextResponse.json(result, { status: 201 });
+    return NextResponse.json({ ok: true }, { status: 201 });
   } catch (error) {
     const authResponse = authErrorResponse(error);
     if (authResponse) return authResponse;
-    const status = error instanceof z.ZodError ? 400 : 500;
+    const expectedError = error instanceof z.ZodError || error instanceof NotFoundError;
+    const status = expectedError ? 400 : 500;
     return NextResponse.json(
       {
         error:
           error instanceof z.ZodError
             ? validationMessage(error)
+            : error instanceof NotFoundError
+              ? error.message
             : "Failed to save audit request. Please try again."
       },
       { status }

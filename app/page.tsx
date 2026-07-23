@@ -1,252 +1,224 @@
+import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, Calculator, FileSearch, Landmark, Scale, ShieldCheck } from "lucide-react";
+import {
+  ArrowRight,
+  Calculator,
+  CheckCircle2,
+  FileSearch,
+  HardDrive,
+  Landmark,
+  LockKeyhole,
+  Scale,
+  ShieldCheck,
+  XCircle
+} from "lucide-react";
 import { RoiCalculator } from "@/components/marketing/RoiCalculator";
 
 const useCases = [
-  {
-    title: "Agencies",
-    copy: "Catch unpaid pages, campaign asks, copywriting, revision rounds, and post-launch support before PMs absorb the work."
-  },
-  {
-    title: "Software shops",
-    copy: "Flag portals, dashboards, integrations, data exports, and engineering requests that were not in the build scope."
-  },
-  {
-    title: "Consultancies",
-    copy: "Separate included advisory work from new strategy, research, implementation, and stakeholder-management requests."
-  },
-  {
-    title: "Law firms",
-    copy: "Review client requests against engagement terms so additional drafting, review, and advisory work is documented."
-  }
+  ["Agencies", "Pages, revisions, copy, campaign asks, integrations, and post-launch support."],
+  ["Software shops", "Portals, dashboards, exports, integrations, and engineering requests outside the build scope."],
+  ["Consultancies", "New strategy, research, implementation, workshops, and stakeholder-management requests."],
+  ["Law firms", "Additional drafting, review, advisory work, and matter requests against engagement terms."]
+];
+
+const connections = [
+  ["Text, CSV, and JSON import", "Available", "Previewed, validated, deduplicated, and locally verified."],
+  ["Signed inbound webhook", "Available", "HMAC verification and replay protection are locally verified."],
+  ["Self-hosted IMAP", "Bring Your Own Credentials", "Implemented and contract-tested; mailbox verification depends on customer credentials."],
+  ["Slack, Gmail, Microsoft 365", "Private Beta", "Adapters are contract-tested; customer-owned provider apps and live approval are required."],
+  ["Call and meeting summaries", "Available", "Paste or import transcript summaries; no meeting bot joins calls."]
 ];
 
 const faqs = [
-  {
-    question: "Is this a chatbot?",
-    answer:
-      "No. The product is a forensic review workflow. It compares client requests against the SOW, records evidence, estimates leakage, and drafts client-facing change-order language for human approval."
-  },
-  {
-    question: "Do you send invoices or change orders automatically?",
-    answer:
-      "No. Version 1 creates evidence and drafts. A project manager or founder approves every client communication."
-  },
-  {
-    question: "What do you need for a free audit?",
-    answer:
-      "One SOW, pasted message exports or summaries, hourly or blended rate, project value, and notes on where the team suspects scope drift."
-  },
-  {
-    question: "How is recovered revenue estimated?",
-    answer:
-      "The audit estimates extra hours and multiplies by the supplied rate. The output is a review queue, not a final invoice."
-  }
+  ["Is ScopeLedger a chatbot?", "No. It is an internal evidence and revenue-control workflow. Requests are compared with the approved SOW and become reviewable findings."],
+  ["Does it contact clients or send invoices?", "No. ScopeLedger never sends a client message, change order, invoice, payment request, or notification automatically."],
+  ["Where does analysis run?", "Ollama is the default provider and can run on the firm's Mac, workstation, or protected LAN server. OpenAI is optional and only used when explicitly configured."],
+  ["What is needed for a free audit?", "One SOW, representative message exports or summaries, the hourly or blended rate, project value, and notes on suspected scope drift."],
+  ["Is estimated leakage an approved charge?", "No. AI estimates remain separate from professional-approved hours and amounts. Every billing decision requires human review."],
+  ["What is actually live today?", "Manual imports and signed webhooks are locally verified. IMAP and provider connectors require customer credentials; Slack, Google, and Microsoft are not represented as live without them."]
 ];
 
 export default function MarketingPage() {
   return (
-    <div className="space-y-16">
-      <section className="grid gap-8 border-b border-audit-border pb-12 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
-        <div>
-          <div className="inline-flex items-center gap-2 rounded-md border border-audit-border px-3 py-2 text-sm text-audit-muted">
-            <ShieldCheck className="h-4 w-4" aria-hidden="true" />
-            Financial audit workflow for client delivery teams
-          </div>
-          <h1 className="mt-6 max-w-4xl text-4xl font-semibold leading-tight tracking-normal text-ink sm:text-5xl">
-            Recover unbilled revenue before scope creep becomes free work.
-          </h1>
-          <p className="mt-5 max-w-2xl text-lg leading-8 text-zinc-700">
-            We help service businesses recover unbilled revenue by detecting out-of-scope
-            client requests before they become free work.
-          </p>
-          <div className="mt-8 flex flex-wrap gap-3">
-            <Link
-              href="/request-audit"
-              className="inline-flex h-11 items-center gap-2 rounded-md bg-ink px-5 text-sm font-semibold text-white hover:bg-zinc-800"
-            >
-              Request a free revenue leakage audit
-              <ArrowRight className="h-4 w-4" aria-hidden="true" />
-            </Link>
-            <Link
-              href="/app"
-              className="inline-flex h-11 items-center rounded-md border border-audit-border px-5 text-sm font-semibold hover:bg-audit-soft"
-            >
-              Open audit console
-            </Link>
-          </div>
+    <div className="space-y-20">
+      <section className="border-b border-audit-border pb-10">
+        <div className="flex flex-wrap items-center gap-3 text-sm text-audit-muted">
+          <span className="rounded-md border border-audit-border px-3 py-2 font-semibold text-ink">Private beta applications</span>
+          <span>Self-hosted</span>
+          <span aria-hidden="true">/</span>
+          <span>Professional-only</span>
+          <span aria-hidden="true">/</span>
+          <span>Ollama-first</span>
         </div>
-
-        <div className="rounded-md border border-audit-border bg-white p-5 shadow-audit">
-          <div className="flex items-center justify-between border-b border-audit-border pb-3">
-            <div>
-              <div className="text-xs uppercase tracking-[0.14em] text-audit-muted">Audit finding</div>
-              <div className="mt-1 font-semibold">ApertureOps B2B SaaS website redesign</div>
-            </div>
-            <div className="rounded-md border border-audit-border px-3 py-1 text-sm font-semibold">$13,475</div>
-          </div>
-          <div className="mt-4 space-y-3">
-            {[
-              ["Out of Scope", "Interactive ROI calculator", "$4,900"],
-              ["Out of Scope", "SEO articles and comparison page", "$2,100"],
-              ["Out of Scope", "HubSpot workflow and Slack alert", "$1,750"],
-              ["Needs Review", "Security page placement", "$525"]
-            ].map(([status, request, value]) => (
-              <div key={request} className="grid grid-cols-[110px_1fr_auto] gap-3 rounded-md border border-audit-border p-3 text-sm">
-                <span className="font-medium">{status}</span>
-                <span className="text-zinc-700">{request}</span>
-                <strong>{value}</strong>
-              </div>
-            ))}
-          </div>
-          <div className="mt-4 rounded-md bg-audit-soft p-4 text-sm leading-6 text-zinc-700">
-            SOW evidence: "Excluded scope includes interactive calculators, SEO content,
-            CRM workflows, Slack alerts, localization, and customer login portals."
-          </div>
+        <h1 className="mt-6 max-w-5xl text-4xl font-semibold leading-tight text-ink sm:text-5xl">
+          ScopeLedger revenue recovery audits
+        </h1>
+        <p className="mt-5 max-w-3xl text-lg leading-8 text-zinc-700">
+          We help service businesses recover unbilled revenue by detecting out-of-scope client
+          requests before they become free work.
+        </p>
+        <div className="mt-8 flex flex-wrap gap-3">
+          <Link href="/request-audit" className="inline-flex h-11 items-center gap-2 rounded-md bg-ink px-5 text-sm font-semibold text-white hover:bg-zinc-800">
+            Request a free leakage audit <ArrowRight className="h-4 w-4" aria-hidden="true" />
+          </Link>
+          <Link href="#installation" className="inline-flex h-11 items-center rounded-md border border-audit-border px-5 text-sm font-semibold hover:bg-audit-soft">
+            Review setup requirements
+          </Link>
         </div>
+        <div className="mt-7 flex flex-wrap gap-x-7 gap-y-2 text-sm text-zinc-700">
+          <span className="inline-flex items-center gap-2"><HardDrive className="h-4 w-4" aria-hidden="true" /> Local-model option</span>
+          <span className="inline-flex items-center gap-2"><ShieldCheck className="h-4 w-4" aria-hidden="true" /> Human approval required</span>
+          <span className="inline-flex items-center gap-2"><XCircle className="h-4 w-4" aria-hidden="true" /> No automated billing</span>
+        </div>
+        <figure className="mt-9 overflow-hidden rounded-md border border-audit-border bg-audit-soft shadow-audit">
+          <Image
+            src="/images/scopeledger-demo-dashboard.jpg"
+            alt="ScopeLedger fictional Northstar Digital Studio revenue dashboard showing 13,475 dollars in potential leakage"
+            width={1280}
+            height={720}
+            priority
+            className="max-h-[420px] w-full object-cover object-top"
+          />
+          <figcaption className="border-t border-audit-border px-4 py-3 text-xs text-audit-muted">
+            Fictional Northstar Digital Studio / ApertureOps demonstration data. Values are AI estimates until a professional approves them.
+          </figcaption>
+        </figure>
       </section>
 
-      <section className="grid gap-6 lg:grid-cols-3">
+      <section className="grid gap-8 lg:grid-cols-[0.8fr_1.2fr]">
         <div>
-          <h2 className="text-2xl font-semibold">Scope creep is a margin leak.</h2>
-          <p className="mt-3 text-sm leading-6 text-zinc-700">
-            The problem usually starts as a harmless request. The cost appears later in
-            delivery capacity, missed change orders, and client expectations.
-          </p>
+          <p className="text-sm font-semibold text-audit-muted">The margin problem</p>
+          <h2 className="mt-2 text-3xl font-semibold">Scope creep rarely arrives as a change request.</h2>
         </div>
-        {[
-          "Requests are scattered across Slack, email, calls, and project tools.",
-          "PMs avoid awkward change-order conversations without clear evidence.",
-          "SOW terms are reviewed too late, after the work is already done."
-        ].map((item) => (
-          <div key={item} className="rounded-md border border-audit-border bg-white p-5 shadow-audit">
-            <p className="text-sm leading-6 text-zinc-700">{item}</p>
-          </div>
-        ))}
-      </section>
-
-      <section className="space-y-6">
-        <div className="max-w-2xl">
-          <h2 className="text-2xl font-semibold">How the audit works</h2>
-          <p className="mt-3 text-sm leading-6 text-zinc-700">
-            A practical review loop for service firms that need evidence, not another
-            messaging surface.
-          </p>
-        </div>
-        <div className="grid gap-4 md:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-3">
           {[
-            ["1", "Paste the SOW", "Start with the contractual source of truth."],
-            ["2", "Paste requests", "Bring in Slack, email, Zoom, Asana, Jira, or notes."],
-            ["3", "Classify scope", "Every request gets evidence, confidence, hours, and revenue."],
-            ["4", "Approve action", "Use the report and drafts to recover or prevent leakage."]
+            "Requests are scattered across email, messages, calls, and project tools.",
+            "Project managers lack evidence for an awkward scope conversation.",
+            "The SOW is reviewed after delivery capacity and margin are already gone."
+          ].map((item) => <p key={item} className="border-l-2 border-ink pl-4 text-sm leading-6 text-zinc-700">{item}</p>)}
+        </div>
+      </section>
+
+      <section id="workflow" className="scroll-mt-28 border-y border-audit-border py-12">
+        <div className="max-w-3xl">
+          <p className="text-sm font-semibold text-audit-muted">Professional-controlled workflow</p>
+          <h2 className="mt-2 text-3xl font-semibold">Evidence first. Billing decision second.</h2>
+        </div>
+        <ol className="mt-8 grid gap-4 md:grid-cols-4">
+          {[
+            ["1", "Approve the SOW", "Version the agreement and approve a scope boundary map."],
+            ["2", "Bring in requests", "Preview imports or use a verified private connection. Nothing analyzes automatically."],
+            ["3", "Review findings", "Inspect classification, SOW evidence, effort, leakage estimate, and draft language."],
+            ["4", "Choose the action", "Approve, discuss, retain, absorb, reject, invoice, or close through a recorded workflow."]
           ].map(([step, title, copy]) => (
-            <div key={step} className="rounded-md border border-audit-border bg-white p-5 shadow-audit">
-              <div className="text-sm font-semibold text-audit-muted">{step}</div>
+            <li key={step} className="rounded-md border border-audit-border bg-white p-5 shadow-audit">
+              <div className="text-sm font-semibold text-audit-muted">Step {step}</div>
               <h3 className="mt-3 font-semibold">{title}</h3>
               <p className="mt-2 text-sm leading-6 text-zinc-700">{copy}</p>
-            </div>
+            </li>
           ))}
+        </ol>
+      </section>
+
+      <section className="grid gap-8 lg:grid-cols-[0.85fr_1.15fr] lg:items-start">
+        <div>
+          <div className="flex items-center gap-2"><FileSearch className="h-5 w-5" aria-hidden="true" /><h2 className="text-3xl font-semibold">Example detection</h2></div>
+          <p className="mt-4 text-base leading-7 text-zinc-700">
+            A request can sound small while introducing design, logic, validation, QA, and another review cycle.
+          </p>
+        </div>
+        <dl className="divide-y divide-audit-border border-y border-audit-border text-sm">
+          <div className="grid gap-2 py-4 sm:grid-cols-[150px_1fr]"><dt className="font-semibold">Client request</dt><dd className="text-zinc-700">“This may be quick: can we add an interactive ROI calculator to the Pricing page?”</dd></div>
+          <div className="grid gap-2 py-4 sm:grid-cols-[150px_1fr]"><dt className="font-semibold">SOW evidence</dt><dd className="text-zinc-700">Interactive calculators and pricing estimators are explicitly excluded.</dd></div>
+          <div className="grid gap-2 py-4 sm:grid-cols-[150px_1fr]"><dt className="font-semibold">Audit estimate</dt><dd className="text-zinc-700">Out of Scope, 28 hours at $175/hour, or $4,900 potential leakage.</dd></div>
+          <div className="grid gap-2 py-4 sm:grid-cols-[150px_1fr]"><dt className="font-semibold">Next action</dt><dd className="text-zinc-700">Professional review and a clearly labeled draft change order. Nothing is sent automatically.</dd></div>
+        </dl>
+      </section>
+
+      <section id="connections" className="scroll-mt-28">
+        <p className="text-sm font-semibold text-audit-muted">Connection status</p>
+        <h2 className="mt-2 text-3xl font-semibold">No integration theater.</h2>
+        <p className="mt-3 max-w-3xl text-sm leading-6 text-zinc-700">
+          ScopeLedger calls a connection live only after a real provider test. Credential-dependent adapters remain labeled honestly until the customer supplies and verifies access.
+        </p>
+        <div className="mt-6 overflow-x-auto rounded-md border border-audit-border">
+          <table className="min-w-full text-left text-sm">
+            <thead className="bg-audit-soft"><tr><th className="p-3">Source</th><th className="p-3">Status</th><th className="p-3">What that means</th></tr></thead>
+            <tbody className="divide-y divide-audit-border">
+              {connections.map(([source, status, detail]) => <tr key={source}><td className="p-3 font-semibold">{source}</td><td className="whitespace-nowrap p-3">{status}</td><td className="p-3 text-zinc-700">{detail}</td></tr>)}
+            </tbody>
+          </table>
         </div>
       </section>
 
-      <section id="calculator" className="rounded-md border border-audit-border bg-audit-soft p-6">
-        <div className="mb-6 flex items-center gap-2">
-          <Calculator className="h-5 w-5" aria-hidden="true" />
-          <h2 className="text-2xl font-semibold">ROI calculator</h2>
+      <section id="security" className="scroll-mt-28 grid gap-8 border-y border-audit-border py-12 lg:grid-cols-2">
+        <div>
+          <div className="flex items-center gap-2"><LockKeyhole className="h-5 w-5" aria-hidden="true" /><h2 className="text-3xl font-semibold">Private by deployment, controlled by workflow.</h2></div>
+          <p className="mt-4 text-sm leading-6 text-zinc-700">
+            PostgreSQL, SOW originals, reports, and encrypted connector credentials stay inside the self-hosted installation. Ollama is the default analysis provider, so no per-analysis cloud API is required.
+          </p>
+          <p className="mt-3 text-sm leading-6 text-zinc-700">
+            OpenAI remains an explicit optional provider. Independent penetration testing, legal review, and live third-party connector approval are not claimed in the private beta.
+          </p>
+          <Link href="/privacy" className="mt-4 inline-flex text-sm font-semibold underline underline-offset-4">
+            Read the private-beta privacy model
+          </Link>
         </div>
+        <div>
+          <h3 className="font-semibold">ScopeLedger does not</h3>
+          <ul className="mt-4 grid gap-3 text-sm text-zinc-700 sm:grid-cols-2">
+            {["create client accounts", "send client notifications", "approve its own findings", "change an invoice", "charge a payment method", "pull an AI model automatically"].map((item) => <li key={item} className="flex gap-2"><XCircle className="mt-0.5 h-4 w-4 shrink-0 text-zinc-500" aria-hidden="true" />{item}</li>)}
+          </ul>
+        </div>
+      </section>
+
+      <section id="calculator" className="scroll-mt-28">
+        <div className="mb-6 flex items-center gap-2"><Calculator className="h-5 w-5" aria-hidden="true" /><h2 className="text-3xl font-semibold">Estimate the leakage</h2></div>
         <RoiCalculator />
       </section>
 
-      <section className="space-y-6">
-        <h2 className="text-2xl font-semibold">Built for high-ticket service delivery</h2>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {useCases.map((item) => (
-            <div key={item.title} className="rounded-md border border-audit-border bg-white p-5 shadow-audit">
-              <h3 className="font-semibold">{item.title}</h3>
-              <p className="mt-3 text-sm leading-6 text-zinc-700">{item.copy}</p>
-            </div>
-          ))}
+      <section>
+        <h2 className="text-3xl font-semibold">Built for high-ticket service delivery</h2>
+        <div className="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {useCases.map(([title, copy]) => <article key={title} className="rounded-md border border-audit-border bg-white p-5 shadow-audit"><h3 className="font-semibold">{title}</h3><p className="mt-3 text-sm leading-6 text-zinc-700">{copy}</p></article>)}
         </div>
       </section>
 
-      <section className="grid gap-6 lg:grid-cols-2">
-        <div className="rounded-md border border-audit-border bg-white p-6 shadow-audit">
-          <div className="mb-4 flex items-center gap-2">
-            <FileSearch className="h-5 w-5" aria-hidden="true" />
-            <h2 className="text-2xl font-semibold">Example detection</h2>
-          </div>
-          <div className="space-y-4 text-sm leading-6 text-zinc-700">
-            <p>
-              Client request: "This may be quick: can we add an interactive ROI
-              calculator to the Pricing page so prospects can estimate savings before
-              they book a demo?"
-            </p>
-            <p>
-              Audit result: Out of Scope. The SOW excludes interactive calculators
-              and pricing estimators. Estimated opportunity: 28 hours at $175/hour,
-              or $4,900.
-            </p>
-            <p>
-              Draft: "We can add the ROI calculator as a separate scope item. It
-              requires custom UX, calculation logic, validation, and QA, so we estimate
-              28 additional hours pending approval."
-            </p>
-          </div>
+      <section id="pricing" className="scroll-mt-28">
+        <p className="text-sm font-semibold text-audit-muted">Private-beta pricing</p>
+        <h2 className="mt-2 text-3xl font-semibold">Start with evidence, then choose the operating model.</h2>
+        <div className="mt-7 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {[
+            ["Free lookback audit", "One representative project", "Find and validate missed billing opportunities before discussing a paid engagement."],
+            ["$1,500 setup + $750/month", "Monitoring pilot", "Weekly request review, monthly leakage reporting, and professional-approved draft support."],
+            ["10-20% of validated recovery", "Performance option", "Available when recovered revenue can be verified and commercial terms are agreed in writing."],
+            ["Custom enterprise", "Multiple delivery units", "Scope, support, deployment, and connector validation priced for the installation."]
+          ].map(([title, label, copy]) => <article key={title} className="rounded-md border border-audit-border bg-white p-5 shadow-audit"><div className="text-xs font-semibold uppercase text-audit-muted">{label}</div><h3 className="mt-2 text-lg font-semibold">{title}</h3><p className="mt-3 text-sm leading-6 text-zinc-700">{copy}</p></article>)}
         </div>
-
-        <div className="rounded-md border border-audit-border bg-white p-6 shadow-audit">
-          <h2 className="text-2xl font-semibold">Pricing model</h2>
-          <div className="mt-5 grid gap-3 text-sm">
-            <div className="rounded-md border border-audit-border p-4">
-              <strong>Free lookback audit</strong>
-              <p className="mt-2 text-zinc-700">Review one project and identify missed billing opportunities.</p>
-            </div>
-            <div className="rounded-md border border-audit-border p-4">
-              <strong>$1,500 setup + $750/month monitoring</strong>
-              <p className="mt-2 text-zinc-700">Weekly request review, monthly leakage report, and change-order drafts.</p>
-            </div>
-            <div className="rounded-md border border-audit-border p-4">
-              <strong>10-20% of validated recovered revenue</strong>
-              <p className="mt-2 text-zinc-700">Performance option when validated recovery is the preferred model.</p>
-            </div>
-            <div className="rounded-md border border-audit-border p-4">
-              <strong>Custom enterprise</strong>
-              <p className="mt-2 text-zinc-700">For larger firms with multiple teams, practices, or delivery units.</p>
-            </div>
-          </div>
-        </div>
+        <p className="mt-4 text-sm text-zinc-600">The customer supplies local hardware, Docker, Ollama capacity, and third-party credentials. Ollama mode has no per-analysis cloud API fee; hardware and operator costs still apply.</p>
       </section>
 
-      <section className="grid gap-4 lg:grid-cols-2">
-        <div className="flex items-center gap-2">
-          <Scale className="h-5 w-5" aria-hidden="true" />
-          <h2 className="text-2xl font-semibold">FAQ</h2>
+      <section id="installation" className="scroll-mt-28 grid gap-8 border-y border-audit-border py-12 lg:grid-cols-[0.8fr_1.2fr]">
+        <div>
+          <div className="flex items-center gap-2"><Landmark className="h-5 w-5" aria-hidden="true" /><h2 className="text-3xl font-semibold">Installation overview</h2></div>
+          <p className="mt-4 text-sm leading-6 text-zinc-700">The private-beta deployment is designed to be self-hosted and is currently optimized for a Mac-first installation.</p>
         </div>
+        <ul className="grid gap-3 text-sm text-zinc-700 sm:grid-cols-2">
+          {["Docker Desktop or compatible Docker Engine", "Private PostgreSQL and document volumes", "Ollama on the host or a protected LAN machine", "Generated database password and encryption key", "Loopback access by default; HTTPS required beyond it", "Customer-owned credentials for provider integrations"].map((item) => <li key={item} className="flex gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700" aria-hidden="true" />{item}</li>)}
+        </ul>
+      </section>
+
+      <section className="grid gap-6 lg:grid-cols-[0.7fr_1.3fr]">
+        <div className="flex items-center gap-2"><Scale className="h-5 w-5" aria-hidden="true" /><h2 className="text-3xl font-semibold">FAQ</h2></div>
         <div className="space-y-3">
-          {faqs.map((faq) => (
-            <details key={faq.question} className="rounded-md border border-audit-border bg-white p-4 shadow-audit">
-              <summary className="cursor-pointer font-semibold">{faq.question}</summary>
-              <p className="mt-3 text-sm leading-6 text-zinc-700">{faq.answer}</p>
-            </details>
-          ))}
+          {faqs.map(([question, answer]) => <details key={question} className="rounded-md border border-audit-border bg-white p-4 shadow-audit"><summary className="cursor-pointer font-semibold">{question}</summary><p className="mt-3 text-sm leading-6 text-zinc-700">{answer}</p></details>)}
         </div>
       </section>
 
-      <section className="rounded-md border border-audit-border bg-ink p-8 text-white">
-        <div className="grid gap-6 lg:grid-cols-[1fr_auto] lg:items-center">
-          <div>
-            <div className="flex items-center gap-2 text-sm text-zinc-300">
-              <Landmark className="h-4 w-4" aria-hidden="true" />
-              Free lookback audit
-            </div>
-            <h2 className="mt-3 text-3xl font-semibold">Find the revenue already hiding in client requests.</h2>
-          </div>
-          <Link
-            href="/request-audit"
-            className="inline-flex h-11 items-center justify-center rounded-md bg-white px-5 text-sm font-semibold text-ink hover:bg-zinc-100"
-          >
-            Request audit
-          </Link>
+      <section className="bg-ink px-6 py-10 text-white sm:px-8">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+          <div><p className="text-sm text-zinc-300">Free manual lookback audit</p><h2 className="mt-2 text-3xl font-semibold">Find the revenue already hiding in client requests.</h2></div>
+          <Link href="/request-audit" className="inline-flex h-11 shrink-0 items-center justify-center rounded-md bg-white px-5 text-sm font-semibold text-ink hover:bg-zinc-100">Apply for the private beta</Link>
         </div>
       </section>
     </div>

@@ -334,6 +334,9 @@ export async function createAuditRequest(input: AuditRequestInput) {
   if (usePostgresStorage()) return postgresStore.createAuditRequest(input);
   return mutateLocalStore((store) => {
     const lead = input.lead_id ? store.leads.find((item) => item.id === input.lead_id) : null;
+    if (input.lead_id && !lead) {
+      throw new NotFoundError("Audit link is invalid or expired.");
+    }
     const company = lead?.company_id
       ? store.companies.find((item) => item.id === lead.company_id) ?? null
       : findOrCreateCompany(store, {

@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { calculateRoiEstimate } from "@/lib/marketing/roi";
 
 function money(value: number) {
   return new Intl.NumberFormat("en-US", {
@@ -23,21 +24,12 @@ export function RoiCalculator() {
   const [projectValue, setProjectValue] = useState("25000");
 
   const result = useMemo(() => {
-    const rate = toNumber(hourlyRate);
-    const hours = toNumber(unbilledHours);
-    const projects = toNumber(activeProjects);
-    const value = toNumber(projectValue);
-    const monthlyLeakage = rate * hours * projects;
-    const annualLeakage = monthlyLeakage * 12;
-    const low = Math.max(750, Math.round(monthlyLeakage * 0.1));
-    const high = Math.max(1500, Math.round(monthlyLeakage * 0.2));
-
-    return {
-      monthlyLeakage,
-      annualLeakage,
-      serviceRange: `${money(low)}-${money(high)}/month`,
-      projectRisk: value ? Math.round((monthlyLeakage / value) * 100) : 0
-    };
+    return calculateRoiEstimate({
+      hourlyRate: toNumber(hourlyRate),
+      unbilledHours: toNumber(unbilledHours),
+      activeProjects: toNumber(activeProjects),
+      projectValue: toNumber(projectValue)
+    });
   }, [activeProjects, hourlyRate, projectValue, unbilledHours]);
 
   return (
@@ -47,7 +39,11 @@ export function RoiCalculator() {
           <span className="text-sm font-medium">Average hourly or blended rate</span>
           <input
             className="mt-2 w-full rounded-md border border-audit-border px-3 py-2"
+            type="number"
             inputMode="decimal"
+            min="0"
+            max="10000"
+            step="0.01"
             value={hourlyRate}
             onChange={(event) => setHourlyRate(event.target.value)}
           />
@@ -56,7 +52,11 @@ export function RoiCalculator() {
           <span className="text-sm font-medium">Unbilled hours per project/month</span>
           <input
             className="mt-2 w-full rounded-md border border-audit-border px-3 py-2"
+            type="number"
             inputMode="decimal"
+            min="0"
+            max="1000"
+            step="0.25"
             value={unbilledHours}
             onChange={(event) => setUnbilledHours(event.target.value)}
           />
@@ -65,7 +65,11 @@ export function RoiCalculator() {
           <span className="text-sm font-medium">Active projects</span>
           <input
             className="mt-2 w-full rounded-md border border-audit-border px-3 py-2"
+            type="number"
             inputMode="numeric"
+            min="0"
+            max="1000"
+            step="1"
             value={activeProjects}
             onChange={(event) => setActiveProjects(event.target.value)}
           />
@@ -74,7 +78,11 @@ export function RoiCalculator() {
           <span className="text-sm font-medium">Typical retainer or project value</span>
           <input
             className="mt-2 w-full rounded-md border border-audit-border px-3 py-2"
+            type="number"
             inputMode="decimal"
+            min="0"
+            max="100000000"
+            step="0.01"
             value={projectValue}
             onChange={(event) => setProjectValue(event.target.value)}
           />
@@ -91,13 +99,20 @@ export function RoiCalculator() {
           </div>
           <div className="flex justify-between border-b border-audit-border pb-2">
             <span>Suggested service range</span>
-            <strong>{result.serviceRange}</strong>
+            <strong>
+              {result.serviceLow === null || result.serviceHigh === null
+                ? "Confirm leakage first"
+                : `${money(result.serviceLow)}-${money(result.serviceHigh)}/month`}
+            </strong>
           </div>
           <div className="flex justify-between">
             <span>Monthly leakage vs. project value</span>
             <strong>{result.projectRisk}%</strong>
           </div>
         </div>
+        <p className="mt-4 text-xs leading-5 text-audit-muted">
+          Illustrative estimate only. It is not validated recovery, an approved charge, or a guarantee.
+        </p>
         <Link
           href="/request-audit"
           className="mt-6 inline-flex h-11 w-full items-center justify-center rounded-md bg-ink px-4 text-sm font-semibold text-white hover:bg-zinc-800"
