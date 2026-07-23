@@ -1,5 +1,13 @@
 # Change Log
 
+## Milestone 10 - Release readiness audit
+
+- Verified the complete professional workflow on fresh PostgreSQL using real local Ollama inference with `gemma3:12b-it-qat`.
+- Rejected contradictory zero-effort `Out of Scope` model output and added bounded retry regressions.
+- Updated finding review controls immediately from versioned API responses to prevent stale duplicate actions.
+- Passed 144 automated tests, type checking, production build, dependency audit, migration rerun, protected-API probes, secret/runtime-data checks, and production-browser verification.
+- Classified the build as **Internal Alpha** because Docker startup and real backup/restore remain blocked on the current host.
+
 ## Unreleased Private Beta
 
 ### Commercial foundation

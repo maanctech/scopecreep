@@ -67,6 +67,47 @@ describe("Ollama provider", () => {
     expect(result.analysis.estimated_revenue).toBe(1750);
   });
 
+  it("retries a definitive out-of-scope response with zero effort", async () => {
+    process.env.AI_PROVIDER = "ollama";
+    process.env.AI_MAX_ATTEMPTS = "2";
+    process.env.OLLAMA_MODEL = "gemma3:12b-it-qat";
+    let chatCalls = 0;
+    vi.stubGlobal("fetch", vi.fn(async (input: string | URL | Request) => {
+      const url = String(input);
+      if (url.endsWith("/api/tags")) {
+        return new Response(JSON.stringify({ models: [{ name: "gemma3:12b-it-qat" }] }), { status: 200 });
+      }
+      chatCalls += 1;
+      const content = JSON.stringify({
+        classification: "Out of Scope",
+        confidence_score: 0.94,
+        reasoning: "The SOW explicitly excludes client portals.",
+        relevant_sow_sections: ["Client portals are excluded."],
+        request_type: "Engineering",
+        estimated_hours: chatCalls === 1 ? 0 : 12,
+        estimated_revenue: 0,
+        suggested_change_order: "We can scope the portal separately.",
+        internal_note: "Explicit exclusion."
+      });
+      return new Response(JSON.stringify({
+        model: "gemma3:12b-it-qat",
+        message: { content }
+      }), { status: 200 });
+    }));
+
+    const result = await analyzeClientRequestDetailed({
+      sowText: "Client portals are excluded.",
+      messageText: "Can you build a client portal?",
+      hourlyRate: 225
+    });
+
+    expect(chatCalls).toBe(2);
+    expect(result.metadata.status).toBe("Succeeded");
+    expect(result.metadata.attempts).toBe(2);
+    expect(result.analysis.estimated_hours).toBe(12);
+    expect(result.analysis.estimated_revenue).toBe(2700);
+  });
+
   it("fails conservatively when Ollama is unavailable", async () => {
     process.env.AI_PROVIDER = "ollama";
     process.env.AI_MAX_ATTEMPTS = "1";

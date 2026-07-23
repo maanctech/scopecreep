@@ -34,6 +34,7 @@ const ACTION_HINTS: Record<FindingActionName, string> = {
 
 export function FindingReviewForm({ finding }: { finding: ScopeFinding }) {
   const router = useRouter();
+  const [currentFinding, setCurrentFinding] = useState(finding);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -49,8 +50,8 @@ export function FindingReviewForm({ finding }: { finding: ScopeFinding }) {
   const [explanation, setExplanation] = useState(finding.client_facing_explanation);
   const [note, setNote] = useState(finding.internal_note ?? "");
 
-  const actions = availableActions(finding);
-  const amountsEditable = finding.workflow_status === "Decided";
+  const actions = availableActions(currentFinding);
+  const amountsEditable = currentFinding.workflow_status === "Decided";
 
   async function submitAction(action: FindingActionName) {
     const confirmation = CONFIRMATIONS[action];
@@ -60,15 +61,30 @@ export function FindingReviewForm({ finding }: { finding: ScopeFinding }) {
     setSuccess(null);
     setIsSubmitting(true);
     try {
-      const response = await fetch(`/api/findings/${encodeURIComponent(finding.id)}/actions`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action, expected_version: finding.version })
-      });
-      const json = (await response.json()) as { error?: string };
+      const response = await fetch(
+        `/api/findings/${encodeURIComponent(currentFinding.id)}/actions`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action, expected_version: currentFinding.version })
+        }
+      );
+      const json = (await response.json()) as { error?: string; finding?: ScopeFinding };
       if (!response.ok) {
         throw new Error(json.error || "The action could not be completed.");
       }
+      if (!json.finding) {
+        throw new Error("The server saved the action but returned no updated finding.");
+      }
+      setCurrentFinding(json.finding);
+      setApprovedHours(
+        json.finding.approved_hours === null ? "" : String(json.finding.approved_hours)
+      );
+      setApprovedDollars(
+        json.finding.approved_amount_cents === null
+          ? ""
+          : (json.finding.approved_amount_cents / 100).toFixed(2)
+      );
       setSuccess(`Saved: ${action}.`);
       router.refresh();
     } catch (submitError) {
@@ -86,8 +102,8 @@ export function FindingReviewForm({ finding }: { finding: ScopeFinding }) {
     setSuccess(null);
 
     const payload: Record<string, unknown> = {
-      expected_version: finding.version,
-      client_facing_explanation: explanation.trim() || finding.client_facing_explanation,
+      expected_version: currentFinding.version,
+      client_facing_explanation: explanation.trim() || currentFinding.client_facing_explanation,
       internal_note: note.trim() ? note.trim() : null
     };
 
@@ -108,15 +124,19 @@ export function FindingReviewForm({ finding }: { finding: ScopeFinding }) {
 
     setIsSubmitting(true);
     try {
-      const response = await fetch(`/api/findings/${encodeURIComponent(finding.id)}`, {
+      const response = await fetch(`/api/findings/${encodeURIComponent(currentFinding.id)}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       });
-      const json = (await response.json()) as { error?: string };
+      const json = (await response.json()) as { error?: string; finding?: ScopeFinding };
       if (!response.ok) {
         throw new Error(json.error || "Your changes could not be saved.");
       }
+      if (!json.finding) {
+        throw new Error("The server saved your changes but returned no updated finding.");
+      }
+      setCurrentFinding(json.finding);
       setSuccess("Your changes were saved.");
       router.refresh();
     } catch (submitError) {
@@ -187,16 +207,17 @@ export function FindingReviewForm({ finding }: { finding: ScopeFinding }) {
         </div>
         {!amountsEditable ? (
           <p className="text-sm text-audit-muted">
-            {finding.workflow_status === "Invoiced" || finding.workflow_status === "Paid"
+            {currentFinding.workflow_status === "Invoiced" ||
+            currentFinding.workflow_status === "Paid"
               ? "Amounts are locked after invoicing. Reopen the finding to change them."
               : "Choose Mark as Billable or Include in Retainer first, then you can adjust the approved hours and amount."}
           </p>
         ) : (
           <p className="text-sm text-audit-muted">
             Current approved amount:{" "}
-            {finding.approved_amount_cents === null
+            {currentFinding.approved_amount_cents === null
               ? "not set"
-              : formatCents(finding.approved_amount_cents)}
+              : formatCents(currentFinding.approved_amount_cents)}
             . Amounts are stored exactly, in cents.
           </p>
         )}

@@ -11,11 +11,11 @@ Record the date, operator, commit, host, and evidence for every completed item. 
 - [x] Approved-SOW, import, deduplication, findings, billing transitions, reports, and exports pass local tests.
 - [x] Production build passes.
 - [x] Backup and restore orchestration has automated coverage.
-- [ ] Real Ollama model completes the structured analysis fixture on release hardware.
+- [x] Real Ollama model completes the structured analysis fixture on the current verification host.
 - [ ] Docker image builds and Compose starts on release hardware.
 - [ ] Real containerized backup and destructive restore drill succeeds on disposable data.
-- [ ] Full browser workflow is rerun against the final production build.
-- [ ] Final secret, private-data, dependency, and Git-status audit is clean.
+- [x] Full browser workflow is rerun against the final production build.
+- [x] Final secret, private-data, dependency, and Git-status audit is clean for the repository and current host.
 
 ## Operational Gates
 
@@ -33,4 +33,4 @@ Record the date, operator, commit, host, and evidence for every completed item. 
 - [ ] Domain, TLS certificate, support terms, and private-beta scope confirmed.
 - [ ] No mocked or credential-dependent connector is described as verified live.
 
-Current repository evidence does not support `Public Production Ready`. Final classification is determined in the release-readiness audit after all achievable gates are rerun.
+Current classification is **Internal Alpha**. Real-model and full browser gates pass, but Docker image/startup and a real database backup/restore drill remain open. The evidence does not support `Paid Private Beta Ready` or `Public Production Ready`.

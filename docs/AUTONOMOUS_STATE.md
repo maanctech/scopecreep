@@ -1,56 +1,54 @@
 # Autonomous Work State
 
-Last updated: 2026-07-22 after Milestone 9 commit `5092d37`, at the start of Milestone 10.
+Last updated: 2026-07-22 at completion of Milestone 10, before its release-audit commit.
 
 ## Repository State
 
 - Branch: `commercial-beta-local-first`
-- Latest completed milestone commit: `5092d37` (`Add private-beta business and release documentation`)
-- State checkpoint: this document update immediately follows `5092d37`; use `git rev-parse HEAD` to resolve its containing checkpoint commit
-- Main branch: intentionally untouched
-- Remote actions: no push, merge, or pull request
-- Worktree: Milestone 9 is committed; this progress update begins Milestone 10
+- Pre-milestone checkpoint: `8826cd8` (`Record Milestone 9 autonomous state`)
+- Milestone 10 code and evidence: included in the commit containing this document; run `git rev-parse HEAD` after commit to resolve it.
+- Main branch: intentionally untouched.
+- Remote actions: no push, merge, or pull request.
+- Final readiness classification: **Internal Alpha**.
 
-## Completed Milestones
+## Completed Work
 
-- Milestone 0: secured, tested, and committed the existing professional revenue workflow baseline.
-- Milestone 1: PostgreSQL migrations, organizations, authentication, roles, session security, and legacy JSON import.
-- Milestone 2: Ollama-first provider abstraction, model discovery, health, structured validation, retries, and optional OpenAI.
-- Milestone 3: SOW originals, extraction, immutable versions, risk review, and professional-approved boundary maps.
-- Milestone 4: normalized communications, preview-first imports, ingestion jobs, signed webhooks, IMAP, deduplication, and checkpoints.
-- Milestone 5: Integration Hub and contract-tested Slack, Google, and Microsoft adapters with honest credential states.
-- Milestone 6: approved-SOW analysis jobs producing reviewable findings without automatic billing actions.
-- Milestone 7: six versioned report formats, exports, backups/restores, diagnostics, redacted support bundles, audit logs, and hardening.
-- Milestone 8: Docker/Compose packaging, startup validation and migration, first-owner setup, persistent volumes, and installation docs.
-- Milestone 9 (`5092d37`): public positioning, pricing, bounded ROI, fictional screenshot, private-beta lead and intake funnel, fail-closed tenant selection, public privacy overview, sales/operations docs, response minimization, and skeptical-review regressions.
+- Milestones 0-9 remain complete through the professional workflow, PostgreSQL/auth foundation, Ollama adapter, SOW workspace, ingestion, Integration Hub, approved-SOW analysis, reports/operations, packaging, and private-beta business funnel.
+- Milestone 10 completed the fresh-database production-browser workflow: first-owner setup, explicit login, project/SOW creation, real-model SOW review, boundary approval, manual import, duplicate rejection, controlled analysis, finding review, billable to invoiced to paid, report generation, setup lockout, protected-route redirect, and logout.
+- A real `gemma3:12b-it-qat` Ollama model completed a grounded out-of-scope analysis. The final finding estimated 40 hours and $9,000 at $225/hour.
+- Hardened structured analysis so `Out of Scope` can never persist with zero estimated effort. Invalid zero-effort output is retried or becomes the conservative fallback.
+- Fixed finding review controls to adopt the versioned API response immediately, removing stale legal actions and duplicate-action risk while the page refreshes.
 
-## Current Evidence
+## Tests and Evidence
 
-- `npm test`: 21 files passed, 142 tests passed, 1 Docker-only test skipped.
-- `npm run build`: successful Next.js production build with 29 static pages generated and `/privacy` included.
 - `npx tsc --noEmit`: passed.
-- Production-browser verification: landing page rendered with public-only navigation and a real 1280x720 fictional dashboard image.
-- Production-browser funnel: a fictional lead submission created a UUID continuation; audit intake then ended at `/onboarding?submitted=audit` with a public receipt and no protected project identifier or private SOW/message response.
-- Public route tests prove HTTP(S)-only website validation, UUID continuation validation, minimized lead response, and minimized audit receipt.
+- `npm test`: 21 files passed; 144 tests passed; 1 Docker-only test skipped.
+- `npm run build`: passed with Next.js 16.2.11 and 29 routes/pages in the build manifest.
+- `npm audit --omit=dev`: 0 vulnerabilities.
+- Fresh PostgreSQL migrations 001-008: passed; repeat migration reported `Database is up to date.`
+- `npm run ollama:check`: real local Ollama 0.32.1 found `gemma3:12b-it-qat` and passed readiness.
+- Real analysis result: `Out of Scope`, 0.95 confidence, 40 hours, $9,000, evidence linked to the approved SOW, provider `ollama`, model `gemma3:12b-it-qat`.
+- Production API probe: protected `/api/findings` returned 401 without a session; security headers were present. `/api/health` returned a bounded no-store health response.
+- Git audit: no high-confidence secret pattern found in tracked files or Git history; no `.env`, runtime data, build output, dependencies, or model artifact is tracked.
 
-## Milestone 9 Skeptical Review
+## Milestone 10 Skeptical Review
 
-- Security/authorization: changed public organization selection from oldest-match routing to an exactly-one fail-closed rule; every lead continuation is now constrained to that organization. Invalid/expired continuations fail consistently in PostgreSQL and JSON modes.
-- Privacy/data exposure: public responses return only a lead continuation ID or `{ ok: true }`; the receipt contains no project ID, SOW, message text, or internal route.
-- Data loss/persistence: audit request, project, and first SOW version remain in one PostgreSQL transaction. Local JSON writes retain atomic temp-file replacement. Independent public HTTP retries can still create duplicates and are documented.
-- Financial correctness: moved ROI arithmetic into bounded tests, floors project count, proves the $7,200/$86,400 default, and no longer recommends a price at zero leakage. Core finding totals and the $13,475 demo remain covered independently.
-- Duplicate ingestion: existing provider/content uniqueness, idempotency-key, edited-message, webhook replay, and billing-event retry tests pass.
-- Integration claims: public and operator docs distinguish available, credential-dependent, mocked-contract, and external-approval states. The premature `Paid private beta` claim was removed while release gates remain open.
-- Artifact integrity: corrected a JPEG dashboard capture that had a `.png` filename; a regression test verifies JPEG magic bytes and the referenced path.
-- Test gaps: added public funnel, tenant-selection, ROI, image-format, and Markdown-link tests. Full suite, build, dependency audit, secret scan, and production browser checks pass.
+- Security and authorization: re-probed a protected API without credentials, reran role, same-origin, cross-organization, encrypted-secret, SSRF, webhook-signature, and production-config tests. No bypass was found.
+- Data loss and migrations: fresh migrations and idempotent rerun passed. Transaction rollback, checksum-protected migration, import rollback, backup manifest, and restore checksum tests passed.
+- Financial correctness: integer-cent arithmetic, exclusive revenue buckets, stale-write protection, and billable/invoiced/paid transition tests passed. The browser dashboard showed $9,000 only in paid/recovered after payment.
+- Duplicate ingestion: importing the exact communication twice inserted only one normalized message. Database uniqueness, content hash, provider ID, webhook replay, checkpoint, and one-analysis-job-per-message tests passed.
+- AI failure handling: the real model exposed a zero-hour out-of-scope risk. The parser and prompt now reject that contradiction, with retry and parser regression tests.
+- Integration truthfulness: no credential-only connector was promoted to connected or verified live. Real-model Ollama is now verified locally; platform connectors remain mocked or credential-dependent.
+- UI trust: the review card previously retained stale action controls after a successful transition. It now switches immediately to actions derived from the returned, incremented finding version.
 
 ## Unresolved Failures and External Blockers
 
-- Docker is not installed on the verification host. Image build, Compose startup, and a real containerized destructive restore drill remain unverified.
-- No installed real Ollama model is available on this host. The provider and structured-output behavior are mock-tested, but the real-model release gate remains open.
-- Live Slack, Google, Microsoft, and IMAP checks require customer-controlled credentials and external provider or tenant approval.
-- TLS/domain, legal agreements, privacy legal approval, external penetration testing, and customer contracts are external activities.
+- Docker, Podman, and Colima are absent. The image build and Compose startup cannot be executed on this host.
+- `pg_dump` and `pg_restore` are absent. A real disposable database backup and destructive restore drill cannot be executed here; controlled orchestration and integrity tests pass only.
+- Slack, Google, Microsoft, and IMAP require customer credentials and provider or tenant approval for live verification.
+- TLS/domain configuration, legal agreements, privacy legal approval, external penetration testing, trademark clearance, customer contracts, monitoring ownership, and off-host backup ownership are external gates.
+- There is no lint script or automated browser/a11y test runner in the repository. Type checking, unit/integration tests, semantic browser inspection, and production-browser workflow checks were used.
 
 ## Exact Next Objective
 
-Execute Milestone 10's requirement-by-requirement release audit. Re-derive the requirements from the original goal, map each to direct evidence, rerun the complete professional browser workflow and all automated/static/security checks, attempt every container/restore/model gate available on this host, fix any newly discovered defect, perform a separate skeptical reviewer pass, update all four progress files, and commit the final verified state.
+On a Docker-capable disposable release host with PostgreSQL client tools, build the image, start Compose, run the complete backup and destructive restore drill, rerun the production browser workflow, and record the resulting commit/host evidence. Only then reconsider `Paid Private Beta Ready`; live connector, TLS, legal, and customer-operational gates must still be scoped honestly.

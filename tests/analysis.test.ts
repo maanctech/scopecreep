@@ -107,6 +107,25 @@ Thanks.`,
     expect(result.estimated_revenue).toBe(0);
   });
 
+  it("rejects out-of-scope results that estimate no additional effort", () => {
+    expect(() =>
+      parseAnalysisJson(
+        JSON.stringify({
+          classification: "Out of Scope",
+          confidence_score: 0.9,
+          reasoning: "The SOW excludes client portals.",
+          relevant_sow_sections: ["Client portals are excluded."],
+          request_type: "Engineering",
+          estimated_hours: 0,
+          estimated_revenue: 0,
+          suggested_change_order: "We can scope this separately.",
+          internal_note: "Explicit exclusion but missing effort."
+        }),
+        225
+      )
+    ).toThrow(/positive estimated_hours/);
+  });
+
   it("rejects invalid classifications", () => {
     expect(() =>
       parseAnalysisJson(

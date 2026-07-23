@@ -69,6 +69,9 @@ function normalizeParsedAnalysis(
   if (confidenceScore < 0 || confidenceScore > 1) {
     throw new Error("AI confidence_score must be between 0 and 1.");
   }
+  if (parsed.classification === "Out of Scope" && parsed.estimated_hours <= 0) {
+    throw new Error("Out of Scope requires a positive estimated_hours value.");
+  }
 
   const estimatedHours = parsed.classification === "In Scope" ? 0 : parsed.estimated_hours;
   const estimatedRevenue = roundCurrency(estimatedHours * hourlyRate);

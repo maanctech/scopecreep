@@ -1,32 +1,33 @@
 # Release Gates and Evidence
 
-Last updated: 2026-07-22 after Milestone 9 commit `5092d37`, at the start of Milestone 10. Branch: `commercial-beta-local-first`. `Pass` requires direct current evidence; `Open` is not a failure concealment.
+Last updated: 2026-07-22 at completion of Milestone 10. Branch: `commercial-beta-local-first`. Pre-commit checkpoint: `8826cd8`.
 
 | Gate | State | Evidence or blocker |
 | --- | --- | --- |
-| Phase 1 baseline safely committed | Pass | `d9b545e`, followed by milestone commits through `1028c1b` |
-| Empty-database migrations | Pass | PostgreSQL migrations 001-008 applied on fresh local PostgreSQL during Milestone 8 |
-| Legacy fictional JSON import | Pass | Northstar/ApertureOps import produced the expected $13,475 potential total |
-| Authentication and setup | Pass | Automated auth/security tests plus production first-owner setup and lockout check |
-| Organization isolation and protected APIs | Pass | Database and authorization regression tests; final M10 audit still required |
-| Ollama reachable with a real model | Open | No real Ollama model installed on this host; mock provider checks are not sufficient |
-| SOW/version/boundary workflow | Pass | Unit/integration tests and browser workflow evidence from Milestones 3 and 6 |
-| Communication import and deduplication | Pass | Manual, webhook, email, connector, and idempotency tests |
-| Finding and billing workflow | Pass | Transition/API/totals tests and production-browser workflow evidence |
-| Reports and reproducibility | Pass | Version/history/hash/read-only generation tests and browser verification |
-| Backup creation | Partial | Service, manifest, document coverage, and failure tests pass; native container run is open |
-| Destructive restore | Partial | Controlled mock orchestration passes; real disposable container restore is open |
-| Docker image build | Open | Docker runtime unavailable on this host |
-| Docker Compose startup | Open | Docker runtime unavailable on this host |
-| Production build | Pass | Next.js production build passed after Milestone 9 changes |
-| Full automated test suite | Pass | 142 passed, 1 Docker-only skipped |
-| End-to-end professional workflow | Partial | Major browser flows verified by milestone; final consolidated M10 rerun remains |
-| Public lead and onboarding funnel | Pass | Production-browser lead/intake receipt plus focused route tests |
-| No secrets or runtime customer data committed | Pending final audit | Milestone 9 candidate-file scan passed; final staged and full-history M10 audit remain |
-| No critical security findings | Pending final audit | Milestone 9 skeptical review fixed fail-open tenant selection and response/artifact/ROI issues; M10 audit remains |
-| Documentation matches implementation | Pending final audit | Status matrix and setup guides added; requirement-level M10 cross-check remains |
-| Unsupported integrations are not presented as live | Pass | Public table and docs explicitly identify verified, credential-dependent, mocked, and external-approval states |
+| Phase 1 baseline safely committed | Pass | `d9b545e`, followed by milestone commits on the commercial branch |
+| Empty-database migrations | Pass | PostgreSQL migrations 001-008 passed on fresh database `scopeledger_m10_20260722`; idempotent rerun passed |
+| Legacy fictional JSON import | Pass | Northstar/ApertureOps import preserves 12 findings and $13,475 potential |
+| Authentication and setup | Pass | First-owner setup, lockout, login, logout, password/security tests, and protected-route redirects passed |
+| Organization isolation and protected APIs | Pass | Database/authorization tests passed; unauthenticated `/api/findings` returned 401 |
+| Ollama reachable with a real model | Pass | Ollama 0.32.1 with `gemma3:12b-it-qat`; discovery, health, SOW review, and structured finding analysis passed |
+| SOW/version/boundary workflow | Pass | Fresh browser flow created SOW, generated evidence-linked review, and approved the boundary map |
+| Communication import and deduplication | Pass | Fresh browser import inserted one message; exact repeat inserted none; automated provider/content/replay tests passed |
+| Finding and billing workflow | Pass | Real finding moved through billable, invoiced, and paid; invalid transitions absent/blocked; 66 focused workflow/AI/money tests passed |
+| Reports and reproducibility | Pass | Explicit v1 internal audit recorded one source finding, SOW evidence, model provenance, $9,000, Markdown/CSV exports, and private-use notices |
+| Backup creation | Partial | Manifest, documents, redaction, overlap, and integrity tests pass; no real `pg_dump` run on this host |
+| Destructive restore | Partial | Controlled checksum/orchestration tests pass; real disposable restore is blocked by missing `pg_restore` and container runtime |
+| Docker image build | Open | Docker, Podman, and Colima are unavailable on this host |
+| Docker Compose startup | Open | Container runtime unavailable; conditional Compose test remains skipped |
+| Production build | Pass | `npm run build` passed after final source changes |
+| Full automated test suite | Pass | 144 passed; 1 Docker-only test skipped |
+| End-to-end professional workflow | Pass | Final production-browser workflow covered setup through report and logout against fresh PostgreSQL and real Ollama |
+| No secrets or runtime customer data committed | Pass | Tracked-file and Git-history high-confidence scans passed; runtime data, `.env`, build output, dependencies, and model artifacts are untracked/ignored |
+| No critical security findings | Pass for tested scope | Dependency audit is clean; auth, organization, CSRF/origin, SSRF, encryption, webhook, file/report sanitization, redaction, and config tests passed |
+| Documentation matches implementation | Pass | Status matrix, release checklist, progress files, and limitations distinguish verified, mocked, credential-dependent, and blocked capabilities |
+| Unsupported integrations are not presented as live | Pass | Platform connectors remain BYOC/private-beta with mocked-contract or credential-dependent labels |
 
 ## Current Classification
 
-Provisional classification: **Internal Alpha**. The repository must not be called `Paid Private Beta Ready` until the real Ollama model, Docker build/startup, and real backup/restore gates have direct evidence or the final audit explicitly establishes a narrower supported installation path that satisfies the original release requirements.
+**Internal Alpha**.
+
+The application is functionally complete for a manual, local-first professional workflow and now has real-model and end-to-end evidence. It is not `Paid Private Beta Ready` because the required Docker build/startup and real database backup/restore gates lack direct evidence. The repository must not be promoted until those installation and recovery gates pass on release hardware.
