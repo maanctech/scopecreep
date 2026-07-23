@@ -1,6 +1,6 @@
 # Product and Architecture Decisions
 
-Last updated: 2026-07-22 at completion of Milestone 10. Branch: `commercial-beta-local-first`. Pre-commit checkpoint: `8826cd8`.
+Last updated: 2026-07-22 after Milestone 10 commit `bd5ec5f`. Branch: `commercial-beta-local-first`.
 
 ## Control and Money
 

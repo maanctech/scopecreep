@@ -1,12 +1,12 @@
 # Autonomous Work State
 
-Last updated: 2026-07-22 at completion of Milestone 10, before its release-audit commit.
+Last updated: 2026-07-22 after Milestone 10 commit `bd5ec5f`.
 
 ## Repository State
 
 - Branch: `commercial-beta-local-first`
-- Pre-milestone checkpoint: `8826cd8` (`Record Milestone 9 autonomous state`)
-- Milestone 10 code and evidence: included in the commit containing this document; run `git rev-parse HEAD` after commit to resolve it.
+- Latest completed milestone commit: `bd5ec5f` (`Complete release readiness audit`)
+- State checkpoint: this document update immediately follows `bd5ec5f`; use `git rev-parse HEAD` to resolve its containing checkpoint commit.
 - Main branch: intentionally untouched.
 - Remote actions: no push, merge, or pull request.
 - Final readiness classification: **Internal Alpha**.

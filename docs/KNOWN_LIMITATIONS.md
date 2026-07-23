@@ -1,6 +1,6 @@
 # Known Limitations
 
-Last updated: 2026-07-22 at completion of Milestone 10. Branch: `commercial-beta-local-first`. Pre-commit checkpoint: `8826cd8`.
+Last updated: 2026-07-22 after Milestone 10 commit `bd5ec5f`. Branch: `commercial-beta-local-first`.
 
 - Docker, Podman, and Colima are unavailable on the verification host. Image build and Compose startup are not directly evidenced.
 - `pg_dump` and `pg_restore` are unavailable. Real database backup and destructive restore are not evidenced; controlled orchestration/checksum tests do not replace that release drill.
