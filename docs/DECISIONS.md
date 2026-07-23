@@ -1,6 +1,6 @@
 # Product and Architecture Decisions
 
-Last updated: 2026-07-22 during Milestone 9.
+Last updated: 2026-07-22 after Milestone 9 commit `5092d37`. Branch: `commercial-beta-local-first`.
 
 ## Control and Money
 

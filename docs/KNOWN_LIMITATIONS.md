@@ -1,6 +1,6 @@
 # Known Limitations
 
-Last updated: 2026-07-22 during Milestone 9. Branch `commercial-beta-local-first`; committed HEAD `1028c1b`.
+Last updated: 2026-07-22 after Milestone 9 commit `5092d37`. Branch: `commercial-beta-local-first`.
 
 - The current verification host does not have Docker, so the image build, Compose startup, and real containerized restore drill are not yet evidenced.
 - No real Ollama model run is evidenced on this host; provider behavior and structured output are covered through controlled mock services.
@@ -22,4 +22,4 @@ Last updated: 2026-07-22 during Milestone 9. Branch `commercial-beta-local-first
 
 ## Exact Next Objective
 
-Commit the reviewed Milestone 9 changes, then run the consolidated Milestone 10 release audit. The highest-priority unresolved gates are a real Ollama model fixture, Docker image/Compose startup, and a real disposable backup/restore drill.
+Run the consolidated Milestone 10 release audit and fix every achievable defect. The highest-priority unresolved gates are a real Ollama model fixture, Docker image/Compose startup, and a real disposable backup/restore drill.

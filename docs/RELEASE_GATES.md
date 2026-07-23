@@ -1,6 +1,6 @@
 # Release Gates and Evidence
 
-Last updated: 2026-07-22 during Milestone 9. `Pass` requires direct current evidence; `Open` is not a failure concealment.
+Last updated: 2026-07-22 after Milestone 9 commit `5092d37`, at the start of Milestone 10. Branch: `commercial-beta-local-first`. `Pass` requires direct current evidence; `Open` is not a failure concealment.
 
 | Gate | State | Evidence or blocker |
 | --- | --- | --- |

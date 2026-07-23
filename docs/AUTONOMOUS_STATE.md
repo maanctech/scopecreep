@@ -1,14 +1,15 @@
 # Autonomous Work State
 
-Last updated: 2026-07-22 after the Milestone 9 skeptical review, before its commit.
+Last updated: 2026-07-22 after Milestone 9 commit `5092d37`, at the start of Milestone 10.
 
 ## Repository State
 
 - Branch: `commercial-beta-local-first`
-- Current committed HEAD: `1028c1b` (`Add self-hosted installation and first-run setup`)
+- Latest completed milestone commit: `5092d37` (`Add private-beta business and release documentation`)
+- State checkpoint: this document update immediately follows `5092d37`; use `git rev-parse HEAD` to resolve its containing checkpoint commit
 - Main branch: intentionally untouched
 - Remote actions: no push, merge, or pull request
-- Worktree: reviewed Milestone 9 changes are intentionally uncommitted pending explicit staging and commit
+- Worktree: Milestone 9 is committed; this progress update begins Milestone 10
 
 ## Completed Milestones
 
@@ -21,7 +22,7 @@ Last updated: 2026-07-22 after the Milestone 9 skeptical review, before its comm
 - Milestone 6: approved-SOW analysis jobs producing reviewable findings without automatic billing actions.
 - Milestone 7: six versioned report formats, exports, backups/restores, diagnostics, redacted support bundles, audit logs, and hardening.
 - Milestone 8: Docker/Compose packaging, startup validation and migration, first-owner setup, persistent volumes, and installation docs.
-- Milestone 9 implementation: public positioning, pricing, ROI, fictional screenshot, private-beta lead and intake funnel, public privacy overview, sales/operations docs, and public response minimization.
+- Milestone 9 (`5092d37`): public positioning, pricing, bounded ROI, fictional screenshot, private-beta lead and intake funnel, fail-closed tenant selection, public privacy overview, sales/operations docs, response minimization, and skeptical-review regressions.
 
 ## Current Evidence
 
@@ -52,4 +53,4 @@ Last updated: 2026-07-22 after the Milestone 9 skeptical review, before its comm
 
 ## Exact Next Objective
 
-Stage only the reviewed Milestone 9 files, inspect the staged list and secret/private-data surface, and commit. Then begin Milestone 10's requirement-by-requirement release audit, including the complete professional browser workflow and every release gate that can be exercised without Docker, real Ollama, or customer credentials.
+Execute Milestone 10's requirement-by-requirement release audit. Re-derive the requirements from the original goal, map each to direct evidence, rerun the complete professional browser workflow and all automated/static/security checks, attempt every container/restore/model gate available on this host, fix any newly discovered defect, perform a separate skeptical reviewer pass, update all four progress files, and commit the final verified state.
