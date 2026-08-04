@@ -1,0 +1,4 @@
+# Formatting here is owned by ESLint @stylistic and better-tailwindcss.
+# See AGENTS.md. Prettier must not touch this repository; a global editor
+# hook would otherwise silently undo the enforced house style on every edit.
+*

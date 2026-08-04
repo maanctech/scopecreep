@@ -32,6 +32,7 @@ describe("POST /api/messages/analyze", () => {
     );
 
     const payload = (await response.json()) as { error: string };
+
     expect(response.status).toBe(400);
     expect(payload.error).toContain("Client message must be");
   });

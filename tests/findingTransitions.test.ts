@@ -63,6 +63,7 @@ describe("valid transitions", () => {
 
     for (const [action, decision, status] of expected) {
       const result = apply(makeFinding(), action);
+
       expect(result.finding.billing_decision).toBe(decision);
       expect(result.finding.workflow_status).toBe(status);
       expect(result.finding.version).toBe(2);
@@ -78,6 +79,7 @@ describe("valid transitions", () => {
         billing_decision:
           status === "Decided" ? "Bill Separately" : status === "Discussing" ? "Discuss With Client" : "Undecided"
       });
+
       expect(availableActions(finding)).toContain("Mark as Courtesy");
       expect(availableActions(finding)).toContain("Reject Finding");
     }
@@ -85,6 +87,7 @@ describe("valid transitions", () => {
 
   it("walks the full billing path: billable, invoiced, paid", () => {
     const billed = chain(makeFinding(), ["Mark as Billable", "Mark as Invoiced", "Mark as Paid"]);
+
     expect(billed.billing_decision).toBe("Bill Separately");
     expect(billed.workflow_status).toBe("Paid");
     expect(billed.version).toBe(4);
@@ -92,6 +95,7 @@ describe("valid transitions", () => {
 
   it("defaults approved values from the AI estimate on Mark as Billable, in integer cents", () => {
     const result = apply(makeFinding({ estimated_hours: 6, estimated_revenue: 1200.5 }), "Mark as Billable");
+
     expect(result.finding.approved_hours).toBe(6);
     expect(result.finding.approved_amount_cents).toBe(120050);
   });
@@ -100,6 +104,7 @@ describe("valid transitions", () => {
     const decided = apply(makeFinding(), "Mark as Billable").finding;
     const edited = { ...decided, approved_amount_cents: 99900 };
     const invoiced = apply(edited, "Mark as Invoiced");
+
     expect(invoiced.finding.approved_amount_cents).toBe(99900);
     expect(invoiced.event.amount_cents).toBe(99900);
   });
@@ -107,15 +112,18 @@ describe("valid transitions", () => {
   it("supports intentional reopen from Invoiced, Paid, and Closed", () => {
     const paid = chain(makeFinding(), ["Mark as Billable", "Mark as Invoiced", "Mark as Paid"]);
     const reopened = apply(paid, "Reopen Finding").finding;
+
     expect(reopened.billing_decision).toBe("Undecided");
     expect(reopened.workflow_status).toBe("Needs Review");
     expect(reopened.approved_amount_cents).toBeNull();
     expect(reopened.approved_hours).toBeNull();
 
     const rejected = apply(makeFinding(), "Reject Finding").finding;
+
     expect(apply(rejected, "Reopen Finding").finding.workflow_status).toBe("Needs Review");
 
     const invoiced = chain(makeFinding(), ["Mark as Billable", "Mark as Invoiced"]);
+
     expect(apply(invoiced, "Reopen Finding").finding.workflow_status).toBe("Needs Review");
   });
 });
@@ -129,6 +137,7 @@ describe("invalid transitions", () => {
   it("rejects paid without invoiced", () => {
     expectRejected(makeFinding(), "Mark as Paid");
     const decided = apply(makeFinding(), "Mark as Billable").finding;
+
     expectRejected(decided, "Mark as Paid");
   });
 
@@ -139,6 +148,7 @@ describe("invalid transitions", () => {
 
   it("prevents rejected findings from being invoiced or paid", () => {
     const rejected = apply(makeFinding(), "Reject Finding").finding;
+
     expectRejected(rejected, "Mark as Invoiced");
     expectRejected(rejected, "Mark as Paid");
     expectRejected(rejected, "Mark as Billable");
@@ -146,23 +156,27 @@ describe("invalid transitions", () => {
 
   it("prevents absorbed findings from being invoiced or paid", () => {
     const absorbed = apply(makeFinding(), "Mark as Courtesy").finding;
+
     expectRejected(absorbed, "Mark as Invoiced");
     expectRejected(absorbed, "Mark as Paid");
   });
 
   it("prevents included-in-retainer findings from being invoiced or paid", () => {
     const retainer = apply(makeFinding(), "Include in Retainer").finding;
+
     expectRejected(retainer, "Mark as Invoiced");
     expectRejected(retainer, "Mark as Paid");
   });
 
   it("locks decision actions once invoiced or paid", () => {
     const invoiced = chain(makeFinding(), ["Mark as Billable", "Mark as Invoiced"]);
+
     expectRejected(invoiced, "Mark as Billable");
     expectRejected(invoiced, "Reject Finding");
     expectRejected(invoiced, "Mark as Courtesy");
 
     const paid = apply(invoiced, "Mark as Paid").finding;
+
     expectRejected(paid, "Mark as Billable");
     expectRejected(paid, "Mark as Invoiced");
   });
@@ -171,12 +185,14 @@ describe("invalid transitions", () => {
     expectRejected(makeFinding(), "Reopen Finding");
     expectRejected(makeFinding({ workflow_status: "New" }), "Reopen Finding");
     const decided = apply(makeFinding(), "Mark as Billable").finding;
+
     expectRejected(decided, "Reopen Finding");
   });
 
   it("refuses invoicing without an approved amount", () => {
     const decided = apply(makeFinding(), "Mark as Billable").finding;
     const cleared = { ...decided, approved_amount_cents: null };
+
     expect(() => apply(cleared, "Mark as Invoiced")).toThrow(/approved amount/i);
   });
 });
@@ -195,9 +211,12 @@ describe("state consistency", () => {
 
     for (const seed of seeds) {
       expect(isDecisionStatusConsistent(seed.billing_decision, seed.workflow_status)).toBe(true);
+
       for (const action of FINDING_ACTIONS) {
         if (!availableActions(seed).includes(action)) continue;
+
         const result = apply(seed, action).finding;
+
         expect(isDecisionStatusConsistent(result.billing_decision, result.workflow_status)).toBe(true);
       }
     }
@@ -207,6 +226,7 @@ describe("state consistency", () => {
     for (const decision of Object.keys(COMPATIBLE_STATUSES) as BillingDecision[]) {
       expect(COMPATIBLE_STATUSES[decision].length).toBeGreaterThan(0);
     }
+
     expect(COMPATIBLE_STATUSES["Reject Finding"]).not.toContain("Paid");
     expect(COMPATIBLE_STATUSES["Absorb Courtesy"]).not.toContain("Invoiced");
     expect(COMPATIBLE_STATUSES["Include In Retainer"]).not.toContain("Invoiced");

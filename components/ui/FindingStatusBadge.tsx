@@ -46,9 +46,13 @@ export function FindingStatusBadge({ finding }: { finding: ScopeFinding }) {
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-sm font-semibold ${tone.className}`}
+      className={`
+        inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-sm
+        font-semibold
+        ${tone.className}
+      `}
     >
-      <Icon className="h-4 w-4" aria-hidden="true" />
+      <Icon className="size-4" aria-hidden="true" />
       {label}
     </span>
   );

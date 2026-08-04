@@ -14,10 +14,14 @@ export async function GET(
     await requireApiPermission(request, "reports:read");
     const { id, versionId } = await params;
     const report = await getReportVersion(id, versionId);
+
     if (!report) return NextResponse.json({ error: "Report version not found." }, { status: 404 });
+
     const format = new URL(request.url).searchParams.get("format");
+
     if (format === "markdown" || format === "csv") {
       const isCsv = format === "csv";
+
       return new NextResponse(isCsv ? report.csv_content || "" : report.markdown, {
         headers: {
           "Content-Type": isCsv ? "text/csv; charset=utf-8" : "text/markdown; charset=utf-8",
@@ -26,12 +30,17 @@ export async function GET(
         }
       });
     }
+
     const { csv_content: _csv, ...safeReport } = report;
+
     return NextResponse.json({ report: safeReport });
   } catch (error) {
     const auth = authErrorResponse(error);
+
     if (auth) return auth;
+
     if (error instanceof NotFoundError) return NextResponse.json({ error: "Project not found." }, { status: 404 });
+
     return NextResponse.json({ error: "Failed to load the report version." }, { status: 500 });
   }
 }

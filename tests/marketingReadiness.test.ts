@@ -59,8 +59,10 @@ describe("public ROI estimate", () => {
 describe("marketing evidence assets", () => {
   it("uses an extension matching the real fictional dashboard image format", async () => {
     const image = await fs.readFile(path.join(root, "public/images/scopeledger-demo-dashboard.jpg"));
+
     expect(Array.from(image.subarray(0, 3))).toEqual([0xff, 0xd8, 0xff]);
     const page = await fs.readFile(path.join(root, "app/page.tsx"), "utf8");
+
     expect(page).toContain("/images/scopeledger-demo-dashboard.jpg");
     expect(page).not.toContain("Paid private beta");
   });
@@ -76,6 +78,7 @@ describe("marketing evidence assets", () => {
     for (const file of files) {
       const markdown = await fs.readFile(file, "utf8");
       const links = [...markdown.matchAll(/\[[^\]]+\]\(([^)]+\.md)(?:#[^)]+)?\)/g)];
+
       for (const [, relative] of links) {
         await expect(fs.access(path.resolve(path.dirname(file), relative))).resolves.toBeUndefined();
       }

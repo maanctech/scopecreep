@@ -44,6 +44,7 @@ export async function POST(request: Request) {
     assertSameOrigin(request);
     checkRateLimit(`audit-request:${requestIp(request)}`, 6, 60 * 60 * 1000);
     let json: unknown;
+
     try {
       json = await request.json();
     } catch {
@@ -51,6 +52,7 @@ export async function POST(request: Request) {
     }
 
     const body = auditRequestSchema.parse(json);
+
     await createAuditRequest({
       ...body,
       lead_id: body.lead_id || null,
@@ -61,9 +63,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true }, { status: 201 });
   } catch (error) {
     const authResponse = authErrorResponse(error);
+
     if (authResponse) return authResponse;
+
     const expectedError = error instanceof z.ZodError || error instanceof NotFoundError;
     const status = expectedError ? 400 : 500;
+
     return NextResponse.json(
       {
         error:

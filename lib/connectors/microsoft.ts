@@ -14,7 +14,7 @@ const teamsChannelSchema = z.object({
 
 export const microsoftConfigurationSchema = z
   .object({
-    projectId: z.string().uuid(),
+    projectId: z.uuid(),
     name: z.string().trim().min(2).max(120),
     clientId: z.string().trim().min(10).max(500),
     clientSecret: z.string().trim().min(8).max(1000),
@@ -79,6 +79,7 @@ function plain(value?: string) {
 
 export function normalizeGraphMail(message: GraphMessage) {
   const sender = message.from?.emailAddress;
+
   return {
     externalId: `mail:${message.id}`,
     externalThreadId: message.conversationId
@@ -109,6 +110,7 @@ function normalizeTeamsMessage(
   rootId?: string,
 ) {
   const id = `teams:${channel.teamId}:${channel.channelId}:${message.id}`;
+
   return {
     externalId: id,
     externalThreadId: `teams:${channel.teamId}:${channel.channelId}:${rootId || message.replyToId || message.id}`,
@@ -140,7 +142,9 @@ export function createMicrosoftConnector(
     provider: "Microsoft",
     async test(_configuration, secrets) {
       const token = secrets["access-token"];
+
       if (!token) throw new Error("Microsoft authorization is required.");
+
       const account = await graphApi<{
         displayName?: string;
         userPrincipalName?: string;
@@ -149,6 +153,7 @@ export function createMicrosoftConnector(
         token,
         "https://graph.microsoft.com/v1.0/me?$select=displayName,userPrincipalName",
       );
+
       return {
         ok: true,
         accountLabel:
@@ -160,7 +165,9 @@ export function createMicrosoftConnector(
     },
     async sync(configuration, secrets, checkpoint) {
       const token = secrets["access-token"];
+
       if (!token) throw new Error("Microsoft authorization is required.");
+
       const result: ConnectorSyncResult = {
         messages: [],
         checkpoint: {},
@@ -169,40 +176,49 @@ export function createMicrosoftConnector(
       let mailUrl = checkpoint.mailDeltaLink
         ? String(checkpoint.mailDeltaLink)
         : `https://graph.microsoft.com/v1.0/me/mailFolders/${encodeURIComponent(configuration.mailboxFolder)}/messages/delta?$top=100&$select=id,conversationId,subject,bodyPreview,body,from,toRecipients,ccRecipients,receivedDateTime,lastModifiedDateTime`;
+
       while (mailUrl) {
         const page = await graphApi<{
           value?: GraphMessage[];
           ["@odata.nextLink"]?: string;
           ["@odata.deltaLink"]?: string;
         }>(fetcher, token, mailUrl);
+
         for (const message of page.value || []) {
           const normalized = normalizeGraphMail(message);
           const domain = normalized.senderEmail?.split("@")[1];
+
           if (
             normalized.text &&
             (!domain || !configuration.excludeInternalDomains.includes(domain))
           )
             result.messages.push(normalized);
         }
+
         if (page["@odata.deltaLink"])
           result.checkpoint.mailDeltaLink = page["@odata.deltaLink"];
+
         mailUrl = page["@odata.nextLink"] || "";
       }
+
       const teamsCheckpoint = (checkpoint.teams || {}) as Record<
         string,
         string
       >;
       const nextTeams = { ...teamsCheckpoint };
+
       for (const channel of configuration.teamsChannels) {
         const key = `${channel.teamId}:${channel.channelId}`;
         const base = `https://graph.microsoft.com/v1.0/teams/${encodeURIComponent(channel.teamId)}/channels/${encodeURIComponent(channel.channelId)}`;
         let url = `${base}/messages?$top=50`;
         let latest = teamsCheckpoint[key] || "";
+
         while (url) {
           const page = await graphApi<{
             value?: GraphMessage[];
             ["@odata.nextLink"]?: string;
           }>(fetcher, token, url);
+
           for (const message of page.value || []) {
             if (
               teamsCheckpoint[key] &&
@@ -210,36 +226,46 @@ export function createMicrosoftConnector(
               message.lastModifiedDateTime <= teamsCheckpoint[key]
             )
               continue;
+
             const normalized = normalizeTeamsMessage(message, channel);
             const domain = normalized.senderEmail?.split("@")[1];
+
             if (
               normalized.text &&
               (!domain ||
                 !configuration.excludeInternalDomains.includes(domain))
             )
               result.messages.push(normalized);
+
             if (message.id) {
               const replies = await graphApi<{ value?: GraphMessage[] }>(
                 fetcher,
                 token,
                 `${base}/messages/${encodeURIComponent(message.id)}/replies?$top=100`,
               );
+
               for (const reply of replies.value || []) {
                 const item = normalizeTeamsMessage(reply, channel, message.id);
+
                 if (item.text) result.messages.push(item);
               }
             }
+
             if (
               message.lastModifiedDateTime &&
               message.lastModifiedDateTime > latest
             )
               latest = message.lastModifiedDateTime;
           }
+
           url = page["@odata.nextLink"] || "";
         }
+
         nextTeams[key] = latest;
       }
+
       result.checkpoint.teams = nextTeams;
+
       return result;
     },
   };

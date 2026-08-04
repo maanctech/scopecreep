@@ -29,16 +29,21 @@ function validationMessage(error: z.ZodError) {
 
 export async function GET(request: Request, context: { params: Promise<{ id: string }> }) {
   const { id } = await context.params;
+
   try {
     await requireApiPermission(request, "findings:read");
     const detail = await getFindingDetail(id);
+
     if (!detail) {
       return NextResponse.json({ error: "Finding not found." }, { status: 404 });
     }
+
     return NextResponse.json(detail);
   } catch (error) {
     const authResponse = authErrorResponse(error);
+
     if (authResponse) return authResponse;
+
     return NextResponse.json({ error: "Failed to load the finding." }, { status: 500 });
   }
 }
@@ -48,6 +53,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     await requireApiPermission(request, "findings:review");
     const { id } = await context.params;
     let json: unknown;
+
     try {
       json = await request.json();
     } catch {
@@ -67,19 +73,25 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     return NextResponse.json({ finding });
   } catch (error) {
     const authResponse = authErrorResponse(error);
+
     if (authResponse) return authResponse;
+
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: validationMessage(error) }, { status: 400 });
     }
+
     if (error instanceof NotFoundError) {
       return NextResponse.json({ error: error.message }, { status: 404 });
     }
+
     if (error instanceof VersionConflictError) {
       return NextResponse.json({ error: error.message }, { status: 409 });
     }
+
     if (error instanceof TransitionError) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
+
     return NextResponse.json({ error: "Failed to update the finding." }, { status: 500 });
   }
 }

@@ -10,12 +10,16 @@ const originalOpenAiKey = process.env.OPENAI_API_KEY;
 
 afterEach(() => {
   vi.unstubAllGlobals();
+
   if (originalProvider === undefined) delete process.env.AI_PROVIDER;
   else process.env.AI_PROVIDER = originalProvider;
+
   if (originalModel === undefined) delete process.env.OLLAMA_MODEL;
   else process.env.OLLAMA_MODEL = originalModel;
+
   if (originalAttempts === undefined) delete process.env.AI_MAX_ATTEMPTS;
   else process.env.AI_MAX_ATTEMPTS = originalAttempts;
+
   if (originalOpenAiKey === undefined) delete process.env.OPENAI_API_KEY;
   else process.env.OPENAI_API_KEY = originalOpenAiKey;
 });
@@ -28,6 +32,7 @@ describe("Ollama provider", () => {
     delete process.env.OLLAMA_MODEL;
     await expect(listOllamaModels()).resolves.toEqual(["other:latest", "gemma3:12b-it-qat"]);
     const health = await new OllamaProvider().health();
+
     expect(health.available).toBe(true);
     expect(health.selectedModel).toBe("gemma3:12b-it-qat");
   });
@@ -37,11 +42,14 @@ describe("Ollama provider", () => {
     process.env.AI_MAX_ATTEMPTS = "2";
     delete process.env.OLLAMA_MODEL;
     let chatCalls = 0;
+
     vi.stubGlobal("fetch", vi.fn(async (input: string | URL | Request) => {
       const url = String(input);
+
       if (url.endsWith("/api/tags")) {
         return new Response(JSON.stringify({ models: [{ name: "gemma3:12b-it-qat" }] }), { status: 200 });
       }
+
       chatCalls += 1;
       const content = chatCalls === 1 ? "not json" : JSON.stringify({
         classification: "Out of Scope",
@@ -54,6 +62,7 @@ describe("Ollama provider", () => {
         suggested_change_order: "We can scope the portal separately.",
         internal_note: "Explicit exclusion."
       });
+
       return new Response(JSON.stringify({ model: "gemma3:12b-it-qat", message: { content } }), { status: 200 });
     }));
 
@@ -62,6 +71,7 @@ describe("Ollama provider", () => {
       messageText: "Can you add a customer portal?",
       hourlyRate: 175
     });
+
     expect(result.metadata.status).toBe("Succeeded");
     expect(result.metadata.attempts).toBe(2);
     expect(result.analysis.estimated_revenue).toBe(1750);
@@ -72,11 +82,14 @@ describe("Ollama provider", () => {
     process.env.AI_MAX_ATTEMPTS = "2";
     process.env.OLLAMA_MODEL = "gemma3:12b-it-qat";
     let chatCalls = 0;
+
     vi.stubGlobal("fetch", vi.fn(async (input: string | URL | Request) => {
       const url = String(input);
+
       if (url.endsWith("/api/tags")) {
         return new Response(JSON.stringify({ models: [{ name: "gemma3:12b-it-qat" }] }), { status: 200 });
       }
+
       chatCalls += 1;
       const content = JSON.stringify({
         classification: "Out of Scope",
@@ -89,6 +102,7 @@ describe("Ollama provider", () => {
         suggested_change_order: "We can scope the portal separately.",
         internal_note: "Explicit exclusion."
       });
+
       return new Response(JSON.stringify({
         model: "gemma3:12b-it-qat",
         message: { content }
@@ -117,11 +131,13 @@ describe("Ollama provider", () => {
       messageText: "Can you add a portal?",
       hourlyRate: 175
     });
+
     expect(result.metadata.status).toBe("Failed");
     expect(result.analysis.classification).toBe("Needs Human Review");
     expect(result.analysis.estimated_revenue).toBe(0);
     expect(result.analysis.reasoning).not.toContain("connection refused");
     const health = await new OllamaProvider().health();
+
     expect(health.available).toBe(false);
     expect(health.message).toBe(
       "Ollama could not be reached. Check OLLAMA_BASE_URL, the Ollama service, and the local firewall."
@@ -142,8 +158,10 @@ describe("provider cancellation", () => {
     process.env.OPENAI_API_KEY = "test-only-key";
     process.env.AI_MAX_ATTEMPTS = "3";
     const fetcher = vi.fn();
+
     vi.stubGlobal("fetch", fetcher);
     const controller = new AbortController();
+
     controller.abort();
 
     const result = await analyzeClientRequestDetailed({

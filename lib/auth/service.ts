@@ -18,6 +18,7 @@ function slugify(value: string) {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "")
     .slice(0, 80);
+
   return slug || `workspace-${randomUUID().slice(0, 8)}`;
 }
 
@@ -50,6 +51,7 @@ async function writeAuditLog(
 
 export async function hasAnyUsers() {
   const result = await query<{ exists: boolean }>("SELECT EXISTS (SELECT 1 FROM users) AS exists");
+
   return result.rows[0]?.exists ?? false;
 }
 
@@ -65,6 +67,7 @@ export async function createInitialOwner(input: {
   return transaction(async (client) => {
     await client.query("LOCK TABLE users IN EXCLUSIVE MODE");
     const existing = await client.query("SELECT 1 FROM users LIMIT 1");
+
     if (existing.rowCount) throw new Error("Initial setup has already been completed.");
 
     const organizationId = randomUUID();
@@ -96,6 +99,7 @@ export async function createInitialOwner(input: {
       resourceType: "organization",
       resourceId: organizationId
     });
+
     return { organizationId, userId };
   });
 }
@@ -109,14 +113,18 @@ export async function createOrganizationUser(input: {
 }) {
   const passwordHash = await hashPassword(input.password);
   const normalizedEmail = normalizeEmail(input.email);
+
   return transaction(async (client) => {
     const organization = await client.query("SELECT 1 FROM organizations WHERE id = $1", [input.organizationId]);
+
     if (!organization.rowCount) throw new Error("Organization not found.");
+
     const existing = await client.query<{ id: string }>(
       "SELECT id FROM users WHERE normalized_email = $1 FOR UPDATE",
       [normalizedEmail]
     );
     const userId = existing.rows[0]?.id ?? randomUUID();
+
     if (!existing.rows[0]) {
       await client.query(
         `INSERT INTO users (id, email, normalized_email, password_hash, display_name)
@@ -124,6 +132,7 @@ export async function createOrganizationUser(input: {
         [userId, input.email.trim(), normalizedEmail, passwordHash, input.displayName.trim()]
       );
     }
+
     await client.query(
       `INSERT INTO organization_memberships (organization_id, user_id, role)
        VALUES ($1,$2,$3)
@@ -138,6 +147,7 @@ export async function createOrganizationUser(input: {
       resourceId: userId,
       metadata: { role: input.role }
     });
+
     return { userId };
   });
 }
@@ -151,9 +161,11 @@ export async function authenticateUser(email: string, password: string) {
     normalizeEmail(email)
   ]);
   const user = result.rows[0];
+
   if (!user || user.disabled_at || !(await verifyPassword(user.password_hash, password))) {
     return null;
   }
+
   return user.id;
 }
 
@@ -173,10 +185,12 @@ export async function createSession(input: {
   const membership = input.organizationId
     ? memberships.rows.find((row) => row.organization_id === input.organizationId)
     : memberships.rows[0];
+
   if (!membership) throw new Error("User does not belong to this organization.");
 
   const token = randomBytes(32).toString("base64url");
   const expiresAt = new Date(Date.now() + SESSION_DURATION_MS);
+
   await query(
     `INSERT INTO user_sessions
       (id, user_id, organization_id, token_hash, expires_at, ip_address, user_agent)
@@ -191,6 +205,7 @@ export async function createSession(input: {
       input.userAgent?.slice(0, 500) ?? null
     ]
   );
+
   return { token, expiresAt };
 }
 
@@ -209,6 +224,7 @@ export async function getAuthContext(token: string): Promise<AuthContext | null>
        AND u.disabled_at IS NULL`,
     [hashToken(token)]
   );
+
   return result.rows[0] ?? null;
 }
 
@@ -226,14 +242,17 @@ export async function changePassword(input: {
   keepSessionId: string;
 }) {
   const passwordHash = await hashPassword(input.newPassword);
+
   return transaction(async (client) => {
     const result = await client.query<{ password_hash: string }>(
       "SELECT password_hash FROM users WHERE id = $1 AND disabled_at IS NULL FOR UPDATE",
       [input.userId]
     );
+
     if (!result.rows[0] || !(await verifyPassword(result.rows[0].password_hash, input.currentPassword))) {
       throw new Error("Current password is incorrect.");
     }
+
     await client.query(
       "UPDATE users SET password_hash = $1, password_changed_at = now(), updated_at = now() WHERE id = $2",
       [passwordHash, input.userId]
@@ -248,6 +267,7 @@ export async function changePassword(input: {
 export async function createPasswordResetToken(userId: string) {
   const token = randomBytes(32).toString("base64url");
   const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
+
   await transaction(async (client) => {
     await client.query(
       "UPDATE password_reset_tokens SET consumed_at = now() WHERE user_id = $1 AND consumed_at IS NULL",
@@ -259,11 +279,13 @@ export async function createPasswordResetToken(userId: string) {
       [randomUUID(), userId, hashToken(token), expiresAt]
     );
   });
+
   return { token, expiresAt };
 }
 
 export async function resetPassword(token: string, newPassword: string) {
   const passwordHash = await hashPassword(newPassword);
+
   return transaction(async (client) => {
     const result = await client.query<{ id: string; user_id: string }>(
       `SELECT id, user_id FROM password_reset_tokens
@@ -272,7 +294,9 @@ export async function resetPassword(token: string, newPassword: string) {
       [hashToken(token)]
     );
     const reset = result.rows[0];
+
     if (!reset) throw new Error("This password reset link is invalid or expired.");
+
     await client.query(
       "UPDATE users SET password_hash = $1, password_changed_at = now(), updated_at = now() WHERE id = $2",
       [passwordHash, reset.user_id]
@@ -282,6 +306,7 @@ export async function resetPassword(token: string, newPassword: string) {
       "UPDATE user_sessions SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL",
       [reset.user_id]
     );
+
     return reset.user_id;
   });
 }

@@ -4,17 +4,36 @@ declare global {
   var __scopeLedgerPool: Pool | undefined;
 }
 
+let poolOverride: Pool | undefined;
+
+/**
+ * Test-only seam: lets tests substitute a Postgres-compatible pool (for
+ * example a PGlite adapter) instead of a real node-postgres connection.
+ * Production code never calls this, so normal behavior is unaffected.
+ */
+export function setPoolForTesting(pool: Pool) {
+  poolOverride = pool;
+}
+
+export function resetPoolForTesting() {
+  poolOverride = undefined;
+}
+
 function databaseUrl() {
   const value = process.env.DATABASE_URL?.trim();
+
   if (!value) {
     throw new Error(
       "DATABASE_URL is required. Use SCOPELEDGER_STORAGE=json only for explicit legacy/demo operation."
     );
   }
+
   return value;
 }
 
 export function getPool() {
+  if (poolOverride) return poolOverride;
+
   if (!global.__scopeLedgerPool) {
     global.__scopeLedgerPool = new Pool({
       connectionString: databaseUrl(),
@@ -24,6 +43,7 @@ export function getPool() {
       ssl: process.env.DATABASE_SSL === "require" ? { rejectUnauthorized: true } : undefined
     });
   }
+
   return global.__scopeLedgerPool;
 }
 
@@ -36,10 +56,13 @@ export async function query<T extends QueryResultRow = QueryResultRow>(
 
 export async function transaction<T>(work: (client: PoolClient) => Promise<T>): Promise<T> {
   const client = await getPool().connect();
+
   try {
     await client.query("BEGIN");
     const result = await work(client);
+
     await client.query("COMMIT");
+
     return result;
   } catch (error) {
     await client.query("ROLLBACK");

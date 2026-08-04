@@ -5,13 +5,15 @@ import { createWebhookConnection } from "@/lib/ingestion/webhook";
 
 const schema = z
   .object({
-    projectId: z.string().uuid(),
+    projectId: z.uuid(),
     name: z.string().trim().min(2).max(120),
   })
   .strict();
+
 export async function POST(request: Request) {
   try {
     await requireApiPermission(request, "integrations:write");
+
     return NextResponse.json(
       {
         connection: await createWebhookConnection(

@@ -56,9 +56,15 @@ export function BillingSummary({ totals }: { totals: RevenueTotals }) {
   ];
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="
+      grid gap-4
+      sm:grid-cols-2
+      lg:grid-cols-3
+    ">
       {cards.map((card) => (
-        <div key={card.label} className="rounded-md border border-audit-border bg-white p-4 shadow-audit">
+        <div key={card.label} className="
+          rounded-md border border-audit-border bg-white p-4 shadow-audit
+        ">
           <div className="text-sm font-medium text-audit-muted">{card.label}</div>
           <div className="mt-1 text-2xl font-semibold">{card.value}</div>
           <div className="mt-1 text-sm text-audit-muted">{card.hint}</div>

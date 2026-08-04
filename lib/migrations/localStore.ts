@@ -1,4 +1,4 @@
-import { DEMO_PROJECT_ID } from "@/lib/demoData";
+import { DEMO_PROJECT_ID } from "@/lib/demo";
 import type {
   AuditRequest,
   BillingEvent,
@@ -144,6 +144,7 @@ function migrateV1ToV2(raw: Record<string, unknown>): BusinessStore {
     const message = messageById.get(analysis.client_message_id);
     const projectId = message?.project_id ?? "";
     const project = projectId ? projectById.get(projectId) : undefined;
+
     return migrateAnalysisToFinding(analysis, projectId, project?.is_demo ?? false);
   });
 

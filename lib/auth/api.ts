@@ -13,6 +13,7 @@ function cookieValue(header: string | null, name: string) {
     ?.split(";")
     .map((part) => part.trim())
     .find((part) => part.startsWith(`${name}=`));
+
   return item ? decodeURIComponent(item.slice(name.length + 1)) : null;
 }
 
@@ -21,20 +22,26 @@ export async function requireApiPermission(
   permission: Permission
 ): Promise<AuthContext | null> {
   assertSameOrigin(request);
+
   if (process.env.NODE_ENV === "test") return null;
 
   const token = cookieValue(request.headers.get("cookie"), SESSION_COOKIE_NAME);
+
   if (!["GET", "HEAD", "OPTIONS"].includes(request.method.toUpperCase())) {
     const path = new URL(request.url).pathname;
     const principal = token
       ? createHash("sha256").update(token).digest("hex").slice(0, 24)
       : requestIp(request);
+
     checkRateLimit(`protected:${principal}:${path}`, 120, 60_000);
   }
 
   const context = token ? await getAuthContext(token) : null;
+
   if (!context) throw new AuthenticationError("Sign in to continue.");
+
   assertPermission(context.role, permission);
+
   return context;
 }
 
@@ -42,15 +49,19 @@ export function authErrorResponse(error: unknown) {
   if (error instanceof AuthenticationError) {
     return NextResponse.json({ error: error.message }, { status: 401 });
   }
+
   if (error instanceof AuthorizationError) {
     return NextResponse.json({ error: "You do not have permission to perform this action." }, { status: 403 });
   }
+
   if (error instanceof InvalidOriginError) {
     return NextResponse.json({ error: error.message }, { status: 403 });
   }
+
   if (error instanceof RateLimitError) {
     return NextResponse.json({ error: error.message }, { status: 429 });
   }
+
   return null;
 }
 

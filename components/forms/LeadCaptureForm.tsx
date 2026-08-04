@@ -40,6 +40,7 @@ export function LeadCaptureForm() {
         lead?: { id: string };
         error?: string;
       } | null;
+
       if (!response.ok || !json?.lead) {
         throw new Error(json?.error || "Failed to submit audit request. Please try again.");
       }
@@ -53,11 +54,18 @@ export function LeadCaptureForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="grid gap-5 rounded-md border border-audit-border bg-white p-6 shadow-audit">
-      <div className="grid gap-4 sm:grid-cols-2">
+    <form onSubmit={onSubmit} className="
+      grid gap-5 rounded-md border border-audit-border bg-white p-6 shadow-audit
+    ">
+      <div className="
+        grid gap-4
+        sm:grid-cols-2
+      ">
         <label className="block">
           <span className="text-sm font-medium">Name</span>
-          <input name="name" autoComplete="name" maxLength={120} className="mt-2 w-full rounded-md border border-audit-border px-3 py-2" required />
+          <input name="name" autoComplete="name" maxLength={120} className="
+            mt-2 w-full rounded-md border border-audit-border px-3 py-2
+          " required />
         </label>
         <label className="block">
           <span className="text-sm font-medium">Email</span>
@@ -66,21 +74,29 @@ export function LeadCaptureForm() {
             type="email"
             autoComplete="email"
             maxLength={200}
-            className="mt-2 w-full rounded-md border border-audit-border px-3 py-2"
+            className="
+              mt-2 w-full rounded-md border border-audit-border px-3 py-2
+            "
             required
           />
         </label>
         <label className="block">
           <span className="text-sm font-medium">Company</span>
-          <input name="company" autoComplete="organization" maxLength={160} className="mt-2 w-full rounded-md border border-audit-border px-3 py-2" required />
+          <input name="company" autoComplete="organization" maxLength={160} className="
+            mt-2 w-full rounded-md border border-audit-border px-3 py-2
+          " required />
         </label>
         <label className="block">
           <span className="text-sm font-medium">Website</span>
-          <input name="website" type="url" autoComplete="url" maxLength={240} placeholder="https://" className="mt-2 w-full rounded-md border border-audit-border px-3 py-2" />
+          <input name="website" type="url" autoComplete="url" maxLength={240} placeholder="https://" className="
+            mt-2 w-full rounded-md border border-audit-border px-3 py-2
+          " />
         </label>
         <label className="block">
           <span className="text-sm font-medium">Type of business</span>
-          <select name="business_type" className="mt-2 w-full rounded-md border border-audit-border px-3 py-2" required>
+          <select name="business_type" className="
+            mt-2 w-full rounded-md border border-audit-border px-3 py-2
+          " required>
             {businessTypes.map((type) => (
               <option key={type}>{type}</option>
             ))}
@@ -88,7 +104,9 @@ export function LeadCaptureForm() {
         </label>
         <label className="block">
           <span className="text-sm font-medium">Team size</span>
-          <select name="team_size" className="mt-2 w-full rounded-md border border-audit-border px-3 py-2" required>
+          <select name="team_size" className="
+            mt-2 w-full rounded-md border border-audit-border px-3 py-2
+          " required>
             {teamSizes.map((size) => (
               <option key={size}>{size}</option>
             ))}
@@ -102,7 +120,9 @@ export function LeadCaptureForm() {
             inputMode="decimal"
             min="0"
             step="0.01"
-            className="mt-2 w-full rounded-md border border-audit-border px-3 py-2"
+            className="
+              mt-2 w-full rounded-md border border-audit-border px-3 py-2
+            "
             placeholder="45000"
           />
         </label>
@@ -114,7 +134,9 @@ export function LeadCaptureForm() {
             inputMode="decimal"
             min="0.01"
             step="0.01"
-            className="mt-2 w-full rounded-md border border-audit-border px-3 py-2"
+            className="
+              mt-2 w-full rounded-md border border-audit-border px-3 py-2
+            "
             placeholder="150"
           />
         </label>
@@ -126,24 +148,33 @@ export function LeadCaptureForm() {
           name="pain_point"
           rows={5}
           maxLength={2000}
-          className="mt-2 w-full rounded-md border border-audit-border px-3 py-2"
+          className="
+            mt-2 w-full rounded-md border border-audit-border px-3 py-2
+          "
           required
         />
       </label>
 
       <label className="flex items-start gap-3 text-sm text-zinc-700">
-        <input name="consent_to_contact" type="checkbox" className="mt-1 h-4 w-4" required />
+        <input name="consent_to_contact" type="checkbox" className="mt-1 size-4" required />
         <span>I agree to be contacted about the free scope creep revenue leakage audit.</span>
       </label>
 
       <div aria-live="polite">
-        {error ? <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div> : null}
+        {error ? <div className="
+          rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700
+        ">{error}</div> : null}
       </div>
 
       <button
         type="submit"
         disabled={isSubmitting}
-        className="inline-flex h-11 items-center justify-center rounded-md bg-ink px-4 text-sm font-semibold text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60"
+        className="
+          inline-flex h-11 items-center justify-center rounded-md bg-ink px-4
+          text-sm font-semibold text-white
+          hover:bg-zinc-800
+          disabled:cursor-not-allowed disabled:opacity-60
+        "
       >
         {isSubmitting ? "Saving request..." : "Request free audit"}
       </button>

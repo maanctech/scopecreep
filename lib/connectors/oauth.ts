@@ -40,7 +40,9 @@ export function oauthProviderDefinition(
         "https://www.googleapis.com/auth/gmail.readonly",
       ],
     };
+
   const tenant = String(configuration.tenantId || "common");
+
   return {
     authorizeUrl: `https://login.microsoftonline.com/${encodeURIComponent(tenant)}/oauth2/v2.0/authorize`,
     tokenUrl: `https://login.microsoftonline.com/${encodeURIComponent(tenant)}/oauth2/v2.0/token`,
@@ -63,28 +65,37 @@ function base64Url(buffer: Buffer) {
 
 export async function beginOAuthAuthorization(connectionId: string) {
   const auth = await currentAuthContext();
+
   if (!auth) throw new Error("A valid organization session is required.");
+
   assertPermission(auth.role, "integrations:write");
   const result = await query<ConnectionRow>(
     "SELECT id,organization_id,provider,configuration FROM communication_connections WHERE id=$1 AND organization_id=$2 AND provider IN ('Google','Microsoft') AND status<>'Disabled'",
     [connectionId, auth.organizationId],
   );
   const connection = result.rows[0];
+
   if (!connection) throw new Error("OAuth connection not found.");
+
   const clientId = String(connection.configuration.clientId || "");
+
   if (!clientId) throw new Error("OAuth client ID is missing.");
+
   const requestId = randomUUID();
   const state = base64Url(randomBytes(32));
   const verifier = base64Url(randomBytes(48));
   const challenge = base64Url(createHash("sha256").update(verifier).digest());
   const appUrl = process.env.APP_URL?.replace(/\/$/, "");
+
   if (!appUrl) throw new Error("APP_URL is required for OAuth callbacks.");
+
   const providerKey = connection.provider.toLowerCase();
   const redirectUri = `${appUrl}/api/integrations/oauth/${providerKey}/callback`;
   const encrypted = encryptSecret(
     verifier,
     verifierContext(auth.organizationId, requestId),
   );
+
   await query(
     `INSERT INTO oauth_authorization_requests (id,organization_id,connection_id,provider,state_sha256,verifier_ciphertext,verifier_initialization_vector,verifier_auth_tag,redirect_uri,expires_at,created_by)
      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,now()+interval '10 minutes',$10)`,
@@ -106,6 +117,7 @@ export async function beginOAuthAuthorization(connectionId: string) {
     connection.configuration,
   );
   const url = new URL(definition.authorizeUrl);
+
   url.searchParams.set("client_id", clientId);
   url.searchParams.set("redirect_uri", redirectUri);
   url.searchParams.set("response_type", "code");
@@ -113,10 +125,12 @@ export async function beginOAuthAuthorization(connectionId: string) {
   url.searchParams.set("state", state);
   url.searchParams.set("code_challenge", challenge);
   url.searchParams.set("code_challenge_method", "S256");
+
   if (connection.provider === "Google") {
     url.searchParams.set("access_type", "offline");
     url.searchParams.set("prompt", "consent");
   }
+
   return { authorizationUrl: url.toString(), expiresInSeconds: 600 };
 }
 
@@ -127,10 +141,13 @@ export async function completeOAuthAuthorization(input: {
   fetcher?: ConnectorHttp;
 }) {
   const auth = await currentAuthContext();
+
   if (!auth) throw new Error("Sign in before completing authorization.");
+
   assertPermission(auth.role, "integrations:write");
   const stateHash = createHash("sha256").update(input.state).digest("hex");
   const fetcher = input.fetcher || fetch;
+
   return transaction(async (client) => {
     const request = await client.query<{
       id: string;
@@ -147,8 +164,10 @@ export async function completeOAuthAuthorization(input: {
       [auth.organizationId, input.provider, stateHash],
     );
     const row = request.rows[0];
+
     if (!row)
       throw new Error("OAuth request is invalid, expired, or already used.");
+
     const verifier = decryptSecret(
       {
         ciphertext: row.verifier_ciphertext,
@@ -180,6 +199,7 @@ export async function completeOAuthAuthorization(input: {
       body,
     });
     const tokens = tokenSchema.parse(data);
+
     await saveConnectionSecret(
       client,
       auth.organizationId,
@@ -187,6 +207,7 @@ export async function completeOAuthAuthorization(input: {
       "access-token",
       tokens.access_token,
     );
+
     if (tokens.refresh_token)
       await saveConnectionSecret(
         client,
@@ -195,10 +216,12 @@ export async function completeOAuthAuthorization(input: {
         "refresh-token",
         tokens.refresh_token,
       );
+
     await client.query(
       "UPDATE oauth_authorization_requests SET used_at=now() WHERE id=$1 AND organization_id=$2",
       [row.id, auth.organizationId],
     );
+
     return { connectionId: row.connection_id };
   });
 }
@@ -211,6 +234,7 @@ export async function refreshedAccessToken(input: {
 }) {
   if (!input.secrets["refresh-token"])
     return input.secrets["access-token"] || "";
+
   const definition = oauthProviderDefinition(
     input.provider,
     input.configuration,
@@ -230,5 +254,6 @@ export async function refreshedAccessToken(input: {
       body,
     },
   );
+
   return tokenSchema.parse(data).access_token;
 }

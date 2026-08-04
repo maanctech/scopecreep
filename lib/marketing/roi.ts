@@ -8,6 +8,7 @@ export type RoiEstimate = {
 
 function bounded(value: number, maximum: number) {
   if (!Number.isFinite(value) || value <= 0) return 0;
+
   return Math.min(value, maximum);
 }
 

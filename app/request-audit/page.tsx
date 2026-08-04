@@ -6,18 +6,21 @@ export default function RequestAuditPage() {
       <section className="border-b border-audit-border pb-6">
         <p className="text-sm font-semibold text-audit-muted">Free lookback audit / private-beta application</p>
         <h1 className="mt-2 text-3xl font-semibold">Request a ScopeLedger revenue leakage audit</h1>
-        <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-700">
+        <p className="mt-3 max-w-2xl text-sm/6 text-zinc-700">
           Tell us about the firm and the scope problem. After this step, you can securely paste
           one SOW and representative client-message exports for a manual review.
         </p>
       </section>
-      <section className="grid gap-4 border-b border-audit-border pb-8 text-sm leading-6 text-zinc-700 sm:grid-cols-3">
+      <section className="
+        grid gap-4 border-b border-audit-border pb-8 text-sm/6 text-zinc-700
+        sm:grid-cols-3
+      ">
         <div><strong className="block text-ink">1. Business context</strong>Project economics, team size, and the margin problem.</div>
         <div><strong className="block text-ink">2. Private intake</strong>SOW text and representative messages saved to the professional workspace.</div>
         <div><strong className="block text-ink">3. Human review</strong>Evidence and estimates are validated before any findings are discussed.</div>
       </section>
       <LeadCaptureForm />
-      <p className="text-xs leading-5 text-zinc-600">
+      <p className="text-xs/5 text-zinc-600">
         This form does not subscribe you to automated marketing or contact a client. Submitted
         materials may contain confidential business information and should only be provided when
         you are authorized to share them for the audit.

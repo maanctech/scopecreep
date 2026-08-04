@@ -8,10 +8,13 @@ export async function GET(request: Request) {
   try {
     await requireApiPermission(request, "findings:read");
     const findings = await getFindings();
+
     return NextResponse.json({ findings });
   } catch (error) {
     const authResponse = authErrorResponse(error);
+
     if (authResponse) return authResponse;
+
     return NextResponse.json({ error: "Failed to load findings." }, { status: 500 });
   }
 }

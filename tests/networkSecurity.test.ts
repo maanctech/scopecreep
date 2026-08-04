@@ -18,6 +18,7 @@ describe("integration network targets", () => {
       "::ffff:127.0.0.1",
     ])
       expect(isPrivateAddress(address)).toBe(true);
+
     expect(isPrivateAddress("8.8.8.8")).toBe(false);
   });
 });

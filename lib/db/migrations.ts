@@ -19,6 +19,7 @@ export async function loadMigrations(directory = path.join(process.cwd(), "db", 
   return Promise.all(
     filenames.map(async (filename): Promise<Migration> => {
       const sql = await fs.readFile(path.join(directory, filename), "utf8");
+
       return {
         version: filename.split("_")[0],
         filename,
@@ -42,6 +43,7 @@ async function ensureMigrationTable(client: Pick<PoolClient, "query">) {
 
 export async function runMigrations() {
   const migrations = await loadMigrations();
+
   return transaction(async (client) => {
     await ensureMigrationTable(client);
     const applied = await client.query<{ version: string; checksum: string }>(
@@ -52,9 +54,11 @@ export async function runMigrations() {
 
     for (const migration of migrations) {
       const existingChecksum = appliedByVersion.get(migration.version);
+
       if (existingChecksum && existingChecksum !== migration.checksum) {
         throw new Error(`Migration ${migration.filename} changed after it was applied.`);
       }
+
       if (existingChecksum) continue;
 
       await client.query(migration.sql);

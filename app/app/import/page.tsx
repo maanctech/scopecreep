@@ -16,6 +16,7 @@ export default async function ImportPage() {
   const canImport = Boolean(
     auth && hasPermission(auth.role, "integrations:write"),
   );
+
   return (
     <div className="space-y-8">
       <section className="border-b border-audit-border pb-7">
@@ -25,7 +26,7 @@ export default async function ImportPage() {
         <h1 className="mt-2 text-3xl font-semibold">
           Import client communications
         </h1>
-        <p className="mt-3 max-w-3xl text-base leading-7 text-zinc-700">
+        <p className="mt-3 max-w-3xl text-base/7 text-zinc-700">
           Preview pasted text, CSV, or JSON before saving it to a project.
           Importing does not run AI analysis and never contacts a client.
         </p>
@@ -38,7 +39,9 @@ export default async function ImportPage() {
           }))}
         />
       ) : canImport ? (
-        <section className="rounded-md border border-audit-border bg-white p-6 shadow-audit">
+        <section className="
+          rounded-md border border-audit-border bg-white p-6 shadow-audit
+        ">
           <h2 className="text-xl font-semibold">Create a project first</h2>
           <p className="mt-2 max-w-2xl text-zinc-700">
             Communications must be routed to a client project so every source
@@ -46,13 +49,18 @@ export default async function ImportPage() {
           </p>
           <Link
             href="/app/projects/new"
-            className="mt-5 inline-flex min-h-11 items-center rounded-md bg-ink px-5 text-sm font-semibold text-white"
+            className="
+              mt-5 inline-flex min-h-11 items-center rounded-md bg-ink px-5
+              text-sm font-semibold text-white
+            "
           >
             Create project
           </Link>
         </section>
       ) : (
-        <div className="rounded-md border border-audit-border bg-white p-5 text-sm">
+        <div className="
+          rounded-md border border-audit-border bg-white p-5 text-sm
+        ">
           Your role can review import history but cannot add communications.
         </div>
       )}
@@ -61,7 +69,9 @@ export default async function ImportPage() {
         <p className="mt-2 text-sm text-zinc-700">
           Completed and failed jobs remain visible for diagnosis.
         </p>
-        <div className="mt-4 overflow-x-auto rounded-md border border-audit-border">
+        <div className="
+          mt-4 overflow-x-auto rounded-md border border-audit-border
+        ">
           <table className="min-w-full text-left text-sm">
             <thead className="bg-audit-soft">
               <tr>

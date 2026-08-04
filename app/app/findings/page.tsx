@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Disclaimer } from "@/components/Disclaimer";
+import { Disclaimer } from "@/components/ui/Disclaimer";
 import { findingDisplayLabel } from "@/lib/domain/findingTransitions";
 import { formatCents, formatDollars } from "@/lib/domain/money";
 import { getFindings } from "@/lib/store";
@@ -31,13 +31,19 @@ function matchesFilters(
   const { finding, project } = row;
 
   if (filters.client && project?.client_name !== filters.client) return false;
+
   if (filters.project && project?.id !== filters.project) return false;
+
   if (filters.classification && finding.classification !== filters.classification) return false;
+
   if (filters.decision && finding.billing_decision !== filters.decision) return false;
+
   if (filters.status && finding.workflow_status !== filters.status) return false;
 
   const createdDate = finding.created_at.slice(0, 10);
+
   if (filters.from && createdDate < filters.from) return false;
+
   if (filters.to && createdDate > filters.to) return false;
 
   return true;
@@ -63,7 +69,7 @@ export default async function FindingsPage({ searchParams }: FindingsPageProps) 
     <div className="space-y-8">
       <section className="border-b border-audit-border pb-7">
         <h1 className="text-3xl font-semibold">All scope findings</h1>
-        <p className="mt-3 max-w-2xl text-base leading-7 text-zinc-700">
+        <p className="mt-3 max-w-2xl text-base/7 text-zinc-700">
           Every AI-flagged request across all projects, with your billing decisions. Open a
           project to review and decide on a finding.
         </p>
@@ -73,14 +79,21 @@ export default async function FindingsPage({ searchParams }: FindingsPageProps) 
 
       <form
         method="GET"
-        className="grid gap-4 rounded-md border border-audit-border bg-white p-5 shadow-audit sm:grid-cols-2 lg:grid-cols-4"
+        className="
+          grid gap-4 rounded-md border border-audit-border bg-white p-5
+          shadow-audit
+          sm:grid-cols-2
+          lg:grid-cols-4
+        "
       >
         <label className="block">
           <span className="text-sm font-medium">Client</span>
           <select
             name="client"
             defaultValue={filters.client ?? ""}
-            className="mt-2 w-full rounded-md border border-audit-border px-3 py-2"
+            className="
+              mt-2 w-full rounded-md border border-audit-border px-3 py-2
+            "
           >
             <option value="">All clients</option>
             {clients.map((client) => (
@@ -93,7 +106,9 @@ export default async function FindingsPage({ searchParams }: FindingsPageProps) 
           <select
             name="project"
             defaultValue={filters.project ?? ""}
-            className="mt-2 w-full rounded-md border border-audit-border px-3 py-2"
+            className="
+              mt-2 w-full rounded-md border border-audit-border px-3 py-2
+            "
           >
             <option value="">All projects</option>
             {projects.map((project) => (
@@ -108,7 +123,9 @@ export default async function FindingsPage({ searchParams }: FindingsPageProps) 
           <select
             name="classification"
             defaultValue={filters.classification ?? ""}
-            className="mt-2 w-full rounded-md border border-audit-border px-3 py-2"
+            className="
+              mt-2 w-full rounded-md border border-audit-border px-3 py-2
+            "
           >
             <option value="">All classifications</option>
             {CLASSIFICATIONS.map((item) => (
@@ -121,7 +138,9 @@ export default async function FindingsPage({ searchParams }: FindingsPageProps) 
           <select
             name="decision"
             defaultValue={filters.decision ?? ""}
-            className="mt-2 w-full rounded-md border border-audit-border px-3 py-2"
+            className="
+              mt-2 w-full rounded-md border border-audit-border px-3 py-2
+            "
           >
             <option value="">All decisions</option>
             {BILLING_DECISIONS.map((item) => (
@@ -134,7 +153,9 @@ export default async function FindingsPage({ searchParams }: FindingsPageProps) 
           <select
             name="status"
             defaultValue={filters.status ?? ""}
-            className="mt-2 w-full rounded-md border border-audit-border px-3 py-2"
+            className="
+              mt-2 w-full rounded-md border border-audit-border px-3 py-2
+            "
           >
             <option value="">All statuses</option>
             {WORKFLOW_STATUSES.map((item) => (
@@ -148,7 +169,9 @@ export default async function FindingsPage({ searchParams }: FindingsPageProps) 
             type="date"
             name="from"
             defaultValue={filters.from ?? ""}
-            className="mt-2 w-full rounded-md border border-audit-border px-3 py-2"
+            className="
+              mt-2 w-full rounded-md border border-audit-border px-3 py-2
+            "
           />
         </label>
         <label className="block">
@@ -157,26 +180,38 @@ export default async function FindingsPage({ searchParams }: FindingsPageProps) 
             type="date"
             name="to"
             defaultValue={filters.to ?? ""}
-            className="mt-2 w-full rounded-md border border-audit-border px-3 py-2"
+            className="
+              mt-2 w-full rounded-md border border-audit-border px-3 py-2
+            "
           />
         </label>
         <div className="flex items-end gap-3">
           <button
             type="submit"
-            className="inline-flex h-11 items-center rounded-md bg-ink px-5 text-sm font-semibold text-white hover:bg-zinc-800"
+            className="
+              inline-flex h-11 items-center rounded-md bg-ink px-5 text-sm
+              font-semibold text-white
+              hover:bg-zinc-800
+            "
           >
             Apply filters
           </button>
           <Link
             href="/app/findings"
-            className="inline-flex h-11 items-center rounded-md border border-audit-border px-4 text-sm font-semibold hover:bg-audit-soft"
+            className="
+              inline-flex h-11 items-center rounded-md border
+              border-audit-border px-4 text-sm font-semibold
+              hover:bg-audit-soft
+            "
           >
             Clear
           </Link>
         </div>
       </form>
 
-      <section className="rounded-md border border-audit-border bg-white shadow-audit">
+      <section className="
+        rounded-md border border-audit-border bg-white shadow-audit
+      ">
         <div className="border-b border-audit-border px-5 py-4">
           <h2 className="text-xl font-semibold">
             {rows.length} finding{rows.length === 1 ? "" : "s"}
@@ -203,11 +238,17 @@ export default async function FindingsPage({ searchParams }: FindingsPageProps) 
             <tbody>
               {rows.length ? (
                 rows.map(({ finding, message, project }) => (
-                  <tr key={finding.id} className="border-t border-audit-border align-top">
+                  <tr key={finding.id} className="
+                    border-t border-audit-border align-top
+                  ">
                     <td className="max-w-96 px-5 py-4">
                       <p className="leading-6">{message?.message_text ?? finding.reasoning}</p>
                       {finding.is_demo ? (
-                        <span className="mt-1 inline-block rounded border border-zinc-300 bg-zinc-100 px-1.5 py-0.5 text-xs font-semibold text-zinc-700">
+                        <span className="
+                          mt-1 inline-block rounded-sm border border-zinc-300
+                          bg-zinc-100 px-1.5 py-0.5 text-xs font-semibold
+                          text-zinc-700
+                        ">
                           Fictional demo data
                         </span>
                       ) : null}

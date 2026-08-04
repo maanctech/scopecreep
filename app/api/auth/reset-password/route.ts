@@ -14,11 +14,15 @@ export async function POST(request: Request) {
     assertSameOrigin(request);
     checkRateLimit(`password-reset:${requestIp(request)}`, 10, 30 * 60 * 1000);
     const body = schema.parse(await request.json());
+
     await resetPassword(body.token, body.newPassword);
+
     return NextResponse.json({ ok: true });
   } catch (error) {
     const authResponse = authErrorResponse(error);
+
     if (authResponse) return authResponse;
+
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Password reset failed." },
       { status: 400 }

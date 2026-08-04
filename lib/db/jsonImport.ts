@@ -5,30 +5,30 @@ import { migrateStoreShape, type BusinessStore } from "@/lib/migrations/localSto
 import { splitSowSections } from "@/lib/sow/extraction";
 
 const idSchema = z.string().trim().min(1).max(240);
-const timestampSchema = z.string().datetime({ offset: true });
+const timestampSchema = z.iso.datetime({ offset: true });
 const nullableMoneySchema = z.number().finite().nonnegative().nullable();
 
 const storeSchema = z.object({
   schema_version: z.number().int().positive(),
-  users: z.array(z.object({ id: idSchema, email: z.string().email(), created_at: timestampSchema }).passthrough()),
-  companies: z.array(z.object({ id: idSchema, name: z.string().trim().min(1), created_at: timestampSchema }).passthrough()),
-  leads: z.array(z.object({
+  users: z.array(z.looseObject({ id: idSchema, email: z.email(), created_at: timestampSchema })),
+  companies: z.array(z.looseObject({ id: idSchema, name: z.string().trim().min(1), created_at: timestampSchema })),
+  leads: z.array(z.looseObject({
     id: idSchema,
     company_id: idSchema.nullable(),
     name: z.string().trim().min(1),
-    email: z.string().email(),
+    email: z.email(),
     company: z.string().trim().min(1),
     average_project_value: nullableMoneySchema,
     hourly_rate: nullableMoneySchema,
     consent_to_contact: z.boolean(),
     created_at: timestampSchema
-  }).passthrough()),
-  leadStatusHistory: z.array(z.object({
+  })),
+  leadStatusHistory: z.array(z.looseObject({
     id: idSchema,
     lead_id: idSchema,
     created_at: timestampSchema
-  }).passthrough()),
-  auditRequests: z.array(z.object({
+  })),
+  auditRequests: z.array(z.looseObject({
     id: idSchema,
     lead_id: idSchema.nullable(),
     company_id: idSchema.nullable(),
@@ -37,8 +37,8 @@ const storeSchema = z.object({
     sow_text: z.string(),
     message_export_text: z.string(),
     created_at: timestampSchema
-  }).passthrough()),
-  projects: z.array(z.object({
+  })),
+  projects: z.array(z.looseObject({
     id: idSchema,
     company_id: idSchema.nullable(),
     lead_id: idSchema.nullable(),
@@ -48,14 +48,14 @@ const storeSchema = z.object({
     sow_text: z.string(),
     is_demo: z.boolean(),
     created_at: timestampSchema
-  }).passthrough()),
-  clientMessages: z.array(z.object({
+  })),
+  clientMessages: z.array(z.looseObject({
     id: idSchema,
     project_id: idSchema,
     message_text: z.string().trim().min(1),
     created_at: timestampSchema
-  }).passthrough()),
-  scopeFindings: z.array(z.object({
+  })),
+  scopeFindings: z.array(z.looseObject({
     id: idSchema,
     project_id: idSchema,
     client_message_id: idSchema,
@@ -68,8 +68,8 @@ const storeSchema = z.object({
     is_demo: z.boolean(),
     created_at: timestampSchema,
     updated_at: timestampSchema
-  }).passthrough()),
-  billingEvents: z.array(z.object({
+  })),
+  billingEvents: z.array(z.looseObject({
     id: idSchema,
     project_id: idSchema,
     scope_finding_id: idSchema,
@@ -78,22 +78,22 @@ const storeSchema = z.object({
     new_amount_cents: z.number().int().nullable(),
     is_demo: z.boolean(),
     created_at: timestampSchema
-  }).passthrough()),
-  reports: z.array(z.object({
+  })),
+  reports: z.array(z.looseObject({
     id: idSchema,
     project_id: idSchema,
     total_revenue_leakage: z.number().finite().nonnegative(),
     analyzed_messages_count: z.number().int().nonnegative(),
     out_of_scope_count: z.number().int().nonnegative(),
     created_at: timestampSchema
-  }).passthrough()),
-  salesTemplates: z.array(z.object({
+  })),
+  salesTemplates: z.array(z.looseObject({
     id: idSchema,
     title: z.string().trim().min(1),
     body: z.string(),
     created_at: timestampSchema,
     updated_at: timestampSchema
-  }).passthrough())
+  }))
 });
 
 function dollarsToCents(value: number | null) {
@@ -102,8 +102,10 @@ function dollarsToCents(value: number | null) {
 
 function uuidFrom(value: string) {
   const hex = createHash("sha256").update(value).digest("hex").slice(0, 32).split("");
+
   hex[12] = "5";
   hex[16] = ((Number.parseInt(hex[16], 16) & 0x3) | 0x8).toString(16);
+
   return `${hex.slice(0, 8).join("")}-${hex.slice(8, 12).join("")}-${hex.slice(12, 16).join("")}-${hex.slice(16, 20).join("")}-${hex.slice(20).join("")}`;
 }
 
@@ -113,10 +115,13 @@ export function importedId(organizationId: string, kind: string, sourceId: strin
 
 function assertUnique(collection: Array<{ id: string }>, label: string) {
   const ids = new Set<string>();
+
   for (const item of collection) {
     if (ids.has(item.id)) throw new Error(`${label} contains duplicate id ${item.id}.`);
+
     ids.add(item.id);
   }
+
   return ids;
 }
 
@@ -152,6 +157,7 @@ export function prepareJsonImport(raw: unknown): JsonImportPlan {
   const projectIds = assertUnique(parsed.projects, "projects");
   const messageIds = assertUnique(parsed.clientMessages, "clientMessages");
   const findingIds = assertUnique(parsed.scopeFindings, "scopeFindings");
+
   assertUnique(parsed.billingEvents, "billingEvents");
   assertUnique(parsed.reports, "reports");
   assertUnique(parsed.salesTemplates, "salesTemplates");
@@ -263,6 +269,7 @@ export async function executeJsonImport(
 
   for (const row of store.projects) {
     const projectId = id("project", row.id)!;
+
     await client.query(
       `INSERT INTO projects
        (id, organization_id, company_id, lead_id, audit_request_id, client_name, project_name,
@@ -275,6 +282,7 @@ export async function executeJsonImport(
 
     const documentId = id("sow-document", row.id)!;
     const versionId = id("sow-version", row.id)!;
+
     await client.query(
       `INSERT INTO sow_documents
        (id, organization_id, project_id, title, status, created_at, updated_at)
@@ -288,6 +296,7 @@ export async function executeJsonImport(
        ON CONFLICT (id) DO NOTHING`,
       [versionId, organizationId, documentId, row.sow_text, createHash("sha256").update(row.sow_text).digest("hex"), row.created_at]
     );
+
     for (const section of splitSowSections(row.sow_text)) {
       await client.query(
         `INSERT INTO sow_sections
@@ -297,6 +306,7 @@ export async function executeJsonImport(
          versionId, section.heading, section.body, section.ordinal, row.created_at]
       );
     }
+
     await client.query("UPDATE sow_documents SET current_version_id = $1 WHERE id = $2", [versionId, documentId]);
     await client.query(
       "UPDATE projects SET active_sow_version_id = $1 WHERE id = $2 AND organization_id = $3",
@@ -347,6 +357,7 @@ export async function executeJsonImport(
   for (const row of store.reports) {
     const reportId = id("report", row.id)!;
     const versionId = id("report-version", row.id)!;
+
     await client.query(
       `INSERT INTO reports (id, organization_id, project_id, title, created_at, updated_at)
        VALUES ($1,$2,$3,$4,$5,$5) ON CONFLICT (id) DO NOTHING`,

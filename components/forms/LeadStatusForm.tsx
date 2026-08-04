@@ -20,9 +20,11 @@ export function LeadStatusForm({ leadId, status }: { leadId: string; status: Lea
         body: JSON.stringify({ status: event.target.value })
       });
       const json = (await response.json()) as { error?: string };
+
       if (!response.ok) {
         throw new Error(json.error || "Failed to update status.");
       }
+
       setSuccess("Saved");
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : "Failed to update status.");
@@ -38,7 +40,9 @@ export function LeadStatusForm({ leadId, status }: { leadId: string; status: Lea
         defaultValue={status}
         onChange={onChange}
         disabled={isSubmitting}
-        className="w-full rounded-md border border-audit-border px-2 py-1 text-sm"
+        className="
+          w-full rounded-md border border-audit-border px-2 py-1 text-sm
+        "
       >
         {LEAD_STATUSES.map((item) => (
           <option key={item}>{item}</option>

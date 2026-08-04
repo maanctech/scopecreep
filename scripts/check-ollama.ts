@@ -6,10 +6,12 @@ const requestedModel = process.env.OLLAMA_MODEL?.trim() || "gemma3:12b-it-qat";
 function safeBaseUrl() {
   try {
     const url = new URL(baseUrl);
+
     if (url.username || url.password) {
       url.username = "[REDACTED]";
       url.password = "";
     }
+
     return url.toString().replace(/\/$/, "");
   } catch {
     return "the configured OLLAMA_BASE_URL";
@@ -19,6 +21,7 @@ function safeBaseUrl() {
 async function main() {
   console.log(`Checking Ollama at ${safeBaseUrl()}...`);
   let models: string[];
+
   try {
     models = await listOllamaModels(5_000);
   } catch {
@@ -26,6 +29,7 @@ async function main() {
     console.error("On macOS, install Ollama from https://ollama.com/download, start it, then run this check again.");
     console.error("For Docker, use OLLAMA_BASE_URL=http://host.docker.internal:11434 or a protected LAN URL.");
     process.exitCode = 1;
+
     return;
   }
 
@@ -33,17 +37,21 @@ async function main() {
     console.error("Ollama is reachable, but no models are installed.");
     console.error(`Run this on the Ollama host: ollama pull ${requestedModel}`);
     process.exitCode = 1;
+
     return;
   }
 
   console.log(`Installed models (${models.length}):`);
   models.forEach((model) => console.log(`- ${model}`));
+
   if (!models.includes(requestedModel)) {
     console.error(`Configured model ${requestedModel} is not installed.`);
     console.error(`Run this on the Ollama host: ollama pull ${requestedModel}`);
     process.exitCode = 1;
+
     return;
   }
+
   console.log(`Ollama is ready with ${requestedModel}. No model was downloaded or changed.`);
 }
 

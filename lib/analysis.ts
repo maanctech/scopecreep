@@ -12,7 +12,9 @@ const analysisSchema = z.object({
   relevant_sow_sections: z
     .preprocess((value) => {
       if (Array.isArray(value)) return value;
+
       if (typeof value === "string" && value.trim()) return [value];
+
       return [];
     }, z.array(z.string().trim().min(1)).default([]))
     .default([]),
@@ -46,6 +48,7 @@ function normalizeConfidence(value: number) {
 function extractJson(raw: string) {
   const trimmed = raw.trim();
   const fenced = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
+
   if (fenced?.[1]) return fenced[1].trim();
 
   if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
@@ -54,6 +57,7 @@ function extractJson(raw: string) {
 
   const firstBrace = trimmed.indexOf("{");
   const lastBrace = trimmed.lastIndexOf("}");
+
   if (firstBrace !== -1 && lastBrace > firstBrace) {
     return trimmed.slice(firstBrace, lastBrace + 1);
   }
@@ -66,9 +70,11 @@ function normalizeParsedAnalysis(
   hourlyRate: number
 ): AnalysisInput {
   const confidenceScore = normalizeConfidence(parsed.confidence_score);
+
   if (confidenceScore < 0 || confidenceScore > 1) {
     throw new Error("AI confidence_score must be between 0 and 1.");
   }
+
   if (parsed.classification === "Out of Scope" && parsed.estimated_hours <= 0) {
     throw new Error("Out of Scope requires a positive estimated_hours value.");
   }
@@ -92,6 +98,7 @@ function assertEvidence(result: AnalysisInput) {
   ) {
     throw new Error(`${result.classification} requires SOW evidence.`);
   }
+
   return result;
 }
 
@@ -107,15 +114,19 @@ function evidenceTokens(value: string) {
 
 export function validateSowEvidence(result: AnalysisInput, sowText: string) {
   if (result.classification !== "Out of Scope" && result.classification !== "In Scope") return result;
+
   const sowTokens = evidenceTokens(sowText);
+
   for (const evidence of result.relevant_sow_sections) {
     const tokens = Array.from(evidenceTokens(evidence));
     const overlap = tokens.filter((token) => sowTokens.has(token)).length;
     const requiredOverlap = Math.max(1, Math.ceil(Math.min(tokens.length, 6) / 2));
+
     if (!tokens.length || overlap < requiredOverlap) {
       throw new Error("AI SOW evidence is not grounded in the supplied SOW.");
     }
   }
+
   return result;
 }
 
@@ -128,6 +139,7 @@ export function validateAnalysisResult(value: unknown, hourlyRate: number): Anal
 }
 
 export function fallbackAnalysis(_reason: string): AnalysisInput {
+
   return {
     classification: "Needs Human Review",
     confidence_score: 0.35,
@@ -219,6 +231,7 @@ function localHeuristicAnalysis(input: {
 
   if (matched) {
     const { label, requestType, hours, evidence } = matched;
+
     return {
       classification: "Out of Scope",
       confidence_score: 0.88,
@@ -285,6 +298,7 @@ export async function analyzeClientRequestDetailed(input: {
   const startedAt = Date.now();
   const inputCharacters = AI_SYSTEM_PROMPT.length + userPrompt.length;
   const primary = configuredProviderName();
+
   if (primary === "demo") {
     return {
       analysis: localHeuristicAnalysis(input),
@@ -318,10 +332,14 @@ export async function analyzeClientRequestDetailed(input: {
 
   providerLoop: for (const providerName of providerNames) {
     const provider = providerFor(providerName);
+
     lastProvider = providerName;
+
     for (let providerAttempt = 1; providerAttempt <= maxAttempts; providerAttempt += 1) {
       if (input.signal?.aborted) break providerLoop;
+
       attempts += 1;
+
       try {
         const correction = providerAttempt > 1
           ? "\n\nYour previous response was invalid. Return one complete JSON object matching the required shape, with SOW evidence for any definitive In Scope or Out of Scope decision."
@@ -332,7 +350,9 @@ export async function analyzeClientRequestDetailed(input: {
           timeoutMs,
           signal: input.signal
         });
+
         lastModel = response.model;
+
         return {
           analysis: validateSowEvidence(parseAnalysisJson(response.content, input.hourlyRate), input.sowText),
           metadata: {
@@ -350,6 +370,7 @@ export async function analyzeClientRequestDetailed(input: {
         };
       } catch (error) {
         if (input.signal?.aborted) break providerLoop;
+
         lastError = error instanceof Error ? error.message.slice(0, 500) : "Unknown AI provider error.";
       }
     }

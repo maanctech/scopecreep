@@ -55,11 +55,13 @@ export function FindingReviewForm({ finding }: { finding: ScopeFinding }) {
 
   async function submitAction(action: FindingActionName) {
     const confirmation = CONFIRMATIONS[action];
+
     if (confirmation && !window.confirm(confirmation)) return;
 
     setError(null);
     setSuccess(null);
     setIsSubmitting(true);
+
     try {
       const response = await fetch(
         `/api/findings/${encodeURIComponent(currentFinding.id)}/actions`,
@@ -70,12 +72,15 @@ export function FindingReviewForm({ finding }: { finding: ScopeFinding }) {
         }
       );
       const json = (await response.json()) as { error?: string; finding?: ScopeFinding };
+
       if (!response.ok) {
         throw new Error(json.error || "The action could not be completed.");
       }
+
       if (!json.finding) {
         throw new Error("The server saved the action but returned no updated finding.");
       }
+
       setCurrentFinding(json.finding);
       setApprovedHours(
         json.finding.approved_hours === null ? "" : String(json.finding.approved_hours)
@@ -109,20 +114,27 @@ export function FindingReviewForm({ finding }: { finding: ScopeFinding }) {
 
     if (amountsEditable) {
       const hours = approvedHours.trim() === "" ? null : Number(approvedHours);
+
       if (hours !== null && (!Number.isFinite(hours) || hours < 0)) {
         setError("Approved hours must be a number of 0 or more.");
+
         return;
       }
+
       const dollars = approvedDollars.trim() === "" ? null : Number(approvedDollars);
+
       if (dollars !== null && (!Number.isFinite(dollars) || dollars < 0)) {
         setError("Approved amount must be a dollar amount of 0 or more.");
+
         return;
       }
+
       payload.approved_hours = hours;
       payload.approved_amount_cents = dollars === null ? null : dollarsToCents(dollars);
     }
 
     setIsSubmitting(true);
+
     try {
       const response = await fetch(`/api/findings/${encodeURIComponent(currentFinding.id)}`, {
         method: "PATCH",
@@ -130,12 +142,15 @@ export function FindingReviewForm({ finding }: { finding: ScopeFinding }) {
         body: JSON.stringify(payload)
       });
       const json = (await response.json()) as { error?: string; finding?: ScopeFinding };
+
       if (!response.ok) {
         throw new Error(json.error || "Your changes could not be saved.");
       }
+
       if (!json.finding) {
         throw new Error("The server saved your changes but returned no updated finding.");
       }
+
       setCurrentFinding(json.finding);
       setSuccess("Your changes were saved.");
       router.refresh();
@@ -156,14 +171,23 @@ export function FindingReviewForm({ finding }: { finding: ScopeFinding }) {
           This is private. Your client will not see this. AI suggestions require human review
           before billing.
         </p>
-        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        <div className="
+          mt-3 grid gap-3
+          sm:grid-cols-2
+        ">
           {actions.map((action) => (
             <button
               key={action}
               type="button"
               disabled={isSubmitting}
               onClick={() => submitAction(action)}
-              className="rounded-md border border-audit-border bg-white px-4 py-3 text-left hover:bg-audit-soft focus:outline-none focus:ring-2 focus:ring-ink disabled:cursor-not-allowed disabled:opacity-60"
+              className="
+                rounded-md border border-audit-border bg-white px-4 py-3
+                text-left
+                hover:bg-audit-soft
+                focus:ring-2 focus:ring-ink focus:outline-hidden
+                disabled:cursor-not-allowed disabled:opacity-60
+              "
             >
               <span className="block text-sm font-semibold text-ink">{action}</span>
               <span className="mt-1 block text-sm text-audit-muted">{ACTION_HINTS[action]}</span>
@@ -177,9 +201,14 @@ export function FindingReviewForm({ finding }: { finding: ScopeFinding }) {
         ) : null}
       </div>
 
-      <form onSubmit={saveDetails} className="space-y-4 rounded-md border border-audit-border bg-audit-soft p-4">
+      <form onSubmit={saveDetails} className="
+        space-y-4 rounded-md border border-audit-border bg-audit-soft p-4
+      ">
         <h4 className="text-base font-semibold">Your review details</h4>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="
+          grid gap-4
+          sm:grid-cols-2
+        ">
           <label className="block">
             <span className="text-sm font-medium">Approved hours</span>
             <input
@@ -189,7 +218,10 @@ export function FindingReviewForm({ finding }: { finding: ScopeFinding }) {
               value={approvedHours}
               onChange={(event) => setApprovedHours(event.target.value)}
               disabled={!amountsEditable || isSubmitting}
-              className="mt-2 w-full rounded-md border border-audit-border px-3 py-2 disabled:bg-zinc-100"
+              className="
+                mt-2 w-full rounded-md border border-audit-border px-3 py-2
+                disabled:bg-zinc-100
+              "
             />
           </label>
           <label className="block">
@@ -201,7 +233,10 @@ export function FindingReviewForm({ finding }: { finding: ScopeFinding }) {
               value={approvedDollars}
               onChange={(event) => setApprovedDollars(event.target.value)}
               disabled={!amountsEditable || isSubmitting}
-              className="mt-2 w-full rounded-md border border-audit-border px-3 py-2 disabled:bg-zinc-100"
+              className="
+                mt-2 w-full rounded-md border border-audit-border px-3 py-2
+                disabled:bg-zinc-100
+              "
             />
           </label>
         </div>
@@ -229,7 +264,9 @@ export function FindingReviewForm({ finding }: { finding: ScopeFinding }) {
             value={explanation}
             onChange={(event) => setExplanation(event.target.value)}
             disabled={isSubmitting}
-            className="mt-2 w-full rounded-md border border-audit-border px-3 py-2"
+            className="
+              mt-2 w-full rounded-md border border-audit-border px-3 py-2
+            "
           />
         </label>
         <label className="block">
@@ -239,14 +276,21 @@ export function FindingReviewForm({ finding }: { finding: ScopeFinding }) {
             value={note}
             onChange={(event) => setNote(event.target.value)}
             disabled={isSubmitting}
-            className="mt-2 w-full rounded-md border border-audit-border px-3 py-2"
+            className="
+              mt-2 w-full rounded-md border border-audit-border px-3 py-2
+            "
           />
         </label>
 
         <button
           type="submit"
           disabled={isSubmitting}
-          className="inline-flex h-11 items-center justify-center rounded-md bg-ink px-5 text-sm font-semibold text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60"
+          className="
+            inline-flex h-11 items-center justify-center rounded-md bg-ink px-5
+            text-sm font-semibold text-white
+            hover:bg-zinc-800
+            disabled:cursor-not-allowed disabled:opacity-60
+          "
         >
           {isSubmitting ? "Saving..." : "Save review details"}
         </button>
@@ -254,12 +298,17 @@ export function FindingReviewForm({ finding }: { finding: ScopeFinding }) {
 
       <div aria-live="polite" role="status">
         {success ? (
-          <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
+          <div className="
+            rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm
+            text-emerald-800
+          ">
             {success}
           </div>
         ) : null}
         {error ? (
-          <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+          <div className="
+            rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700
+          ">
             {error} {error.includes("changed since") ? "Reload the page to see the latest version." : ""}
           </div>
         ) : null}

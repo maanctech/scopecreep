@@ -12,6 +12,7 @@ describe("signed inbound webhooks", () => {
       messages: [{ id: "1", text: "Client request" }],
     });
     const signature = webhookSignature("secret", timestamp, body);
+
     expect(() =>
       verifyWebhookSignature({
         secret: "secret",
@@ -37,6 +38,7 @@ describe("signed inbound webhooks", () => {
     const timestamp = String(
       Math.floor(Date.parse("2026-07-22T12:00:00Z") / 1000),
     );
+
     expect(() =>
       verifyWebhookSignature({
         secret: "secret",

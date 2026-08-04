@@ -9,6 +9,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
     await requireApiPermission(request, "projects:read");
     const { id } = await context.params;
     const project = await getProjectDetail(id);
+
     if (!project) {
       return NextResponse.json({ error: "Project not found." }, { status: 404 });
     }

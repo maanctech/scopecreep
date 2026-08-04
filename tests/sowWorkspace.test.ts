@@ -9,6 +9,7 @@ describe("SOW document extraction", () => {
       filename: "../../client-agreement.txt",
       mediaType: "text/plain"
     });
+
     expect(result.safeFilename).toBe("client-agreement.txt");
     expect(result.sourceType).toBe("TXT");
     expect(result.text).toContain("five website pages");
@@ -22,6 +23,7 @@ describe("SOW document extraction", () => {
 
   it("creates stable ordered sections", () => {
     const sections = splitSowSections("SERVICES\nFive page website design.\nEXCLUSIONS\nE-commerce is not included.");
+
     expect(sections.map((section) => section.heading)).toEqual(["SERVICES", "EXCLUSIONS"]);
     expect(sections[1].body).toContain("E-commerce");
   });
@@ -35,10 +37,12 @@ describe("SOW risk and boundary validation", () => {
       boundary_items: [{ boundary_type: "Excluded", category: "Functionality", description: "No store", evidence: "E-commerce functionality is excluded." }],
       risk_items: []
     };
+
     expect(validateSowReview(base, sow).boundary_items).toHaveLength(1);
     expect(validateSowReview({ ...base, risk_items: [{ severity: "High", category: "Payment terms", description: "No payment deadline is stated.", recommendation: "Add one.", evidence: "No supporting clause found in the supplied SOW." }] }, sow).risk_items).toHaveLength(1);
     expect(() => validateSowReview({ ...base, boundary_items: [{ ...base.boundary_items[0], evidence: "Cryptocurrency settlement and blockchain custody are excluded." }] }, sow)).toThrow(/not grounded/);
     const sanitized = sanitizeSowReview({ ...base, boundary_items: [...base.boundary_items, { ...base.boundary_items[0], evidence: "Cryptocurrency settlement and blockchain custody are excluded." }] }, sow);
+
     expect(sanitized.boundary_items).toHaveLength(1);
     expect(sanitized.summary).toContain("omitted automatically");
   });

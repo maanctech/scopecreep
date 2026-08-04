@@ -111,6 +111,7 @@ export function availableActions(finding: ScopeFinding): FindingActionName[] {
 /** Plain-English label shown in the UI, derived from the canonical state. */
 export function findingDisplayLabel(finding: ScopeFinding): string {
   if (finding.workflow_status === "Invoiced") return "Invoiced";
+
   if (finding.workflow_status === "Paid") return "Paid";
 
   switch (finding.billing_decision) {
@@ -136,6 +137,7 @@ export function recommendedNextStep(finding: ScopeFinding): string {
   if (finding.workflow_status === "Invoiced") {
     return "When your client pays the invoice you sent, use Mark as Paid to record it here.";
   }
+
   if (finding.workflow_status === "Paid") {
     return "Payment recorded. Nothing else to do unless you need to reopen this finding.";
   }
@@ -251,6 +253,7 @@ export function applyFindingAction(
           "missing_amount"
         );
       }
+
       status = "Invoiced";
       break;
     case "Mark as Paid":

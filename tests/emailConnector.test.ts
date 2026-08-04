@@ -14,6 +14,7 @@ describe("IMAP connector contract", () => {
       folder: "Clients",
       allowedSenderDomains: ["client.example"],
     });
+
     expect(parsed).toMatchObject({
       secure: true,
       folder: "Clients",

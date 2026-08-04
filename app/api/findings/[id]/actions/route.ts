@@ -23,6 +23,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     await requireApiPermission(request, "billing:write");
     const { id } = await context.params;
     let json: unknown;
+
     try {
       json = await request.json();
     } catch {
@@ -40,19 +41,25 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     return NextResponse.json({ finding });
   } catch (error) {
     const authResponse = authErrorResponse(error);
+
     if (authResponse) return authResponse;
+
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: validationMessage(error) }, { status: 400 });
     }
+
     if (error instanceof NotFoundError) {
       return NextResponse.json({ error: error.message }, { status: 404 });
     }
+
     if (error instanceof VersionConflictError) {
       return NextResponse.json({ error: error.message }, { status: 409 });
     }
+
     if (error instanceof TransitionError) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
+
     return NextResponse.json({ error: "Failed to update the finding." }, { status: 500 });
   }
 }

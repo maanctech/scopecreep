@@ -10,6 +10,7 @@ const dockerAvailable = spawnSync("docker", ["compose", "version"], { stdio: "ig
 describe("self-hosted installation assets", () => {
   it("builds a non-root runtime with matching PostgreSQL backup tools and health checks", () => {
     const dockerfile = read("Dockerfile");
+
     expect(dockerfile).toContain("FROM node:22-bookworm-slim AS runtime");
     expect(dockerfile).toContain("postgresql-client-15");
     expect(dockerfile).toContain("USER scopeledger");
@@ -20,9 +21,11 @@ describe("self-hosted installation assets", () => {
   it("keeps PostgreSQL private, binds the app to loopback by default, and persists required state", () => {
     const compose = read("compose.yaml");
     const postgresService = compose.split("\n  app:")[0];
+
     expect(compose).toContain("image: postgres:15-bookworm");
     expect(compose).toContain("${SCOPELEDGER_BIND_ADDRESS:-127.0.0.1}");
     expect(postgresService).not.toContain("\n    ports:");
+
     for (const volume of [
       "scopeledger_postgres",
       "scopeledger_app_data",
@@ -30,6 +33,7 @@ describe("self-hosted installation assets", () => {
     ]) {
       expect(compose).toContain(volume);
     }
+
     expect(compose).toContain("http://host.docker.internal:11434");
     expect(compose).toContain("no-new-privileges:true");
   });
@@ -40,6 +44,7 @@ describe("self-hosted installation assets", () => {
     const waitAt = entrypoint.indexOf("npm run db:wait");
     const migrateAt = entrypoint.indexOf("npm run db:migrate");
     const execAt = entrypoint.indexOf('exec "$@"');
+
     expect(configAt).toBeGreaterThan(-1);
     expect(configAt).toBeLessThan(waitAt);
     expect(waitAt).toBeLessThan(migrateAt);
@@ -48,6 +53,7 @@ describe("self-hosted installation assets", () => {
 
   it("ships placeholders and generation commands instead of committed secrets", () => {
     const environment = read(".env.compose.example");
+
     expect(environment).toContain("POSTGRES_PASSWORD=");
     expect(environment).toContain("SCOPELEDGER_MASTER_KEY=");
     expect(environment).toContain("openssl rand -hex 24");

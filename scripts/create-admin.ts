@@ -7,13 +7,16 @@ async function main() {
   const displayName = process.env.SCOPELEDGER_ADMIN_NAME?.trim();
   const email = process.env.SCOPELEDGER_ADMIN_EMAIL?.trim();
   const password = process.env.SCOPELEDGER_ADMIN_PASSWORD;
+
   if (!organizationName || !displayName || !email || !password) {
     throw new Error(
       "Set SCOPELEDGER_ORGANIZATION_NAME, SCOPELEDGER_ADMIN_NAME, SCOPELEDGER_ADMIN_EMAIL, and SCOPELEDGER_ADMIN_PASSWORD."
     );
   }
+
   await runMigrations();
   const created = await createInitialOwner({ organizationName, displayName, email, password });
+
   console.log(`Created the initial owner for organization ${created.organizationId}.`);
 }
 

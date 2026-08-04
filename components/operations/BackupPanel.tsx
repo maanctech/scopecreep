@@ -12,10 +12,13 @@ export function BackupPanel({ canCreate }: { canCreate: boolean }) {
   async function create() {
     setBusy(true);
     setNotice({});
+
     try {
       const response = await fetch("/api/backups", { method: "POST" });
       const body = await response.json() as { error?: string; backup?: { path: string; complete: boolean } };
+
       if (!response.ok) throw new Error(body.error || "Backup creation failed.");
+
       setNotice({ success: `Complete backup saved to ${body.backup?.path}.` });
       router.refresh();
     } catch (error) {
@@ -32,9 +35,13 @@ export function BackupPanel({ canCreate }: { canCreate: boolean }) {
         type="button"
         onClick={create}
         disabled={!canCreate || busy}
-        className="inline-flex min-h-11 items-center gap-2 rounded-md bg-ink px-4 text-sm font-semibold text-white disabled:opacity-50"
+        className="
+          inline-flex min-h-11 items-center gap-2 rounded-md bg-ink px-4 text-sm
+          font-semibold text-white
+          disabled:opacity-50
+        "
       >
-        <DatabaseBackup className="h-4 w-4" aria-hidden="true" />
+        <DatabaseBackup className="size-4" aria-hidden="true" />
         {busy ? "Creating verified backup..." : "Create installation backup"}
       </button>
       {!canCreate ? <p className="mt-2 text-sm text-zinc-600">A system administrator must create installation backups.</p> : null}

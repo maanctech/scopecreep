@@ -6,12 +6,17 @@ export class OpenAiProvider implements AiProvider {
   async generate(request: AiRequest): Promise<AiRawResponse> {
     const apiKey = process.env.OPENAI_API_KEY?.trim();
     const model = process.env.OPENAI_MODEL?.trim() || "gpt-4.1-mini";
+
     if (!apiKey) throw new Error("OPENAI_API_KEY is not configured.");
+
     const controller = new AbortController();
     const abort = () => controller.abort();
+
     if (request.signal?.aborted) controller.abort();
+
     request.signal?.addEventListener("abort", abort, { once: true });
     const timeout = setTimeout(() => controller.abort(), request.timeoutMs);
+
     try {
       const response = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
@@ -30,10 +35,14 @@ export class OpenAiProvider implements AiProvider {
           ]
         })
       });
+
       if (!response.ok) throw new Error(`OpenAI analysis returned ${response.status}.`);
+
       const payload = (await response.json()) as { choices?: Array<{ message?: { content?: string } }> };
       const content = payload.choices?.[0]?.message?.content;
+
       if (!content) throw new Error("OpenAI returned an empty analysis.");
+
       return { content, model };
     } finally {
       clearTimeout(timeout);
@@ -44,6 +53,7 @@ export class OpenAiProvider implements AiProvider {
   async health(): Promise<AiProviderHealth> {
     const model = process.env.OPENAI_MODEL?.trim() || "gpt-4.1-mini";
     const available = Boolean(process.env.OPENAI_API_KEY?.trim());
+
     return {
       provider: this.name,
       available,

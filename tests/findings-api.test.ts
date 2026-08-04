@@ -9,7 +9,7 @@ import {
   GET as getReportRoute,
   POST as postReportRoute
 } from "@/app/api/projects/[id]/report/route";
-import { DEMO_PROJECT_ID } from "@/lib/demoData";
+import { DEMO_PROJECT_ID } from "@/lib/demo";
 import { resetLocalDemoStore } from "@/lib/store";
 
 const dataFile = path.join(process.cwd(), "data", "demo-store.json");
@@ -28,6 +28,7 @@ function jsonRequest(method: string, body?: unknown) {
   if (method === "GET" || body === undefined || body === "") {
     return new Request("http://localhost/api/test", { method });
   }
+
   return new Request("http://localhost/api/test", {
     method,
     headers: { "Content-Type": "application/json" },
@@ -46,8 +47,10 @@ beforeAll(async () => {
 describe("finding read APIs", () => {
   it("returns a finding with its history", async () => {
     const response = await getFindingRoute(jsonRequest("GET", ""), params(HUBSPOT_FINDING));
+
     expect(response.status).toBe(200);
     const json = await response.json();
+
     expect(json.finding.billing_decision).toBe("Bill Separately");
     expect(json.finding.approved_amount_cents).toBe(175000);
     expect(json.events.length).toBeGreaterThan(0);
@@ -55,8 +58,10 @@ describe("finding read APIs", () => {
 
   it("returns 404 for a missing finding", async () => {
     const response = await getFindingRoute(jsonRequest("GET", ""), params(MISSING_FINDING));
+
     expect(response.status).toBe(404);
     const events = await getFindingEventsRoute(jsonRequest("GET", ""), params(MISSING_FINDING));
+
     expect(events.status).toBe(404);
   });
 });
@@ -67,6 +72,7 @@ describe("PATCH /api/findings/[id]", () => {
       jsonRequest("PATCH", "{not json"),
       params(HUBSPOT_FINDING)
     );
+
     expect(response.status).toBe(400);
   });
 
@@ -75,12 +81,14 @@ describe("PATCH /api/findings/[id]", () => {
       jsonRequest("PATCH", { expected_version: 1, workflow_status: "Paid" }),
       params(HUBSPOT_FINDING)
     );
+
     expect(unknownField.status).toBe(400);
 
     const fractionalCents = await patchFindingRoute(
       jsonRequest("PATCH", { expected_version: 1, approved_amount_cents: 100.5 }),
       params(HUBSPOT_FINDING)
     );
+
     expect(fractionalCents.status).toBe(400);
   });
 
@@ -89,6 +97,7 @@ describe("PATCH /api/findings/[id]", () => {
       jsonRequest("PATCH", { expected_version: 1, internal_note: "note" }),
       params(MISSING_FINDING)
     );
+
     expect(response.status).toBe(404);
   });
 
@@ -97,6 +106,7 @@ describe("PATCH /api/findings/[id]", () => {
       jsonRequest("PATCH", { expected_version: 99, internal_note: "stale" }),
       params(HUBSPOT_FINDING)
     );
+
     expect(response.status).toBe(409);
   });
 
@@ -105,6 +115,7 @@ describe("PATCH /api/findings/[id]", () => {
       jsonRequest("PATCH", { expected_version: 1, approved_amount_cents: 120000 }),
       params(SECURITY_FINDING)
     );
+
     expect(response.status).toBe(400);
   });
 
@@ -118,8 +129,10 @@ describe("PATCH /api/findings/[id]", () => {
       }),
       params(HUBSPOT_FINDING)
     );
+
     expect(response.status).toBe(200);
     const json = await response.json();
+
     expect(json.finding.approved_amount_cents).toBe(180000);
     expect(json.finding.version).toBe(2);
 
@@ -128,6 +141,7 @@ describe("PATCH /api/findings/[id]", () => {
     const estimateUpdated = eventsJson.events.find(
       (event: { event_type: string }) => event.event_type === "Estimate Updated"
     );
+
     expect(estimateUpdated).toBeDefined();
     expect(estimateUpdated.previous_amount_cents).toBe(175000);
     expect(estimateUpdated.new_amount_cents).toBe(180000);
@@ -140,6 +154,7 @@ describe("POST /api/findings/[id]/actions", () => {
       jsonRequest("POST", { action: "Delete Finding", expected_version: 1 }),
       params(SECURITY_FINDING)
     );
+
     expect(response.status).toBe(400);
   });
 
@@ -148,6 +163,7 @@ describe("POST /api/findings/[id]/actions", () => {
       jsonRequest("POST", { action: "Mark as Billable", expected_version: 1 }),
       params(MISSING_FINDING)
     );
+
     expect(response.status).toBe(404);
   });
 
@@ -156,12 +172,14 @@ describe("POST /api/findings/[id]/actions", () => {
       jsonRequest("POST", { action: "Mark as Paid", expected_version: 1 }),
       params(SECURITY_FINDING)
     );
+
     expect(paidTooEarly.status).toBe(400);
 
     const invoicedWithoutDecision = await postActionRoute(
       jsonRequest("POST", { action: "Mark as Invoiced", expected_version: 1 }),
       params(SECURITY_FINDING)
     );
+
     expect(invoicedWithoutDecision.status).toBe(400);
   });
 
@@ -170,8 +188,10 @@ describe("POST /api/findings/[id]/actions", () => {
       jsonRequest("POST", { action: "Mark as Billable", expected_version: 1 }),
       params(SECURITY_FINDING)
     );
+
     expect(billable.status).toBe(200);
     const billableJson = await billable.json();
+
     expect(billableJson.finding.workflow_status).toBe("Decided");
     expect(billableJson.finding.approved_amount_cents).toBe(52500);
     expect(billableJson.finding.version).toBe(2);
@@ -180,25 +200,30 @@ describe("POST /api/findings/[id]/actions", () => {
       jsonRequest("POST", { action: "Mark as Invoiced", expected_version: 1 }),
       params(SECURITY_FINDING)
     );
+
     expect(stale.status).toBe(409);
 
     const invoiced = await postActionRoute(
       jsonRequest("POST", { action: "Mark as Invoiced", expected_version: 2 }),
       params(SECURITY_FINDING)
     );
+
     expect(invoiced.status).toBe(200);
 
     const paid = await postActionRoute(
       jsonRequest("POST", { action: "Mark as Paid", expected_version: 3, note: "Paid by check." }),
       params(SECURITY_FINDING)
     );
+
     expect(paid.status).toBe(200);
     const paidJson = await paid.json();
+
     expect(paidJson.finding.workflow_status).toBe("Paid");
 
     const events = await getFindingEventsRoute(jsonRequest("GET", ""), params(SECURITY_FINDING));
     const eventsJson = await events.json();
     const types = eventsJson.events.map((event: { event_type: string }) => event.event_type);
+
     expect(types).toContain("Approved Internally");
     expect(types).toContain("Invoiced");
     expect(types).toContain("Paid");
@@ -209,26 +234,31 @@ describe("POST /api/findings/[id]/actions", () => {
       jsonRequest("POST", { action: "Reject Finding", expected_version: 1 }),
       params(PRODUCT_TOUR_FINDING)
     );
+
     expect(rejected.status).toBe(200);
 
     const paid = await postActionRoute(
       jsonRequest("POST", { action: "Mark as Paid", expected_version: 2 }),
       params(PRODUCT_TOUR_FINDING)
     );
+
     expect(paid.status).toBe(400);
 
     const invoiced = await postActionRoute(
       jsonRequest("POST", { action: "Mark as Invoiced", expected_version: 2 }),
       params(PRODUCT_TOUR_FINDING)
     );
+
     expect(invoiced.status).toBe(400);
 
     const reopened = await postActionRoute(
       jsonRequest("POST", { action: "Reopen Finding", expected_version: 2 }),
       params(PRODUCT_TOUR_FINDING)
     );
+
     expect(reopened.status).toBe(200);
     const reopenedJson = await reopened.json();
+
     expect(reopenedJson.finding.billing_decision).toBe("Undecided");
     expect(reopenedJson.finding.workflow_status).toBe("Needs Review");
   });
@@ -239,8 +269,10 @@ describe("billing events API", () => {
     const response = await getBillingEventsRoute(
       new Request("http://localhost/api/billing-events")
     );
+
     expect(response.status).toBe(200);
     const json = await response.json();
+
     expect(json.events.length).toBeGreaterThanOrEqual(20);
   });
 
@@ -248,9 +280,11 @@ describe("billing events API", () => {
     const response = await getBillingEventsRoute(
       new Request("http://localhost/api/billing-events?format=csv")
     );
+
     expect(response.status).toBe(200);
     expect(response.headers.get("Content-Type")).toContain("text/csv");
     const text = await response.text();
+
     expect(text.split("\n")[0]).toContain("event_type");
   });
 });
@@ -260,36 +294,46 @@ describe("report routes", () => {
     await resetLocalDemoStore();
 
     const before = await readStoreFile();
+
     expect(before.reports).toHaveLength(0);
 
     const response = await getReportRoute(jsonRequest("GET", ""), params(DEMO_PROJECT_ID));
+
     expect(response.status).toBe(404);
 
     const after = await readStoreFile();
+
     expect(after.reports).toHaveLength(0);
   });
 
   it("POST explicitly generates reports and keeps history", async () => {
     const first = await postReportRoute(jsonRequest("POST", ""), params(DEMO_PROJECT_ID));
+
     expect(first.status).toBe(201);
     const firstJson = await first.json();
+
     expect(firstJson.report.total_revenue_leakage).toBe(13475);
     expect(firstJson.report.markdown).toContain("Billing Review Status");
 
     const second = await postReportRoute(jsonRequest("POST", ""), params(DEMO_PROJECT_ID));
+
     expect(second.status).toBe(201);
 
     const store = await readStoreFile();
+
     expect(store.reports).toHaveLength(2);
 
     const read = await getReportRoute(jsonRequest("GET", ""), params(DEMO_PROJECT_ID));
+
     expect(read.status).toBe(200);
   });
 
   it("returns 404 for a missing project", async () => {
     const missing = await getReportRoute(jsonRequest("GET", ""), params("no-such-project"));
+
     expect(missing.status).toBe(404);
     const missingPost = await postReportRoute(jsonRequest("POST", ""), params("no-such-project"));
+
     expect(missingPost.status).toBe(404);
   });
 });

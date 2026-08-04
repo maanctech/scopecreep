@@ -6,6 +6,7 @@ import {
 } from "@/lib/security/secrets";
 
 const original = process.env.SCOPELEDGER_MASTER_KEY;
+
 afterEach(() =>
   original === undefined
     ? delete process.env.SCOPELEDGER_MASTER_KEY
@@ -16,6 +17,7 @@ describe("integration secret encryption", () => {
   it("round-trips with authenticated organization context and never returns the value as a mask", () => {
     process.env.SCOPELEDGER_MASTER_KEY = Buffer.alloc(32, 7).toString("base64");
     const encrypted = encryptSecret("private-token", "org-1:connection-1");
+
     expect(encrypted.ciphertext).not.toContain("private-token");
     expect(decryptSecret(encrypted, "org-1:connection-1")).toBe(
       "private-token",

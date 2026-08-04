@@ -11,9 +11,13 @@ export function redactLogMetadata(value: unknown, key = ""): unknown {
   if (/password|secret|token|authorization|cookie|api.?key|master.?key|sow|message|content|body|email/i.test(key)) {
     return REDACTED;
   }
+
   if (value instanceof Error) return { name: value.name, message: redactText(value.message.slice(0, 500)) };
+
   if (typeof value === "string") return redactText(value);
+
   if (Array.isArray(value)) return value.map((item) => redactLogMetadata(item));
+
   if (value && typeof value === "object") {
     return Object.fromEntries(
       Object.entries(value as Record<string, unknown>).map(([entryKey, entryValue]) => [
@@ -22,6 +26,7 @@ export function redactLogMetadata(value: unknown, key = ""): unknown {
       ])
     );
   }
+
   return value;
 }
 
@@ -36,6 +41,7 @@ export function logEvent(
     event,
     ...redactLogMetadata(metadata) as Record<string, unknown>
   });
+
   if (level === "error") console.error(entry);
   else if (level === "warn") console.warn(entry);
   else console.info(entry);

@@ -35,15 +35,18 @@ export function verifyWebhookSignature(input: {
 }) {
   const timestamp = Number(input.timestamp);
   const now = Math.floor((input.now ?? Date.now()) / 1000);
+
   if (
     !Number.isInteger(timestamp) ||
     Math.abs(now - timestamp) > SIGNATURE_WINDOW_SECONDS
   )
     throw new Error("Webhook timestamp is missing or expired.");
+
   const expected = Buffer.from(
     webhookSignature(input.secret, input.timestamp, input.body),
   );
   const actual = Buffer.from(input.signature);
+
   if (expected.length !== actual.length || !timingSafeEqual(expected, actual))
     throw new Error("Webhook signature is invalid.");
 }
@@ -53,18 +56,23 @@ export async function createWebhookConnection(input: {
   name: string;
 }) {
   const auth = await currentAuthContext();
+
   if (!auth) throw new Error("A valid organization session is required.");
+
   const project = await query<Row>(
     "SELECT id FROM projects WHERE id=$1 AND organization_id=$2",
     [input.projectId, auth.organizationId],
   );
+
   if (!project.rows[0]) throw new Error("Project not found.");
+
   const connectionId = randomUUID();
   const secret = randomBytes(32).toString("base64url");
   const encrypted = encryptSecret(
     secret,
     contextKey(auth.organizationId, connectionId),
   );
+
   await transaction(async (client) => {
     await client.query(
       `INSERT INTO communication_connections (id,organization_id,provider,name,status,configuration,sync_scope,data_permissions) VALUES ($1,$2,'Webhook',$3,'Credentials Required',$4::jsonb,'Signed inbound messages','["Message text","sender","recipients","timestamps","thread identifiers"]'::jsonb)`,
@@ -91,6 +99,7 @@ export async function createWebhookConnection(input: {
       [randomUUID(), auth.organizationId, auth.userId, connectionId],
     );
   });
+
   return {
     connectionId,
     secret,
@@ -120,14 +129,18 @@ export async function receiveWebhook(input: {
 }) {
   if (!input.deliveryId.trim() || input.deliveryId.length > 200)
     throw new Error("Webhook delivery ID is required.");
+
   if (Buffer.byteLength(input.body) > 1_000_000)
     throw new Error("Webhook payloads must be 1 MB or smaller.");
+
   const connection = await query<Row>(
     `SELECT c.*,s.ciphertext,s.initialization_vector,s.auth_tag FROM communication_connections c JOIN encrypted_secrets s ON s.connection_id=c.id AND s.organization_id=c.organization_id AND s.name='webhook-signing-secret' WHERE c.id=$1 AND c.provider='Webhook' AND c.status<>'Disabled'`,
     [input.connectionId],
   );
   const row = connection.rows[0];
+
   if (!row) throw new Error("Webhook connection not found.");
+
   const organizationId = String(row.organization_id);
   const secret = decryptSecret(
     {
@@ -137,6 +150,7 @@ export async function receiveWebhook(input: {
     },
     contextKey(organizationId, input.connectionId),
   );
+
   verifyWebhookSignature({
     secret,
     timestamp: input.timestamp,
@@ -144,26 +158,32 @@ export async function receiveWebhook(input: {
     body: input.body,
   });
   const configuration = row.configuration as { projectId?: string };
+
   if (!configuration.projectId)
     throw new Error("Webhook has no project route.");
+
   const preview = parseManualImport({ format: "JSON", content: input.body });
   const payloadHash = createHash("sha256").update(input.body).digest("hex");
+
   return transaction(async (client) => {
     const prior = await client.query<{ payload_sha256: string }>(
       "SELECT payload_sha256 FROM webhook_deliveries WHERE organization_id=$1 AND connection_id=$2 AND delivery_id=$3",
       [organizationId, input.connectionId, input.deliveryId],
     );
+
     if (prior.rows[0]) {
       if (prior.rows[0].payload_sha256 !== payloadHash)
         throw new Error(
           "Webhook delivery ID was reused with different content.",
         );
+
       return {
         inserted: 0,
         duplicates: preview.messages.length,
         replayed: true,
       };
     }
+
     await client.query(
       "INSERT INTO webhook_deliveries (id,organization_id,connection_id,delivery_id,payload_sha256) VALUES ($1,$2,$3,$4,$5)",
       [
@@ -174,17 +194,20 @@ export async function receiveWebhook(input: {
         payloadHash,
       ],
     );
-    let source = await client.query<{ id: string }>(
+    const source = await client.query<{ id: string }>(
       "SELECT id FROM communication_sources WHERE organization_id=$1 AND connection_id=$2 AND external_id='inbound'",
       [organizationId, input.connectionId],
     );
     const sourceId = source.rows[0]?.id || randomUUID();
+
     if (!source.rows[0])
       await client.query(
         "INSERT INTO communication_sources (id,organization_id,connection_id,project_id,external_id,source_type,name) VALUES ($1,$2,$3,$4,'inbound','Webhook','Signed inbound webhook')",
         [sourceId, organizationId, input.connectionId, configuration.projectId],
       );
+
     const jobId = randomUUID();
+
     await client.query(
       "INSERT INTO ingestion_jobs (id,organization_id,connection_id,project_id,job_type,status,input,attempt_count,progress,max_attempts,idempotency_key,started_at) VALUES ($1,$2,$3,$4,'Webhook Delivery','Running',$5::jsonb,1,10,1,$6,now())",
       [
@@ -200,6 +223,7 @@ export async function receiveWebhook(input: {
       ],
     );
     let inserted = 0;
+
     for (const message of preview.messages) {
       const result = await client.query(
         `INSERT INTO client_messages (id,organization_id,project_id,source_id,external_id,source,sender,sender_email,recipients,subject,message_text,message_date,edited_at,content_sha256,raw_metadata,ingested_at) VALUES ($1,$2,$3,$4,$5,'Webhook',$6,$7,$8::jsonb,$9,$10,$11,$12,$13,$14::jsonb,now()) ON CONFLICT DO NOTHING RETURNING id`,
@@ -220,13 +244,16 @@ export async function receiveWebhook(input: {
           JSON.stringify(message.rawMetadata),
         ],
       );
+
       inserted += result.rowCount || 0;
     }
+
     const result = {
       inserted,
       duplicates: preview.messages.length - inserted,
       replayed: false,
     };
+
     await client.query(
       "UPDATE ingestion_jobs SET status='Succeeded',progress=100,result=$1::jsonb,completed_at=now(),updated_at=now() WHERE id=$2",
       [JSON.stringify(result), jobId],
@@ -235,6 +262,7 @@ export async function receiveWebhook(input: {
       "UPDATE communication_connections SET status='Connected',connection_verified_at=COALESCE(connection_verified_at,now()),last_tested_at=now(),last_synced_at=now(),last_error=NULL,updated_at=now() WHERE id=$1 AND organization_id=$2",
       [input.connectionId, organizationId],
     );
+
     return result;
   });
 }

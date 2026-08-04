@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { BillingSummary } from "@/components/BillingSummary";
-import { Disclaimer } from "@/components/Disclaimer";
+import { BillingSummary } from "@/components/billing/BillingSummary";
+import { Disclaimer } from "@/components/ui/Disclaimer";
 import { formatCents } from "@/lib/domain/money";
 import { computeRevenueTotals } from "@/lib/domain/revenueTotals";
 import { getBillingEvents, getFindings } from "@/lib/store";
@@ -30,12 +30,17 @@ function matchesFilters(
   const { event, project } = row;
 
   if (filters.client && project?.client_name !== filters.client) return false;
+
   if (filters.project && project?.id !== filters.project) return false;
+
   if (filters.type && event.event_type !== filters.type) return false;
+
   if (filters.status && event.new_status !== filters.status) return false;
 
   const createdDate = event.created_at.slice(0, 10);
+
   if (filters.from && createdDate < filters.from) return false;
+
   if (filters.to && createdDate > filters.to) return false;
 
   return true;
@@ -67,17 +72,24 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
 
   return (
     <div className="space-y-8">
-      <section className="flex flex-col gap-4 border-b border-audit-border pb-7 lg:flex-row lg:items-end lg:justify-between">
+      <section className="
+        flex flex-col gap-4 border-b border-audit-border pb-7
+        lg:flex-row lg:items-end lg:justify-between
+      ">
         <div>
           <h1 className="text-3xl font-semibold">Billing history</h1>
-          <p className="mt-3 max-w-2xl text-base leading-7 text-zinc-700">
+          <p className="mt-3 max-w-2xl text-base/7 text-zinc-700">
             A permanent record of every billing decision and change. Events can never be edited or
             deleted. This tracker never charges clients or sends invoices.
           </p>
         </div>
         <a
           href="/api/billing-events?format=csv"
-          className="inline-flex h-11 items-center rounded-md border border-audit-border bg-white px-4 text-sm font-semibold hover:bg-audit-soft"
+          className="
+            inline-flex h-11 items-center rounded-md border border-audit-border
+            bg-white px-4 text-sm font-semibold
+            hover:bg-audit-soft
+          "
         >
           Download CSV
         </a>
@@ -96,7 +108,10 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
         <section className="space-y-4">
           <div>
             <h2 className="text-xl font-semibold">Demo totals</h2>
-            <p className="mt-1 inline-flex rounded-md border border-amber-300 bg-amber-50 px-2.5 py-1 text-sm font-semibold text-amber-900">
+            <p className="
+              mt-1 inline-flex rounded-md border border-amber-300 bg-amber-50
+              px-2.5 py-1 text-sm font-semibold text-amber-900
+            ">
               Fictional demonstration data
             </p>
           </div>
@@ -106,14 +121,21 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
 
       <form
         method="GET"
-        className="grid gap-4 rounded-md border border-audit-border bg-white p-5 shadow-audit sm:grid-cols-2 lg:grid-cols-3"
+        className="
+          grid gap-4 rounded-md border border-audit-border bg-white p-5
+          shadow-audit
+          sm:grid-cols-2
+          lg:grid-cols-3
+        "
       >
         <label className="block">
           <span className="text-sm font-medium">Client</span>
           <select
             name="client"
             defaultValue={filters.client ?? ""}
-            className="mt-2 w-full rounded-md border border-audit-border px-3 py-2"
+            className="
+              mt-2 w-full rounded-md border border-audit-border px-3 py-2
+            "
           >
             <option value="">All clients</option>
             {clients.map((client) => (
@@ -126,7 +148,9 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
           <select
             name="project"
             defaultValue={filters.project ?? ""}
-            className="mt-2 w-full rounded-md border border-audit-border px-3 py-2"
+            className="
+              mt-2 w-full rounded-md border border-audit-border px-3 py-2
+            "
           >
             <option value="">All projects</option>
             {projects.map((project) => (
@@ -141,7 +165,9 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
           <select
             name="type"
             defaultValue={filters.type ?? ""}
-            className="mt-2 w-full rounded-md border border-audit-border px-3 py-2"
+            className="
+              mt-2 w-full rounded-md border border-audit-border px-3 py-2
+            "
           >
             <option value="">All event types</option>
             {BILLING_EVENT_TYPES.map((item) => (
@@ -154,7 +180,9 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
           <select
             name="status"
             defaultValue={filters.status ?? ""}
-            className="mt-2 w-full rounded-md border border-audit-border px-3 py-2"
+            className="
+              mt-2 w-full rounded-md border border-audit-border px-3 py-2
+            "
           >
             <option value="">All statuses</option>
             {WORKFLOW_STATUSES.map((item) => (
@@ -168,7 +196,9 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
             type="date"
             name="from"
             defaultValue={filters.from ?? ""}
-            className="mt-2 w-full rounded-md border border-audit-border px-3 py-2"
+            className="
+              mt-2 w-full rounded-md border border-audit-border px-3 py-2
+            "
           />
         </label>
         <label className="block">
@@ -177,26 +207,38 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
             type="date"
             name="to"
             defaultValue={filters.to ?? ""}
-            className="mt-2 w-full rounded-md border border-audit-border px-3 py-2"
+            className="
+              mt-2 w-full rounded-md border border-audit-border px-3 py-2
+            "
           />
         </label>
         <div className="flex items-end gap-3">
           <button
             type="submit"
-            className="inline-flex h-11 items-center rounded-md bg-ink px-5 text-sm font-semibold text-white hover:bg-zinc-800"
+            className="
+              inline-flex h-11 items-center rounded-md bg-ink px-5 text-sm
+              font-semibold text-white
+              hover:bg-zinc-800
+            "
           >
             Apply filters
           </button>
           <Link
             href="/app/billing"
-            className="inline-flex h-11 items-center rounded-md border border-audit-border px-4 text-sm font-semibold hover:bg-audit-soft"
+            className="
+              inline-flex h-11 items-center rounded-md border
+              border-audit-border px-4 text-sm font-semibold
+              hover:bg-audit-soft
+            "
           >
             Clear
           </Link>
         </div>
       </form>
 
-      <section className="rounded-md border border-audit-border bg-white shadow-audit">
+      <section className="
+        rounded-md border border-audit-border bg-white shadow-audit
+      ">
         <div className="border-b border-audit-border px-5 py-4">
           <h2 className="text-xl font-semibold">
             {rows.length} event{rows.length === 1 ? "" : "s"}
@@ -222,12 +264,17 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
             <tbody>
               {rows.length ? (
                 rows.map(({ event, finding, project }) => (
-                  <tr key={event.id} className="border-t border-audit-border align-top">
+                  <tr key={event.id} className="
+                    border-t border-audit-border align-top
+                  ">
                     <td className="px-5 py-4 whitespace-nowrap">{formatTimestamp(event.created_at)}</td>
                     <td className="px-5 py-4 font-medium">
                       {event.event_type}
                       {event.is_demo ? (
-                        <span className="ml-2 rounded border border-zinc-300 bg-zinc-100 px-1.5 py-0.5 text-xs font-semibold text-zinc-700">
+                        <span className="
+                          ml-2 rounded-sm border border-zinc-300 bg-zinc-100
+                          px-1.5 py-0.5 text-xs font-semibold text-zinc-700
+                        ">
                           Demo
                         </span>
                       ) : null}

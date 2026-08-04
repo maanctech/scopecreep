@@ -45,13 +45,17 @@ const configurationSchema = z.discriminatedUnion("provider", [
 
 async function auth() {
   const context = await currentAuthContext();
+
   if (!context) throw new Error("A valid organization session is required.");
+
   return context;
 }
 
 function connector(provider: ConnectorProvider) {
   if (provider === "Slack") return createSlackConnector();
+
   if (provider === "Google") return createGoogleConnector();
+
   return createMicrosoftConnector();
 }
 
@@ -63,6 +67,7 @@ export async function listIntegrations() {
      FROM communication_connections c WHERE c.organization_id=$1 ORDER BY c.provider,c.created_at`,
     [context.organizationId],
   );
+
   return result.rows.map((row) => ({
     ...row,
     configuration: {
@@ -81,13 +86,16 @@ export async function configurePlatformConnection(raw: unknown) {
     "SELECT id FROM projects WHERE id=$1 AND organization_id=$2",
     [parsed.projectId, context.organizationId],
   );
+
   if (!project.rows[0]) throw new Error("Project not found.");
+
   const connectionId = randomUUID();
   const { provider, name, ...values } = parsed;
   const configuration = { ...values } as Record<string, unknown>;
   const secretName = provider === "Slack" ? "bot-token" : "client-secret";
   const secretValue =
     provider === "Slack" ? parsed.botToken : parsed.clientSecret;
+
   delete configuration.botToken;
   delete configuration.clientSecret;
   await transaction(async (client) => {
@@ -133,6 +141,7 @@ export async function configurePlatformConnection(raw: unknown) {
       ],
     );
   });
+
   return {
     id: connectionId,
     provider,
@@ -152,11 +161,14 @@ async function connectionForUser(connectionId: string) {
     "SELECT id,provider,status,configuration FROM communication_connections WHERE id=$1 AND organization_id=$2 AND provider IN ('Slack','Google','Microsoft')",
     [connectionId, context.organizationId],
   );
+
   if (!result.rows[0]) throw new Error("Platform connection not found.");
+
   if (result.rows[0].status === "Disabled")
     throw new Error(
       "This connection is disabled. Create a new configuration to reconnect.",
     );
+
   return { context, connection: result.rows[0] };
 }
 
@@ -169,14 +181,18 @@ async function usableSecrets(
   },
 ) {
   const secrets = await connectionSecrets(organizationId, connection.id);
+
   if (connection.provider === "Slack") return secrets;
+
   const accessToken = await refreshedAccessToken({
     provider: connection.provider,
     configuration: connection.configuration,
     secrets,
   });
+
   if (!accessToken)
     throw new Error(`${connection.provider} authorization is required.`);
+
   if (accessToken !== secrets["access-token"])
     await transaction((client) =>
       saveConnectionSecret(
@@ -187,23 +203,28 @@ async function usableSecrets(
         accessToken,
       ),
     );
+
   return { ...secrets, "access-token": accessToken };
 }
 
 export async function testPlatformConnection(connectionId: string) {
   const { context, connection } = await connectionForUser(connectionId);
+
   try {
     const result = await connector(connection.provider).test(
       connection.configuration as never,
       await usableSecrets(context.organizationId, connection),
     );
+
     await query(
       "UPDATE communication_connections SET status='Connected',connection_verified_at=now(),last_tested_at=now(),last_error=NULL,updated_at=now() WHERE id=$1 AND organization_id=$2",
       [connectionId, context.organizationId],
     );
+
     return result;
   } catch {
     const message = `${connection.provider} connection test failed. Verify credentials, permissions, selected sources, and provider setup.`;
+
     await query(
       "UPDATE communication_connections SET status='Needs Attention',last_tested_at=now(),last_error=$1,updated_at=now() WHERE id=$2 AND organization_id=$3",
       [message, connectionId, context.organizationId],
@@ -214,9 +235,12 @@ export async function testPlatformConnection(connectionId: string) {
 
 export async function syncPlatformConnection(connectionId: string) {
   const { context, connection } = await connectionForUser(connectionId);
+
   if (connection.status !== "Connected")
     throw new Error("Test this connection successfully before syncing.");
+
   const jobId = randomUUID();
+
   await transaction(async (client) => {
     await client.query(
       "INSERT INTO ingestion_jobs (id,organization_id,connection_id,project_id,job_type,status,input,attempt_count,progress,max_attempts,started_at) VALUES ($1,$2,$3,$4,$5,'Running','{}'::jsonb,1,5,3,now())",
@@ -233,6 +257,7 @@ export async function syncPlatformConnection(connectionId: string) {
       [connectionId, context.organizationId],
     );
   });
+
   try {
     const checkpoint = await query<{
       checkpoint_value: Record<string, unknown>;
@@ -251,10 +276,12 @@ export async function syncPlatformConnection(connectionId: string) {
     const eligibleMessages = providerResult.messages.filter(
       (message) => message.text.length <= 100_000,
     );
+
     if (oversized)
       providerResult.warnings.push(
         `${oversized} provider message(s) over 100,000 characters were skipped.`,
       );
+
     return transaction(async (client) => {
       const persisted = await persistConnectorSync({
         client,
@@ -264,6 +291,7 @@ export async function syncPlatformConnection(connectionId: string) {
         provider: connection.provider,
         messages: eligibleMessages,
       });
+
       await client.query(
         `INSERT INTO sync_checkpoints (id,organization_id,connection_id,checkpoint_key,checkpoint_value)
          VALUES ($1,$2,$3,'provider',$4::jsonb)
@@ -276,6 +304,7 @@ export async function syncPlatformConnection(connectionId: string) {
         ],
       );
       const result = { ...persisted, warnings: providerResult.warnings };
+
       await client.query(
         "UPDATE ingestion_jobs SET status='Succeeded',progress=100,result=$1::jsonb,completed_at=now(),updated_at=now() WHERE id=$2 AND organization_id=$3",
         [JSON.stringify(result), jobId, context.organizationId],
@@ -284,10 +313,12 @@ export async function syncPlatformConnection(connectionId: string) {
         "UPDATE communication_connections SET status='Connected',last_synced_at=now(),last_error=NULL,updated_at=now() WHERE id=$1 AND organization_id=$2",
         [connectionId, context.organizationId],
       );
+
       return result;
     });
   } catch {
     const message = `${connection.provider} sync failed. Review the provider permissions, filters, and job diagnostics.`;
+
     await transaction(async (client) => {
       await client.query(
         "UPDATE ingestion_jobs SET status='Failed',error_message=$1,completed_at=now(),updated_at=now() WHERE id=$2 AND organization_id=$3",
@@ -313,16 +344,20 @@ export async function disablePlatformConnection(connectionId: string) {
     [connectionId, context.organizationId],
   );
   const connection = result.rows[0];
+
   if (!connection) throw new Error("Connection not found.");
+
   if (connection.provider === "Google") {
     const secrets = await connectionSecrets(
       context.organizationId,
       connectionId,
     ).catch(() => ({}));
+
     await createGoogleConnector()
       .revoke?.(connection.configuration as never, secrets)
       .catch(() => undefined);
   }
+
   await transaction(async (client) => {
     await client.query(
       "DELETE FROM encrypted_secrets WHERE organization_id=$1 AND connection_id=$2",
@@ -347,5 +382,6 @@ export async function disablePlatformConnection(connectionId: string) {
       ],
     );
   });
+
   return { disabled: true };
 }

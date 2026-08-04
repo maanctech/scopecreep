@@ -407,8 +407,10 @@ const findingByMessageId = new Map(
 );
 
 let eventSequence = 0;
+
 function seedEvent(finding, input) {
   eventSequence += 1;
+
   return {
     id: `88888888-8888-4888-8888-8888888888${String(eventSequence).padStart(2, "0")}`,
     project_id: finding.project_id,
@@ -420,6 +422,7 @@ function seedEvent(finding, input) {
 
 function seedDecisionChain(messageId, steps) {
   const finding = findingByMessageId.get(messageId);
+
   return steps.map((step) =>
     seedEvent(finding, {
       ...step,
@@ -666,6 +669,7 @@ const store = {
 };
 
 const dataDir = path.join(process.cwd(), "data");
+
 await mkdir(dataDir, { recursive: true });
 await writeFile(path.join(dataDir, "demo-store.json"), JSON.stringify(store, null, 2));
 console.log("Local business demo data reset in data/demo-store.json");

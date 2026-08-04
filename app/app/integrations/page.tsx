@@ -17,6 +17,7 @@ export default async function IntegrationsPage({
     getAppDashboard(),
     searchParams,
   ]);
+
   return (
     <div className="space-y-8">
       <section className="border-b border-audit-border pb-7">
@@ -24,7 +25,7 @@ export default async function IntegrationsPage({
           Private source connections
         </p>
         <h1 className="mt-2 text-3xl font-semibold">Integration Hub</h1>
-        <p className="mt-3 max-w-3xl text-base leading-7 text-zinc-700">
+        <p className="mt-3 max-w-3xl text-base/7 text-zinc-700">
           Route selected client communications into a project. A saved setup is
           not called connected until ScopeLedger completes a real provider test.
           Imports never start analysis or contact a client automatically.

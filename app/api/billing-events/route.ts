@@ -7,6 +7,7 @@ export const runtime = "nodejs";
 
 function csvCell(value: string | null | undefined) {
   const text = value ?? "";
+
   return `"${text.replace(/"/g, '""')}"`;
 }
 
@@ -66,7 +67,9 @@ export async function GET(request: Request) {
     });
   } catch (error) {
     const authResponse = authErrorResponse(error);
+
     if (authResponse) return authResponse;
+
     return NextResponse.json({ error: "Failed to load billing events." }, { status: 500 });
   }
 }

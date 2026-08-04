@@ -14,6 +14,7 @@ function money(value: number) {
 
 function toNumber(value: string) {
   const parsed = Number(value);
+
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
 }
 
@@ -33,12 +34,20 @@ export function RoiCalculator() {
   }, [activeProjects, hourlyRate, projectValue, unbilledHours]);
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_0.85fr]">
-      <div className="grid gap-4 sm:grid-cols-2">
+    <div className="
+      grid gap-6
+      lg:grid-cols-[1fr_0.85fr]
+    ">
+      <div className="
+        grid gap-4
+        sm:grid-cols-2
+      ">
         <label className="block">
           <span className="text-sm font-medium">Average hourly or blended rate</span>
           <input
-            className="mt-2 w-full rounded-md border border-audit-border px-3 py-2"
+            className="
+              mt-2 w-full rounded-md border border-audit-border px-3 py-2
+            "
             type="number"
             inputMode="decimal"
             min="0"
@@ -51,7 +60,9 @@ export function RoiCalculator() {
         <label className="block">
           <span className="text-sm font-medium">Unbilled hours per project/month</span>
           <input
-            className="mt-2 w-full rounded-md border border-audit-border px-3 py-2"
+            className="
+              mt-2 w-full rounded-md border border-audit-border px-3 py-2
+            "
             type="number"
             inputMode="decimal"
             min="0"
@@ -64,7 +75,9 @@ export function RoiCalculator() {
         <label className="block">
           <span className="text-sm font-medium">Active projects</span>
           <input
-            className="mt-2 w-full rounded-md border border-audit-border px-3 py-2"
+            className="
+              mt-2 w-full rounded-md border border-audit-border px-3 py-2
+            "
             type="number"
             inputMode="numeric"
             min="0"
@@ -77,7 +90,9 @@ export function RoiCalculator() {
         <label className="block">
           <span className="text-sm font-medium">Typical retainer or project value</span>
           <input
-            className="mt-2 w-full rounded-md border border-audit-border px-3 py-2"
+            className="
+              mt-2 w-full rounded-md border border-audit-border px-3 py-2
+            "
             type="number"
             inputMode="decimal"
             min="0"
@@ -89,15 +104,21 @@ export function RoiCalculator() {
         </label>
       </div>
 
-      <div className="rounded-md border border-audit-border bg-white p-5 shadow-audit">
+      <div className="
+        rounded-md border border-audit-border bg-white p-5 shadow-audit
+      ">
         <div className="text-sm text-audit-muted">Estimated monthly leakage</div>
         <div className="mt-2 text-3xl font-semibold">{money(result.monthlyLeakage)}</div>
         <div className="mt-5 grid gap-3 text-sm">
-          <div className="flex justify-between border-b border-audit-border pb-2">
+          <div className="
+            flex justify-between border-b border-audit-border pb-2
+          ">
             <span>Annualized leakage</span>
             <strong>{money(result.annualLeakage)}</strong>
           </div>
-          <div className="flex justify-between border-b border-audit-border pb-2">
+          <div className="
+            flex justify-between border-b border-audit-border pb-2
+          ">
             <span>Suggested service range</span>
             <strong>
               {result.serviceLow === null || result.serviceHigh === null
@@ -110,12 +131,16 @@ export function RoiCalculator() {
             <strong>{result.projectRisk}%</strong>
           </div>
         </div>
-        <p className="mt-4 text-xs leading-5 text-audit-muted">
+        <p className="mt-4 text-xs/5 text-audit-muted">
           Illustrative estimate only. It is not validated recovery, an approved charge, or a guarantee.
         </p>
         <Link
           href="/request-audit"
-          className="mt-6 inline-flex h-11 w-full items-center justify-center rounded-md bg-ink px-4 text-sm font-semibold text-white hover:bg-zinc-800"
+          className="
+            mt-6 inline-flex h-11 w-full items-center justify-center rounded-md
+            bg-ink px-4 text-sm font-semibold text-white
+            hover:bg-zinc-800
+          "
         >
           Request free audit
         </Link>

@@ -34,6 +34,7 @@ function validationMessage(error: z.ZodError) {
 export async function GET(request: Request) {
   try {
     await requireApiPermission(request, "projects:read");
+
     return NextResponse.json(await getAppDashboard());
   } catch (error) {
     return authErrorResponse(error) || NextResponse.json({ error: "Failed to load projects." }, { status: 500 });
@@ -44,6 +45,7 @@ export async function POST(request: Request) {
   try {
     await requireApiPermission(request, "projects:write");
     let json: unknown;
+
     try {
       json = await request.json();
     } catch {
@@ -59,8 +61,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ project }, { status: 201 });
   } catch (error) {
     const authResponse = authErrorResponse(error);
+
     if (authResponse) return authResponse;
+
     const status = error instanceof z.ZodError ? 400 : 500;
+
     return NextResponse.json(
       {
         error:

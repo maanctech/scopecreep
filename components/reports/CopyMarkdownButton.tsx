@@ -21,9 +21,13 @@ export function CopyMarkdownButton({ markdown }: { markdown: string }) {
       <button
         type="button"
         onClick={copy}
-        className="inline-flex h-10 items-center gap-2 rounded-md bg-ink px-3 text-sm font-semibold text-white hover:bg-zinc-800"
+        className="
+          inline-flex h-10 items-center gap-2 rounded-md bg-ink px-3 text-sm
+          font-semibold text-white
+          hover:bg-zinc-800
+        "
       >
-        <Clipboard className="h-4 w-4" aria-hidden="true" />
+        <Clipboard className="size-4" aria-hidden="true" />
         Copy markdown
       </button>
       {status === "copied" ? <span className="text-sm text-emerald-700">Copied.</span> : null}

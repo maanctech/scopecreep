@@ -5,9 +5,9 @@ import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { buildDemoStore } from "@/lib/demoData";
+import { buildDemoStore } from "@/lib/demo";
 import { validateProductionConfiguration } from "@/lib/config/runtime";
-import { useSecureSessionCookie } from "@/lib/auth/sessionConfig";
+import { shouldUseSecureSessionCookie } from "@/lib/auth/sessionConfig";
 import { redactLogMetadata } from "@/lib/observability/logger";
 import { buildSupportBundle } from "@/lib/operations/diagnostics";
 import {
@@ -28,14 +28,19 @@ const originalPgRestorePath = process.env.PG_RESTORE_PATH;
 
 afterEach(async () => {
   vi.unstubAllEnvs();
+
   if (originalBackupDirectory === undefined) delete process.env.SCOPELEDGER_BACKUP_DIR;
   else process.env.SCOPELEDGER_BACKUP_DIR = originalBackupDirectory;
+
   if (originalDocumentDirectory === undefined) delete process.env.SCOPELEDGER_DOCUMENT_DIR;
   else process.env.SCOPELEDGER_DOCUMENT_DIR = originalDocumentDirectory;
+
   if (originalDatabaseUrl === undefined) delete process.env.DATABASE_URL;
   else process.env.DATABASE_URL = originalDatabaseUrl;
+
   if (originalPgRestorePath === undefined) delete process.env.PG_RESTORE_PATH;
   else process.env.PG_RESTORE_PATH = originalPgRestorePath;
+
   await Promise.all(temporaryDirectories.splice(0).map((directory) => fs.rm(directory, { recursive: true, force: true })));
 });
 
@@ -43,6 +48,7 @@ function demoRows() {
   const store = buildDemoStore();
   const project = store.projects[0];
   const findings = new Map(store.scopeFindings.map((finding) => [finding.client_message_id, finding]));
+
   return {
     project,
     rows: store.clientMessages
@@ -54,10 +60,13 @@ function demoRows() {
 describe("versioned report generation", () => {
   it("generates every supported report type without implying automatic delivery", () => {
     const { project, rows } = demoRows();
+
     for (const reportType of REPORT_TYPES) {
       const report = generateReportDocument({ project, rows, reportType });
+
       expect(report).toContain(reportType);
       expect(report).toMatch(/never sends|manual invoicing only/i);
+
       if (["Client Discussion Brief", "Change Order Draft"].includes(reportType)) {
         expect(report).toContain("DRAFT");
       }
@@ -66,16 +75,20 @@ describe("versioned report generation", () => {
 
   it("neutralizes spreadsheet formulas in CSV exports", () => {
     const { project, rows } = demoRows();
+
     rows[0].message.message_text = "=HYPERLINK(\"https://attacker.example\")";
     const csv = generateFindingsCsv(project, rows);
+
     expect(csv).toContain("'=HYPERLINK");
     expect(csv).not.toContain('\n"=HYPERLINK');
   });
 
   it("neutralizes active HTML and Markdown controls in report source text", () => {
     const { project, rows } = demoRows();
+
     rows[0].message.message_text = "<script>alert(1)</script>\n# Injected heading";
     const report = generateReportDocument({ project, rows, reportType: "Finding Summary" });
+
     expect(report).not.toContain("<script>");
     expect(report).not.toContain("\n# Injected heading");
     expect(report).toContain("&lt;script&gt;");
@@ -138,9 +151,9 @@ describe("production configuration and log safety", () => {
   it("uses secure cookies for HTTPS and permits explicit loopback HTTP setup", () => {
     vi.stubEnv("NODE_ENV", "production");
     vi.stubEnv("APP_URL", "https://scopeledger.example");
-    expect(useSecureSessionCookie()).toBe(true);
+    expect(shouldUseSecureSessionCookie()).toBe(true);
     vi.stubEnv("APP_URL", "http://127.0.0.1:3000");
-    expect(useSecureSessionCookie()).toBe(false);
+    expect(shouldUseSecureSessionCookie()).toBe(false);
   });
 
   it("redacts nested credentials and sensitive business text", () => {
@@ -175,6 +188,7 @@ describe("production configuration and log safety", () => {
       },
       [{ metadata: { ownerEmail: "owner@private.example", accessToken: "token" } }]
     );
+
     expect(support.diagnostics.organization).toEqual({ id: "[REDACTED]", name: "[REDACTED]" });
     expect(JSON.stringify(support)).not.toContain("Private Firm");
     expect(JSON.stringify(support)).not.toContain("owner@private.example");
@@ -185,6 +199,7 @@ describe("production configuration and log safety", () => {
 describe("backup integrity", () => {
   it("rejects overlapping backup and private-document directories without leaving partial work", async () => {
     const root = await fs.mkdtemp(path.join(os.tmpdir(), "scopeledger-overlap-test-"));
+
     temporaryDirectories.push(root);
     process.env.SCOPELEDGER_BACKUP_DIR = root;
     process.env.SCOPELEDGER_DOCUMENT_DIR = root;
@@ -195,16 +210,20 @@ describe("backup integrity", () => {
 
   it("validates database and document checksums before restore", async () => {
     const root = await fs.mkdtemp(path.join(os.tmpdir(), "scopeledger-backup-test-"));
+
     temporaryDirectories.push(root);
     process.env.SCOPELEDGER_BACKUP_DIR = root;
     const source = path.join(root, "source");
+
     await fs.mkdir(source);
     const database = Buffer.from("fictional database dump");
     const documentSource = path.join(root, "documents");
+
     await fs.mkdir(documentSource);
     await fs.writeFile(path.join(documentSource, "fictional-sow.txt"), "fictional document");
     await run("tar", ["-czf", path.join(source, "documents.tar.gz"), "-C", documentSource, "."]);
     const documents = await fs.readFile(path.join(source, "documents.tar.gz"));
+
     await fs.writeFile(path.join(source, "database.dump"), database);
     const manifest: BackupManifest = {
       kind: "scopeledger-installation",
@@ -227,16 +246,20 @@ describe("backup integrity", () => {
       },
       encryptedSecretsCovered: true
     };
+
     await fs.writeFile(path.join(source, "manifest.json"), JSON.stringify(manifest));
     const bundle = path.join(root, "verified.tar.gz");
+
     await run("tar", ["-czf", bundle, "-C", source, "."]);
 
     const inspected = await inspectBackupBundle(bundle);
+
     expect(inspected.manifest.complete).toBe(true);
     await fs.rm(inspected.temporary, { recursive: true, force: true });
 
     const restoreTool = path.join(root, "mock-pg-restore.sh");
     const restoredDocuments = path.join(root, "restored-documents");
+
     await fs.writeFile(restoreTool, "#!/bin/sh\nexit 0\n", { mode: 0o700 });
     await fs.mkdir(restoredDocuments);
     await fs.writeFile(path.join(restoredDocuments, "old-private-file.txt"), "previous install");
@@ -244,6 +267,7 @@ describe("backup integrity", () => {
     process.env.PG_RESTORE_PATH = restoreTool;
     process.env.SCOPELEDGER_DOCUMENT_DIR = restoredDocuments;
     const restored = await restoreInstallationBackup(bundle);
+
     expect(restored.createdAt).toBe(manifest.createdAt);
     await expect(fs.readFile(path.join(restoredDocuments, "fictional-sow.txt"), "utf8"))
       .resolves.toBe("fictional document");
@@ -253,6 +277,7 @@ describe("backup integrity", () => {
     await run("tar", ["-czf", bundle, "-C", source, "."]);
     await expect(inspectBackupBundle(bundle)).rejects.toThrow(/checksum validation failed/);
     const leftovers = (await fs.readdir(root)).filter((entry) => entry.startsWith(".restore-"));
+
     expect(leftovers).toEqual([]);
   });
 });

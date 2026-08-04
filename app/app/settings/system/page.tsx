@@ -19,39 +19,77 @@ export default async function SystemSettingsPage() {
   const failedJobs = [...diagnostics.analysisJobs, ...diagnostics.ingestionJobs].filter(
     (row) => row.status === "Failed"
   );
+
   return (
     <div className="space-y-8">
       <section className="border-b border-audit-border pb-7">
-        <div className="flex items-center gap-2 text-sm font-medium text-audit-muted">
-          <Activity className="h-4 w-4" aria-hidden="true" /> System operations
+        <div className="
+          flex items-center gap-2 text-sm font-medium text-audit-muted
+        ">
+          <Activity className="size-4" aria-hidden="true" /> System operations
         </div>
         <h1 className="mt-2 text-3xl font-semibold">Diagnostics and audit log</h1>
-        <p className="mt-3 max-w-3xl text-base leading-7 text-zinc-700">
+        <p className="mt-3 max-w-3xl text-base/7 text-zinc-700">
           Review local service health, migrations, job failures, integration state, and append-only operational events. Support exports redact sensitive business content and credentials.
         </p>
         <Link
           href="/api/diagnostics/support-bundle"
-          className="mt-5 inline-flex h-11 items-center gap-2 rounded-md border border-ink px-4 text-sm font-semibold hover:bg-audit-soft"
+          className="
+            mt-5 inline-flex h-11 items-center gap-2 rounded-md border
+            border-ink px-4 text-sm font-semibold
+            hover:bg-audit-soft
+          "
         >
-          <Download className="h-4 w-4" aria-hidden="true" /> Download redacted support bundle
+          <Download className="size-4" aria-hidden="true" /> Download redacted support bundle
         </Link>
       </section>
 
-      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-md border border-audit-border p-5"><div className="text-sm text-audit-muted">Application</div><div className="mt-2 text-xl font-semibold capitalize">{diagnostics.application.status}</div><p className="mt-1 text-sm">v{diagnostics.application.version}</p></div>
-        <div className="rounded-md border border-audit-border p-5"><div className="text-sm text-audit-muted">Database</div><div className="mt-2 text-xl font-semibold capitalize">{diagnostics.application.database}</div><p className="mt-1 text-sm">{diagnostics.application.latencyMs} ms check</p></div>
-        <div className="rounded-md border border-audit-border p-5"><div className="text-sm text-audit-muted">Migrations</div><div className="mt-2 text-xl font-semibold">{diagnostics.migrations.applied}/{diagnostics.migrations.expected}</div><p className="mt-1 text-sm">{diagnostics.migrations.pending.length ? `${diagnostics.migrations.pending.length} pending` : "Current"}</p></div>
-        <div className="rounded-md border border-audit-border p-5"><div className="text-sm text-audit-muted">Failed jobs</div><div className="mt-2 text-xl font-semibold">{failedJobs.reduce((sum, row) => sum + Number(row.count), 0)}</div><p className="mt-1 text-sm">Analysis and ingestion</p></div>
+      <section className="
+        grid gap-4
+        sm:grid-cols-2
+        lg:grid-cols-4
+      ">
+        <div className="rounded-md border border-audit-border p-5"><div className="
+          text-sm text-audit-muted
+        ">Application</div><div className="
+          mt-2 text-xl font-semibold capitalize
+        ">{diagnostics.application.status}</div><p className="mt-1 text-sm">v{diagnostics.application.version}</p></div>
+        <div className="rounded-md border border-audit-border p-5"><div className="
+          text-sm text-audit-muted
+        ">Database</div><div className="mt-2 text-xl font-semibold capitalize">{diagnostics.application.database}</div><p className="
+          mt-1 text-sm
+        ">{diagnostics.application.latencyMs} ms check</p></div>
+        <div className="rounded-md border border-audit-border p-5"><div className="
+          text-sm text-audit-muted
+        ">Migrations</div><div className="mt-2 text-xl font-semibold">{diagnostics.migrations.applied}/{diagnostics.migrations.expected}</div><p className="
+          mt-1 text-sm
+        ">{diagnostics.migrations.pending.length ? `${diagnostics.migrations.pending.length} pending` : "Current"}</p></div>
+        <div className="rounded-md border border-audit-border p-5"><div className="
+          text-sm text-audit-muted
+        ">Failed jobs</div><div className="mt-2 text-xl font-semibold">{failedJobs.reduce((sum, row) => sum + Number(row.count), 0)}</div><p className="
+          mt-1 text-sm
+        ">Analysis and ingestion</p></div>
       </section>
 
-      <section className="grid gap-6 lg:grid-cols-2">
+      <section className="
+        grid gap-6
+        lg:grid-cols-2
+      ">
         <div>
           <h2 className="text-xl font-semibold">Configuration checks</h2>
-          <div className="mt-4 divide-y divide-audit-border rounded-md border border-audit-border">
+          <div className="
+            mt-4 divide-y divide-audit-border rounded-md border
+            border-audit-border
+          ">
             {diagnostics.configuration.map((check) => (
               <div key={check.name} className="flex gap-3 p-4">
-                <ShieldCheck className={`mt-0.5 h-5 w-5 ${check.ok ? "text-emerald-700" : "text-amber-700"}`} aria-hidden="true" />
-                <div><div className="font-semibold">{check.name}</div><p className="mt-1 text-sm text-zinc-700">{check.message}</p></div>
+                <ShieldCheck className={`
+                  mt-0.5 size-5
+                  ${check.ok ? `text-emerald-700` : `text-amber-700`}
+                `} aria-hidden="true" />
+                <div><div className="font-semibold">{check.name}</div><p className="
+                  mt-1 text-sm text-zinc-700
+                ">{check.message}</p></div>
               </div>
             ))}
           </div>
@@ -61,24 +99,43 @@ export default async function SystemSettingsPage() {
           <div className="mt-4 rounded-md border border-audit-border p-5">
             <div className="text-lg font-semibold capitalize">{diagnostics.ai.provider}</div>
             <p className="mt-2 text-sm text-zinc-700">{diagnostics.ai.message}</p>
-            <dl className="mt-4 grid gap-3 sm:grid-cols-2"><div><dt className="text-sm text-audit-muted">Selected model</dt><dd className="font-semibold">{diagnostics.ai.selectedModel || "Unavailable"}</dd></div><div><dt className="text-sm text-audit-muted">Available models</dt><dd className="font-semibold">{diagnostics.ai.models.length}</dd></div></dl>
+            <dl className="
+              mt-4 grid gap-3
+              sm:grid-cols-2
+            "><div><dt className="text-sm text-audit-muted">Selected model</dt><dd className="
+              font-semibold
+            ">{diagnostics.ai.selectedModel || "Unavailable"}</dd></div><div><dt className="
+              text-sm text-audit-muted
+            ">Available models</dt><dd className="font-semibold">{diagnostics.ai.models.length}</dd></div></dl>
           </div>
         </div>
       </section>
 
       <section>
         <h2 className="text-xl font-semibold">Installation backups</h2>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-zinc-700">
+        <p className="mt-2 max-w-3xl text-sm/6 text-zinc-700">
           A complete backup contains a PostgreSQL dump, encrypted integration-secret records, required local documents, migration metadata, and SHA-256 checksums. Restore is deliberately command-line only and requires explicit confirmation.
         </p>
         <div className="mt-4"><BackupPanel canCreate={auth.isSystemAdmin && hasPermission(auth.role, "backups:write")} /></div>
-        <div className="mt-4 overflow-x-auto rounded-md border border-audit-border">
+        <div className="
+          mt-4 overflow-x-auto rounded-md border border-audit-border
+        ">
           <table className="min-w-full text-left text-sm">
             <caption className="sr-only">Installation backup history</caption>
-            <thead className="bg-audit-soft"><tr><th className="p-3">Created</th><th className="p-3">Status</th><th className="p-3">Coverage</th><th className="p-3">Size</th><th className="p-3">Filesystem path</th></tr></thead>
+            <thead className="bg-audit-soft"><tr><th className="p-3">Created</th><th className="
+              p-3
+            ">Status</th><th className="p-3">Coverage</th><th className="p-3">Size</th><th className="
+              p-3
+            ">Filesystem path</th></tr></thead>
             <tbody className="divide-y divide-audit-border">
               {backups.length ? backups.map((backup) => (
-                <tr key={backup.id}><td className="whitespace-nowrap p-3">{new Date(backup.created_at).toLocaleString()}</td><td className="p-3 font-semibold">{backup.status}</td><td className="p-3">{backup.includes_database && backup.includes_documents && backup.includes_encrypted_secrets ? "Database + documents + encrypted secrets" : "Incomplete"}</td><td className="p-3">{backup.byte_size == null ? "-" : `${(backup.byte_size / 1024 / 1024).toFixed(1)} MB`}</td><td className="max-w-md break-all p-3 font-mono text-xs">{backup.storage_path || backup.error_message || "In progress"}</td></tr>
+                <tr key={backup.id}><td className="p-3 whitespace-nowrap">{new Date(backup.created_at).toLocaleString()}</td><td className="
+                  p-3 font-semibold
+                ">{backup.status}</td><td className="p-3">{backup.includes_database && backup.includes_documents && backup.includes_encrypted_secrets ? "Database + documents + encrypted secrets" : "Incomplete"}</td><td className="
+                  p-3
+                ">{backup.byte_size == null ? "-" : `${(backup.byte_size / 1024 / 1024).toFixed(1)} MB`}</td><td className="
+                  max-w-md p-3 font-mono text-xs break-all
+                ">{backup.storage_path || backup.error_message || "In progress"}</td></tr>
               )) : <tr><td colSpan={5} className="p-6 text-zinc-600">No installation backups have been recorded.</td></tr>}
             </tbody>
           </table>
@@ -88,13 +145,21 @@ export default async function SystemSettingsPage() {
       <section>
         <h2 className="text-xl font-semibold">Append-only audit log</h2>
         <p className="mt-2 text-sm text-zinc-700">Recent organization-scoped events. Sensitive metadata is redacted before display.</p>
-        <div className="mt-4 overflow-x-auto rounded-md border border-audit-border">
+        <div className="
+          mt-4 overflow-x-auto rounded-md border border-audit-border
+        ">
           <table className="min-w-full text-left text-sm">
             <caption className="sr-only">Recent append-only audit events</caption>
-            <thead className="bg-audit-soft"><tr><th className="p-3">Time</th><th className="p-3">Action</th><th className="p-3">Resource</th><th className="p-3">Reference</th></tr></thead>
+            <thead className="bg-audit-soft"><tr><th className="p-3">Time</th><th className="
+              p-3
+            ">Action</th><th className="p-3">Resource</th><th className="p-3">Reference</th></tr></thead>
             <tbody className="divide-y divide-audit-border">
               {events.length ? events.map((event) => (
-                <tr key={event.id}><td className="whitespace-nowrap p-3">{new Date(event.createdAt).toLocaleString()}</td><td className="p-3 font-semibold">{event.action}</td><td className="p-3">{event.resourceType}</td><td className="p-3 font-mono text-xs">{event.resourceId || "-"}</td></tr>
+                <tr key={event.id}><td className="p-3 whitespace-nowrap">{new Date(event.createdAt).toLocaleString()}</td><td className="
+                  p-3 font-semibold
+                ">{event.action}</td><td className="p-3">{event.resourceType}</td><td className="
+                  p-3 font-mono text-xs
+                ">{event.resourceId || "-"}</td></tr>
               )) : <tr><td colSpan={4} className="p-6 text-zinc-600">No audit events have been recorded yet.</td></tr>}
             </tbody>
           </table>

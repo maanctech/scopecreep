@@ -49,7 +49,9 @@ export function findingBucket(finding: ScopeFinding): FindingBucket {
       return "discussing";
     case "Bill Separately":
       if (finding.workflow_status === "Invoiced") return "invoiced";
+
       if (finding.workflow_status === "Paid") return "paid";
+
       return "billable";
     case "Include In Retainer":
       return "retainer";

@@ -35,6 +35,7 @@ export function OnboardingForm({ leadId }: { leadId?: string }) {
         ok?: boolean;
         error?: string;
       } | null;
+
       if (!response.ok || !json?.ok) {
         throw new Error(json?.error || "Failed to submit audit intake. Please try again.");
       }
@@ -48,11 +49,21 @@ export function OnboardingForm({ leadId }: { leadId?: string }) {
   }
 
   return (
-    <form onSubmit={onSubmit} className="grid gap-5 rounded-md border border-audit-border bg-white p-6 shadow-audit">
-      <div className="grid gap-4 sm:grid-cols-3">
-        <label className="block sm:col-span-1">
+    <form onSubmit={onSubmit} className="
+      grid gap-5 rounded-md border border-audit-border bg-white p-6 shadow-audit
+    ">
+      <div className="
+        grid gap-4
+        sm:grid-cols-3
+      ">
+        <label className="
+          block
+          sm:col-span-1
+        ">
           <span className="text-sm font-medium">Client name</span>
-          <input name="client_name" maxLength={160} className="mt-2 w-full rounded-md border border-audit-border px-3 py-2" required />
+          <input name="client_name" maxLength={160} className="
+            mt-2 w-full rounded-md border border-audit-border px-3 py-2
+          " required />
         </label>
         <label className="block">
           <span className="text-sm font-medium">Hourly or blended rate</span>
@@ -62,7 +73,9 @@ export function OnboardingForm({ leadId }: { leadId?: string }) {
             inputMode="decimal"
             min="0.01"
             step="0.01"
-            className="mt-2 w-full rounded-md border border-audit-border px-3 py-2"
+            className="
+              mt-2 w-full rounded-md border border-audit-border px-3 py-2
+            "
             required
           />
         </label>
@@ -74,7 +87,9 @@ export function OnboardingForm({ leadId }: { leadId?: string }) {
             inputMode="decimal"
             min="0"
             step="0.01"
-            className="mt-2 w-full rounded-md border border-audit-border px-3 py-2"
+            className="
+              mt-2 w-full rounded-md border border-audit-border px-3 py-2
+            "
           />
         </label>
       </div>
@@ -85,7 +100,9 @@ export function OnboardingForm({ leadId }: { leadId?: string }) {
           name="sow_text"
           rows={8}
           maxLength={MAX_SOW_LENGTH}
-          className="mt-2 w-full rounded-md border border-audit-border px-3 py-2"
+          className="
+            mt-2 w-full rounded-md border border-audit-border px-3 py-2
+          "
           required
         />
       </label>
@@ -96,7 +113,9 @@ export function OnboardingForm({ leadId }: { leadId?: string }) {
           name="message_export_text"
           rows={8}
           maxLength={MAX_MESSAGE_LENGTH * 6}
-          className="mt-2 w-full rounded-md border border-audit-border px-3 py-2"
+          className="
+            mt-2 w-full rounded-md border border-audit-border px-3 py-2
+          "
           required
         />
       </label>
@@ -107,18 +126,27 @@ export function OnboardingForm({ leadId }: { leadId?: string }) {
           name="suspected_scope_creep_notes"
           rows={4}
           maxLength={2000}
-          className="mt-2 w-full rounded-md border border-audit-border px-3 py-2"
+          className="
+            mt-2 w-full rounded-md border border-audit-border px-3 py-2
+          "
         />
       </label>
 
       <div aria-live="polite">
-        {error ? <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div> : null}
+        {error ? <div className="
+          rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700
+        ">{error}</div> : null}
       </div>
 
       <button
         type="submit"
         disabled={isSubmitting}
-        className="inline-flex h-11 items-center justify-center rounded-md bg-ink px-4 text-sm font-semibold text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60"
+        className="
+          inline-flex h-11 items-center justify-center rounded-md bg-ink px-4
+          text-sm font-semibold text-white
+          hover:bg-zinc-800
+          disabled:cursor-not-allowed disabled:opacity-60
+        "
       >
         {isSubmitting ? "Saving intake..." : "Create audit workspace"}
       </button>

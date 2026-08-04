@@ -1,4 +1,5 @@
 "use client";
+
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ImportPreview } from "@/lib/ingestion/types";
@@ -19,6 +20,7 @@ export function CommunicationImportForm({
   const [notice, setNotice] = useState<{ error?: string; success?: string }>(
     {},
   );
+
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setBusy(true);
@@ -38,6 +40,7 @@ export function CommunicationImportForm({
           ? await file.text()
           : String(form.get("content") || ""),
     };
+
     try {
       const response = await fetch("/api/ingestion/manual", {
         method: "POST",
@@ -48,8 +51,10 @@ export function CommunicationImportForm({
         preview?: ImportPreview;
         error?: string;
       };
+
       if (!response.ok || !data.preview)
         throw new Error(data.error || "The import could not be previewed.");
+
       setPayload(next);
       setPreview(data.preview);
     } catch (error) {
@@ -63,10 +68,13 @@ export function CommunicationImportForm({
       setBusy(false);
     }
   }
+
   async function confirmImport() {
     if (!payload || !preview) return;
+
     setBusy(true);
     setNotice({});
+
     try {
       const response = await fetch("/api/ingestion/manual", {
         method: "POST",
@@ -77,8 +85,10 @@ export function CommunicationImportForm({
         result?: { inserted: number; duplicates: number; repeated: boolean };
         error?: string;
       };
+
       if (!response.ok || !data.result)
         throw new Error(data.error || "The import could not be saved.");
+
       setNotice({
         success: data.result.repeated
           ? "This exact import was already completed; no duplicate messages were created."
@@ -98,8 +108,11 @@ export function CommunicationImportForm({
       setBusy(false);
     }
   }
+
   return (
-    <section className="rounded-md border border-audit-border bg-white p-6 shadow-audit">
+    <section className="
+      rounded-md border border-audit-border bg-white p-6 shadow-audit
+    ">
       <h2 className="text-xl font-semibold">1. Choose and preview</h2>
       <form onSubmit={submit} className="mt-5 grid gap-4">
         <label>
@@ -146,12 +159,17 @@ export function CommunicationImportForm({
             name="file"
             type="file"
             accept=".csv,.json,.txt,.vtt,.srt,text/csv,application/json,text/plain,text/vtt"
-            className="mt-2 block w-full rounded-md border border-audit-border p-3"
+            className="
+              mt-2 block w-full rounded-md border border-audit-border p-3
+            "
           />
         </label>
         <button
           disabled={busy}
-          className="h-11 rounded-md bg-ink px-5 text-sm font-semibold text-white disabled:opacity-60"
+          className="
+            h-11 rounded-md bg-ink px-5 text-sm font-semibold text-white
+            disabled:opacity-60
+          "
         >
           {busy ? "Reading import..." : "Preview import"}
         </button>
@@ -159,7 +177,10 @@ export function CommunicationImportForm({
       {notice.error ? (
         <div
           role="alert"
-          className="mt-4 rounded-md border border-red-300 bg-red-50 p-4 text-sm text-red-900"
+          className="
+            mt-4 rounded-md border border-red-300 bg-red-50 p-4 text-sm
+            text-red-900
+          "
         >
           {notice.error}
         </div>
@@ -167,7 +188,10 @@ export function CommunicationImportForm({
       {notice.success ? (
         <div
           role="status"
-          className="mt-4 rounded-md border border-emerald-300 bg-emerald-50 p-4 text-sm text-emerald-900"
+          className="
+            mt-4 rounded-md border border-emerald-300 bg-emerald-50 p-4 text-sm
+            text-emerald-900
+          "
         >
           {notice.success}
         </div>
@@ -188,7 +212,10 @@ export function CommunicationImportForm({
               ))}
             </ul>
           ) : null}
-          <div className="mt-4 divide-y divide-audit-border rounded-md border border-audit-border">
+          <div className="
+            mt-4 divide-y divide-audit-border rounded-md border
+            border-audit-border
+          ">
             {preview.messages.slice(0, 5).map((message, index) => (
               <article
                 className="p-4"
@@ -199,7 +226,7 @@ export function CommunicationImportForm({
                     message.senderEmail ||
                     "Sender not provided"}
                 </div>
-                <p className="mt-2 whitespace-pre-wrap text-sm text-zinc-700">
+                <p className="mt-2 text-sm whitespace-pre-wrap text-zinc-700">
                   {message.text.slice(0, 500)}
                 </p>
               </article>
@@ -209,7 +236,10 @@ export function CommunicationImportForm({
             type="button"
             onClick={confirmImport}
             disabled={busy}
-            className="mt-4 h-11 rounded-md bg-ink px-5 text-sm font-semibold text-white disabled:opacity-60"
+            className="
+              mt-4 h-11 rounded-md bg-ink px-5 text-sm font-semibold text-white
+              disabled:opacity-60
+            "
           >
             {busy
               ? "Importing..."

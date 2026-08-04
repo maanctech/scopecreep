@@ -20,7 +20,9 @@ export function FindingHistory({ events }: { events: BillingEvent[] }) {
   return (
     <ol className="space-y-3">
       {events.map((event) => (
-        <li key={event.id} className="rounded-md border border-audit-border bg-white p-3 text-sm">
+        <li key={event.id} className="
+          rounded-md border border-audit-border bg-white p-3 text-sm
+        ">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <span className="font-semibold">{event.event_type}</span>
             <span className="text-audit-muted">{formatTimestamp(event.created_at)}</span>

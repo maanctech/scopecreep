@@ -11,6 +11,7 @@ const blankToUndefined = (value: unknown) => (value === "" || value == null ? un
 const isHttpWebsite = (value: string) => {
   try {
     const protocol = new URL(value).protocol;
+
     return protocol === "http:" || protocol === "https:";
   } catch {
     return false;
@@ -54,6 +55,7 @@ export async function POST(request: Request) {
     assertSameOrigin(request);
     checkRateLimit(`lead-capture:${requestIp(request)}`, 8, 60 * 60 * 1000);
     let json: unknown;
+
     try {
       json = await request.json();
     } catch {
@@ -71,8 +73,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ lead: { id: lead.id } }, { status: 201 });
   } catch (error) {
     const authResponse = authErrorResponse(error);
+
     if (authResponse) return authResponse;
+
     const status = error instanceof z.ZodError ? 400 : 500;
+
     return NextResponse.json(
       {
         error:

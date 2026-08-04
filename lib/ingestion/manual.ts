@@ -8,8 +8,7 @@ import type {
 export const MAX_IMPORT_BYTES = 5 * 1024 * 1024;
 export const MAX_IMPORT_MESSAGES = 5_000;
 
-const rowSchema = z
-  .object({
+const rowSchema = z.looseObject({
     id: z.union([z.string(), z.number()]).optional().nullable(),
     external_id: z.union([z.string(), z.number()]).optional().nullable(),
     thread_id: z.union([z.string(), z.number()]).optional().nullable(),
@@ -29,8 +28,7 @@ const rowSchema = z
     message: z.string().optional().nullable(),
     message_text: z.string().optional().nullable(),
     text: z.string().optional().nullable(),
-  })
-  .passthrough();
+  });
 
 function timestamp(
   value: string | null | undefined,
@@ -38,11 +36,15 @@ function timestamp(
   row: number,
 ) {
   if (!value?.trim()) return null;
+
   const parsed = new Date(value);
+
   if (Number.isNaN(parsed.getTime())) {
     warnings.push(`Row ${row}: ignored an invalid timestamp.`);
+
     return null;
   }
+
   return parsed.toISOString();
 }
 
@@ -52,26 +54,34 @@ function normalizeRow(
   warnings: string[],
 ): NormalizedCommunication | null {
   const parsed = rowSchema.safeParse(value);
+
   if (!parsed.success) {
     warnings.push(
       `Row ${rowNumber}: skipped because its fields could not be read.`,
     );
+
     return null;
   }
+
   const row = parsed.data;
   const text = String(row.message_text ?? row.message ?? row.text ?? "")
     .replace(/\0/g, "")
     .trim();
+
   if (!text) {
     warnings.push(`Row ${rowNumber}: skipped because message text is empty.`);
+
     return null;
   }
+
   if (text.length > 100_000) {
     warnings.push(
       `Row ${rowNumber}: skipped because the message exceeds 100,000 characters.`,
     );
+
     return null;
   }
+
   const recipients = Array.isArray(row.recipients)
     ? row.recipients
         .map(String)
@@ -81,6 +91,7 @@ function normalizeRow(
         .split(/[;,]/)
         .map((item) => item.trim())
         .filter(Boolean);
+
   return {
     externalId:
       row.external_id != null
@@ -112,8 +123,10 @@ export function parseManualImport(input: {
 }): ImportPreview {
   if (Buffer.byteLength(input.content, "utf8") > MAX_IMPORT_BYTES)
     throw new Error("Imports must be 5 MB or smaller.");
+
   const warnings: string[] = [];
   let rows: unknown[];
+
   if (input.format === "Transcript") {
     rows = parseTranscript(input.content);
   } else if (input.format === "Text") {
@@ -128,6 +141,7 @@ export function parseManualImport(input: {
     }) as unknown[];
   } else {
     const parsed = JSON.parse(input.content) as unknown;
+
     rows = Array.isArray(parsed)
       ? parsed
       : typeof parsed === "object" &&
@@ -136,15 +150,19 @@ export function parseManualImport(input: {
         ? (parsed as { messages: unknown[] }).messages
         : [parsed];
   }
+
   if (rows.length > MAX_IMPORT_MESSAGES)
     throw new Error(
       `Imports may contain at most ${MAX_IMPORT_MESSAGES.toLocaleString()} messages.`,
     );
+
   const messages = rows
     .map((row, index) => normalizeRow(row, index + 1, warnings))
     .filter((row): row is NormalizedCommunication => Boolean(row));
+
   if (!messages.length)
     throw new Error("No valid messages were found in the import.");
+
   return { format: input.format, messages, warnings };
 }
 
@@ -155,19 +173,27 @@ function parseTranscript(content: string) {
     .map((block) => block.trim())
     .filter(Boolean);
   const rows: Array<Record<string, unknown>> = [];
+
   for (const [index, block] of blocks.entries()) {
     const lines = block.split(/\r?\n/).map((line) => line.trim());
+
     if (/^\d+$/.test(lines[0] || "")) lines.shift();
+
     const timing = lines[0]?.match(
       /^(\d{2}:)?\d{2}:\d{2}[.,]\d{3}\s+-->\s+(\d{2}:)?\d{2}:\d{2}[.,]\d{3}/,
     );
+
     if (timing) lines.shift();
+
     const text = lines
       .join(" ")
       .replace(/<[^>]+>/g, "")
       .trim();
+
     if (!text) continue;
+
     const speaker = text.match(/^([^:]{1,100}):\s+(.+)$/);
+
     rows.push({
       external_id: `transcript-cue-${index + 1}`,
       sender: speaker?.[1] || null,
@@ -175,5 +201,6 @@ function parseTranscript(content: string) {
       transcript_timing: timing?.[0] || null,
     });
   }
+
   return rows.length ? rows : [{ text: content }];
 }

@@ -9,6 +9,7 @@ import {
 export async function GET(request: Request) {
   try {
     await requireApiPermission(request, "integrations:read");
+
     return NextResponse.json({ connections: await listIntegrations() });
   } catch (error) {
     return (
@@ -24,13 +25,16 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     await requireApiPermission(request, "integrations:write");
+
     return NextResponse.json(
       { connection: await configurePlatformConnection(await request.json()) },
       { status: 201 },
     );
   } catch (error) {
     const auth = authErrorResponse(error);
+
     if (auth) return auth;
+
     return NextResponse.json(
       {
         error:

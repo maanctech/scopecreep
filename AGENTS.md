@@ -1,0 +1,63 @@
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
+<!-- END:nextjs-agent-rules -->
+
+# Layout
+
+Single Next.js package, no workspaces. Run everything from the repository root.
+
+- `app/` — routes and route handlers. Route handlers validate input, authenticate the session, enforce the organization role, then call a domain service. They do not contain domain logic.
+- `lib/<domain>/` — domain services. This is where logic lives.
+- `lib/store/` — the storage facade. `index.ts` dispatches on `shouldUsePostgresStorage()` to either `json/` or `postgres/`, which share a module layout. Callers import `@/lib/store` and never reach past it.
+- `components/<feature>/` — React components. `components/ui/` holds the shared primitives.
+- `db/migrations/` — ordered, transactional, checksum-protected. Applied migrations are immutable; a change means a new migration.
+- `tests/` — Vitest, node environment, no file parallelism. Several suites exercise the real local JSON store in `data/`, which is why they cannot run concurrently.
+- `docs/` — operator and architecture documentation.
+
+PostgreSQL is the commercial runtime. The JSON store is a fallback and an import source, selected by `SCOPELEDGER_STORAGE=json` or by the test environment.
+
+# Architecture law
+
+Violating any of these is a defect, not a style preference.
+
+- **Every commercial record is organization-scoped.** A query that can return another organization's rows is a security bug.
+- **Finding state changes go only through `lib/domain/findingTransitions.ts`.** Never write a finding status directly. Every transition appends billing history.
+- **Communication import never starts analysis.** Ingestion produces normalized messages and a visible job outcome. A human starts analysis.
+- **AI estimates never become approved amounts.** Estimated hours and estimated potential revenue are model output. Approved hours and approved amounts are entered by a professional. Never copy one into the other.
+- **Money is integer cents.** Use `lib/domain/money.ts`. Never store or compute currency as a float.
+- **Report generation is explicit and versioned.** Viewing a report never regenerates it.
+- **Analysis requires an approved SOW version and an approved boundary map.** No approval, no analysis.
+- **Connector credentials are encrypted with `SCOPELEDGER_MASTER_KEY` before storage.** Never persist a credential in plaintext, never log one.
+
+# Code style
+
+Formatting is enforced by ESLint `@stylistic`. Run `npm run format` before treating a change as done; `npm run format:check` verifies without writing.
+
+The house style is deliberately **spacious**: blank line before every `return`; before and after every `if`/`for`/`while`/`do`/`switch`/`try`/`function`/`class` block; after a run of variable declarations; after the import block. Write it that way by hand — do not rely on the fixer to rescue dense code.
+
+**Comments are effectively forbidden.** Add one only when the logic is genuinely hard to follow and the comment materially explains _why_. Never explain _what_. Banned outright: banner and section comments, JSDoc on self-evident functions, restating code in English, decorative TODOs, commented-out code. When tempted to comment, reach for a clearer name or a smaller function.
+
+Names are spelled out in full. `position` not `pos`, `configuration` not `config`, `index` not `idx` — loop counters `i` and `j` excepted. Component files are `PascalCase.tsx`. Library files are `camelCase.ts`. Prefer a named record over a positional tuple.
+
+Files that grow past roughly 400 lines are a signal that they are doing too much. Split by responsibility, not by technical layer.
+
+# Verification
+
+A change is done when all three pass:
+
+```bash
+npm run typecheck && npm run lint && npm test
+```
+
+Never commit. Never push. Never `--no-verify`. Never add a dependency without asking first.
+
+# Working here
+
+Read before you write. When the cause of a problem is unclear, investigate — read the code, add a log, reproduce it. Do not guess and call it a fix.
+
+Change only what was asked. If something adjacent looks wrong, say so; do not fix it uninvited.
+
+Reach for a subagent only for wide, genuinely independent investigation across many files. Never use one to verify your own work.

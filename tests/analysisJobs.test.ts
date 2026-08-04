@@ -113,8 +113,10 @@ describe("controlled analysis jobs", () => {
   it("pins queued jobs to the approved SOW and boundary map", async () => {
     mocks.databaseQuery.mockImplementation(async (sql: string) => {
       if (sql.includes("FROM projects p")) return result([approvedProject()]);
+
       if (sql.includes("FROM scope_boundary_items"))
         return result([boundaryItem()]);
+
       if (sql.includes("FROM client_messages m"))
         return result([
           {
@@ -123,7 +125,9 @@ describe("controlled analysis jobs", () => {
             content_sha256: "message-hash",
           },
         ]);
+
       if (sql.includes("INSERT INTO analysis_jobs")) return result([{ id: jobId }]);
+
       return result([], 1);
     });
 
@@ -133,12 +137,14 @@ describe("controlled analysis jobs", () => {
     const insert = mocks.databaseQuery.mock.calls.find(([sql]) =>
       String(sql).includes("INSERT INTO analysis_jobs"),
     );
+
     expect(insert?.[1]).toEqual(
       expect.arrayContaining([sowVersionId, boundaryMapId, userId]),
     );
     const messageQuery = mocks.databaseQuery.mock.calls.find(([sql]) =>
       String(sql).includes("FROM client_messages m"),
     );
+
     expect(messageQuery?.[0]).toContain("NOT EXISTS");
   });
 
@@ -151,9 +157,11 @@ describe("controlled analysis jobs", () => {
       sow_version_id: sowVersionId,
       boundary_map_id: boundaryMapId,
     };
+
     mocks.databaseQuery.mockImplementation(async (sql: string) => {
       if (sql.startsWith("UPDATE analysis_jobs SET status='Running'"))
         return result([job]);
+
       if (sql.includes("SELECT m.message_text"))
         return result([
           {
@@ -165,10 +173,13 @@ describe("controlled analysis jobs", () => {
             already_analyzed: false,
           },
         ]);
+
       if (sql.includes("FROM scope_boundary_items"))
         return result([boundaryItem()]);
+
       if (sql.includes("SELECT status,cancel_requested_at"))
         return result([{ status: "Running", cancel_requested_at: null }]);
+
       return result([], 1);
     });
     mocks.analyze.mockResolvedValue(successfulAnalysis());
@@ -209,6 +220,7 @@ describe("controlled analysis jobs", () => {
             boundary_map_id: boundaryMapId,
           },
         ]);
+
       if (sql.includes("SELECT m.message_text"))
         return result([
           {
@@ -219,8 +231,10 @@ describe("controlled analysis jobs", () => {
             already_analyzed: false,
           },
         ]);
+
       if (sql.includes("FROM scope_boundary_items"))
         return result([boundaryItem()]);
+
       return result([], 1);
     });
     mocks.analyze.mockResolvedValue({
@@ -262,6 +276,7 @@ describe("controlled analysis jobs", () => {
     mocks.databaseQuery.mockImplementation(async (sql: string) => {
       if (sql.includes("SELECT id,status FROM analysis_jobs"))
         return result([{ id: jobId, status: "Running" }]);
+
       return result([], 1);
     });
 

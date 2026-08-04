@@ -1,7 +1,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
-import { buildDemoStore, DEMO_PROJECT_ID } from "@/lib/demoData";
+import { buildDemoStore, DEMO_PROJECT_ID } from "@/lib/demo";
 import { computeRevenueTotals } from "@/lib/domain/revenueTotals";
 import {
   LocalStoreFormatError,
@@ -43,7 +43,9 @@ function buildLegacyV1Store() {
     auditRequests: v2.auditRequests,
     projects: v2.projects.map((project) => {
       const legacy: Record<string, unknown> = { ...project };
+
       delete legacy.is_demo;
+
       return legacy;
     }),
     clientMessages: v2.clientMessages,
@@ -55,6 +57,7 @@ function buildLegacyV1Store() {
 
 async function listBackupFiles() {
   const entries = await fs.readdir(dataDir);
+
   return entries.filter(
     (name) => name.includes("pre-migration-backup") || name.includes("corrupt")
   );
@@ -99,12 +102,15 @@ describe("migrateStoreShape (pure)", () => {
 
   it("preserves the Northstar $13,475 potential total through migration", () => {
     const { store } = migrateStoreShape(buildLegacyV1Store());
+
     expect(computeRevenueTotals(store.scopeFindings).potential_dollars).toBe(13475);
   });
 
   it("creates one append-only Finding Created event per migrated finding", () => {
     const { store } = migrateStoreShape(buildLegacyV1Store());
+
     expect(store.billingEvents).toHaveLength(12);
+
     for (const event of store.billingEvents) {
       expect(event.event_type).toBe("Finding Created");
       expect(event.actor).toBe("System Migration");
@@ -114,11 +120,13 @@ describe("migrateStoreShape (pure)", () => {
   it("is deterministic and repeatable", () => {
     const first = migrateStoreShape(buildLegacyV1Store());
     const second = migrateStoreShape(buildLegacyV1Store());
+
     expect(first.store).toEqual(second.store);
   });
 
   it("marks non-demo projects and their findings as real records", () => {
     const legacy = buildLegacyV1Store();
+
     legacy.projects.push({
       id: "real-project-1",
       company_id: null,
@@ -151,14 +159,17 @@ describe("migrateStoreShape (pure)", () => {
 
     const { store } = migrateStoreShape(legacy);
     const realFinding = store.scopeFindings.find((finding) => finding.id === "real-analysis-1");
+
     expect(realFinding?.is_demo).toBe(false);
     expect(realFinding?.project_id).toBe("real-project-1");
     const demoFinding = store.scopeFindings.find((finding) => finding.id !== "real-analysis-1");
+
     expect(demoFinding?.is_demo).toBe(true);
   });
 
   it("passes v2 stores through unchanged", () => {
     const { store, migrated } = migrateStoreShape(buildDemoStore());
+
     expect(migrated).toBe(false);
     expect(store.scopeFindings).toHaveLength(12);
   });
@@ -177,13 +188,16 @@ describe("store file migration (filesystem)", () => {
     await fs.writeFile(dataFile, JSON.stringify(buildLegacyV1Store(), null, 2));
 
     const findings = await getFindings();
+
     expect(findings).toHaveLength(12);
     expect(findings.every((row) => row.finding.billing_decision === "Undecided")).toBe(true);
 
     const backups = await listBackupFiles();
+
     expect(backups.some((name) => name.includes("pre-migration-backup"))).toBe(true);
 
     const persisted = JSON.parse(await fs.readFile(dataFile, "utf8"));
+
     expect(persisted.schema_version).toBe(2);
     expect(persisted.scopeFindings).toHaveLength(12);
   });
@@ -195,11 +209,13 @@ describe("store file migration (filesystem)", () => {
     await expect(getFindings()).rejects.toThrow(LocalStoreCorruptError);
 
     const backups = await listBackupFiles();
+
     expect(backups.some((name) => name.includes("corrupt"))).toBe(true);
 
     // The corrupt original still exists in the backup; nothing demo-related
     // was silently written over the user's data file location either.
     const stillCorrupt = await fs.readFile(dataFile, "utf8");
+
     expect(stillCorrupt).toBe("{this is not json");
   });
 });

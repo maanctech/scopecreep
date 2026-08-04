@@ -31,13 +31,16 @@ function configurationChecks() {
         : "APP_URL is missing. Password-reset links cannot be generated safely."
     }
   ];
+
   return checks;
 }
 
 export async function applicationHealth() {
   const started = Date.now();
+
   try {
     await query("SELECT 1");
+
     return {
       status: "healthy" as const,
       version: packageJson.version,
@@ -56,7 +59,9 @@ export async function applicationHealth() {
 
 export async function systemDiagnostics() {
   const auth = await currentAuthContext();
+
   if (!auth) throw new Error("A valid organization session is required.");
+
   const [health, ai, migrations, applied, connections, analysisJobs, ingestionJobs] = await Promise.all([
     applicationHealth(),
     configuredProviderHealth(),
@@ -78,6 +83,7 @@ export async function systemDiagnostics() {
     )
   ]);
   const appliedVersions = new Set(applied.rows.map((row) => row.version));
+
   return {
     generatedAt: new Date().toISOString(),
     application: health,
@@ -98,13 +104,16 @@ export async function systemDiagnostics() {
 
 export async function auditLog(limit = 200) {
   const auth = await currentAuthContext();
+
   if (!auth) throw new Error("A valid organization session is required.");
+
   const safeLimit = Math.min(500, Math.max(1, Math.trunc(limit)));
   const rows = await query<Row>(
     `SELECT id,actor_user_id,action,resource_type,resource_id,metadata,created_at
      FROM audit_logs WHERE organization_id=$1 ORDER BY created_at DESC,id DESC LIMIT $2`,
     [auth.organizationId, safeLimit]
   );
+
   return rows.rows.map((row) => ({
     id: String(row.id),
     actorUserId: row.actor_user_id ? String(row.actor_user_id) : null,
@@ -118,6 +127,7 @@ export async function auditLog(limit = 200) {
 
 export async function supportBundle() {
   const diagnostics = await systemDiagnostics();
+
   return buildSupportBundle(diagnostics, await auditLog(100));
 }
 

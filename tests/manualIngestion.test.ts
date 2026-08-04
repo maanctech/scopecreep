@@ -8,6 +8,7 @@ describe("manual communication import", () => {
       content:
         "external_id,sender,message_text,timestamp\nmsg-1,Client,Please add a portal,not-a-date",
     });
+
     expect(result.messages[0]).toMatchObject({
       externalId: "msg-1",
       sender: "Client",
@@ -27,6 +28,7 @@ describe("manual communication import", () => {
         ],
       }),
     });
+
     expect(json.messages.map((message) => message.externalId)).toEqual([
       "1",
       "2",
@@ -35,6 +37,7 @@ describe("manual communication import", () => {
       format: "Text",
       content: "First message\n---\nSecond message",
     });
+
     expect(text.messages).toHaveLength(2);
   });
 
@@ -56,6 +59,7 @@ describe("manual communication import", () => {
       content:
         "WEBVTT\n\n00:00:01.000 --> 00:00:04.000\nMorgan Lee: Could we add customer SSO?\n\n2\n00:00:05,000 --> 00:00:08,000\nAlex: I will check the agreement.",
     });
+
     expect(result.messages).toHaveLength(2);
     expect(result.messages[0]).toMatchObject({
       sender: "Morgan Lee",

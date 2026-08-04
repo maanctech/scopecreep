@@ -10,7 +10,11 @@ const tones: Record<Classification, string> = {
 export function Badge({ classification }: { classification: Classification }) {
   return (
     <span
-      className={`inline-flex items-center rounded-md border px-2.5 py-1 text-xs font-semibold ${tones[classification]}`}
+      className={`
+        inline-flex items-center rounded-md border px-2.5 py-1 text-xs
+        font-semibold
+        ${tones[classification]}
+      `}
     >
       {classification}
     </span>

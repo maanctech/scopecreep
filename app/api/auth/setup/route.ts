@@ -19,9 +19,11 @@ export async function POST(request: Request) {
   try {
     assertSameOrigin(request);
     checkRateLimit(`setup:${requestIp(request)}`, 5, 15 * 60 * 1000);
+
     if (await hasAnyUsers()) {
       return NextResponse.json({ error: "Initial setup has already been completed." }, { status: 409 });
     }
+
     const input = schema.parse(await request.json());
     const owner = await createInitialOwner(input);
     const session = await createSession({
@@ -31,14 +33,19 @@ export async function POST(request: Request) {
       userAgent: request.headers.get("user-agent")
     });
     const response = NextResponse.json({ ok: true }, { status: 201 });
+
     setSessionCookie(response, session.token, session.expiresAt);
+
     return response;
   } catch (error) {
     const authResponse = authErrorResponse(error);
+
     if (authResponse) return authResponse;
+
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues[0]?.message || "Invalid setup details." }, { status: 400 });
     }
+
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Setup failed." },
       { status: 400 }

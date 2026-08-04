@@ -8,12 +8,15 @@ async function main() {
   const email = process.env.SCOPELEDGER_USER_EMAIL?.trim();
   const password = process.env.SCOPELEDGER_USER_PASSWORD;
   const role = process.env.SCOPELEDGER_USER_ROLE as OrganizationRole | undefined;
+
   if (!organizationId || !displayName || !email || !password || !role || !ORGANIZATION_ROLES.includes(role)) {
     throw new Error(
       `Set SCOPELEDGER_ORGANIZATION_ID, SCOPELEDGER_USER_NAME, SCOPELEDGER_USER_EMAIL, SCOPELEDGER_USER_PASSWORD, and SCOPELEDGER_USER_ROLE (${ORGANIZATION_ROLES.join(", ")}).`
     );
   }
+
   const created = await createOrganizationUser({ organizationId, displayName, email, password, role });
+
   console.log(`Created or updated user ${created.userId} with role ${role}.`);
 }
 

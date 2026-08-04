@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Plus, ShieldCheck } from "lucide-react";
-import { BillingSummary } from "@/components/BillingSummary";
-import { Disclaimer } from "@/components/Disclaimer";
+import { BillingSummary } from "@/components/billing/BillingSummary";
+import { Disclaimer } from "@/components/ui/Disclaimer";
 import { formatCents, formatDollars } from "@/lib/domain/money";
 import { getAppDashboard } from "@/lib/store";
 import { currentAuthContext } from "@/lib/auth/current";
@@ -25,18 +25,26 @@ export default async function ProductDashboardPage({ searchParams }: { searchPar
   return (
     <div className="space-y-10">
       {query.notice === "permission-denied" ? (
-        <div role="alert" className="rounded-md border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+        <div role="alert" className="
+          rounded-md border border-amber-300 bg-amber-50 p-4 text-sm
+          text-amber-900
+        ">
           Your role does not allow access to that page. No data was changed.
         </div>
       ) : null}
-      <section className="flex flex-col gap-4 border-b border-audit-border pb-7 lg:flex-row lg:items-end lg:justify-between">
+      <section className="
+        flex flex-col gap-4 border-b border-audit-border pb-7
+        lg:flex-row lg:items-end lg:justify-between
+      ">
         <div>
-          <div className="flex items-center gap-2 text-sm font-medium text-audit-muted">
-            <ShieldCheck className="h-4 w-4" aria-hidden="true" />
+          <div className="
+            flex items-center gap-2 text-sm font-medium text-audit-muted
+          ">
+            <ShieldCheck className="size-4" aria-hidden="true" />
             Audit console
           </div>
           <h1 className="mt-2 text-3xl font-semibold">Revenue workflow dashboard</h1>
-          <p className="mt-3 max-w-2xl text-base leading-7 text-zinc-700">
+          <p className="mt-3 max-w-2xl text-base/7 text-zinc-700">
             Review AI-flagged scope findings, make billing decisions, and track what you approved,
             invoiced, and recovered. Nothing here contacts your clients.
           </p>
@@ -44,16 +52,24 @@ export default async function ProductDashboardPage({ searchParams }: { searchPar
         <div className="flex flex-wrap gap-3">
           <Link
             href="/app/findings"
-            className="inline-flex h-11 items-center rounded-md border border-audit-border bg-white px-4 text-sm font-semibold hover:bg-audit-soft"
+            className="
+              inline-flex h-11 items-center rounded-md border
+              border-audit-border bg-white px-4 text-sm font-semibold
+              hover:bg-audit-soft
+            "
           >
             Review all findings
           </Link>
           {canCreateProject ? (
             <Link
               href="/app/projects/new"
-              className="inline-flex h-11 items-center gap-2 rounded-md bg-ink px-4 text-sm font-semibold text-white hover:bg-zinc-800"
+              className="
+                inline-flex h-11 items-center gap-2 rounded-md bg-ink px-4
+                text-sm font-semibold text-white
+                hover:bg-zinc-800
+              "
             >
-              <Plus className="h-4 w-4" aria-hidden="true" />
+              <Plus className="size-4" aria-hidden="true" />
               New project
             </Link>
           ) : null}
@@ -73,7 +89,10 @@ export default async function ProductDashboardPage({ searchParams }: { searchPar
         <section className="space-y-4">
           <div>
             <h2 className="text-xl font-semibold">Demo totals</h2>
-            <p className="mt-1 inline-flex rounded-md border border-amber-300 bg-amber-50 px-2.5 py-1 text-sm font-semibold text-amber-900">
+            <p className="
+              mt-1 inline-flex rounded-md border border-amber-300 bg-amber-50
+              px-2.5 py-1 text-sm font-semibold text-amber-900
+            ">
               Fictional demonstration data
             </p>
             <p className="mt-2 text-sm text-audit-muted">
@@ -85,8 +104,13 @@ export default async function ProductDashboardPage({ searchParams }: { searchPar
         </section>
       ) : null}
 
-      <section className="grid gap-6 lg:grid-cols-2">
-        <div className="rounded-md border border-audit-border bg-white shadow-audit">
+      <section className="
+        grid gap-6
+        lg:grid-cols-2
+      ">
+        <div className="
+          rounded-md border border-audit-border bg-white shadow-audit
+        ">
           <div className="border-b border-audit-border px-5 py-4">
             <h2 className="text-xl font-semibold">Findings needing your attention</h2>
             <p className="mt-1 text-sm text-audit-muted">
@@ -97,19 +121,24 @@ export default async function ProductDashboardPage({ searchParams }: { searchPar
             {dashboard.attention.length ? (
               dashboard.attention.map(({ finding, message, project }) => (
                 <li key={finding.id} className="px-5 py-4">
-                  <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <div className="
+                    flex flex-wrap items-baseline justify-between gap-2
+                  ">
                     <span className="font-semibold">{formatDollars(finding.estimated_revenue)}</span>
                     <span className="text-sm text-audit-muted">
                       {project?.client_name ?? "Unknown client"}
                       {finding.is_demo ? " (demo)" : ""}
                     </span>
                   </div>
-                  <p className="mt-1 text-sm leading-6 text-zinc-700">
+                  <p className="mt-1 text-sm/6 text-zinc-700">
                     {message?.message_text ?? finding.reasoning}
                   </p>
                   {project ? (
                     <Link
-                      className="mt-2 inline-block text-sm font-semibold underline underline-offset-4"
+                      className="
+                        mt-2 inline-block text-sm font-semibold underline
+                        underline-offset-4
+                      "
                       href={`/app/projects/${project.id}?show=needs-review`}
                     >
                       Review this finding
@@ -126,7 +155,9 @@ export default async function ProductDashboardPage({ searchParams }: { searchPar
         </div>
 
         <div className="space-y-6">
-          <div className="rounded-md border border-audit-border bg-white shadow-audit">
+          <div className="
+            rounded-md border border-audit-border bg-white shadow-audit
+          ">
             <div className="border-b border-audit-border px-5 py-4">
               <h2 className="text-xl font-semibold">Recent decisions</h2>
             </div>
@@ -134,7 +165,9 @@ export default async function ProductDashboardPage({ searchParams }: { searchPar
               {dashboard.recentDecisions.length ? (
                 dashboard.recentDecisions.map(({ event, project }) => (
                   <li key={event.id} className="px-5 py-3 text-sm">
-                    <div className="flex flex-wrap items-baseline justify-between gap-2">
+                    <div className="
+                      flex flex-wrap items-baseline justify-between gap-2
+                    ">
                       <span className="font-semibold">{event.event_type}</span>
                       <span className="text-audit-muted">{formatTimestamp(event.created_at)}</span>
                     </div>
@@ -151,10 +184,17 @@ export default async function ProductDashboardPage({ searchParams }: { searchPar
             </ul>
           </div>
 
-          <div className="rounded-md border border-audit-border bg-white shadow-audit">
-            <div className="flex items-center justify-between border-b border-audit-border px-5 py-4">
+          <div className="
+            rounded-md border border-audit-border bg-white shadow-audit
+          ">
+            <div className="
+              flex items-center justify-between border-b border-audit-border
+              px-5 py-4
+            ">
               <h2 className="text-xl font-semibold">Recent billing events</h2>
-              <Link className="text-sm font-semibold underline underline-offset-4" href="/app/billing">
+              <Link className="
+                text-sm font-semibold underline underline-offset-4
+              " href="/app/billing">
                 View all
               </Link>
             </div>
@@ -162,7 +202,9 @@ export default async function ProductDashboardPage({ searchParams }: { searchPar
               {dashboard.recentEvents.length ? (
                 dashboard.recentEvents.map(({ event, project }) => (
                   <li key={event.id} className="px-5 py-3 text-sm">
-                    <div className="flex flex-wrap items-baseline justify-between gap-2">
+                    <div className="
+                      flex flex-wrap items-baseline justify-between gap-2
+                    ">
                       <span className="font-semibold">{event.event_type}</span>
                       <span className="text-audit-muted">{formatTimestamp(event.created_at)}</span>
                     </div>
@@ -180,7 +222,9 @@ export default async function ProductDashboardPage({ searchParams }: { searchPar
         </div>
       </section>
 
-      <section className="rounded-md border border-audit-border bg-white shadow-audit">
+      <section className="
+        rounded-md border border-audit-border bg-white shadow-audit
+      ">
         <div className="border-b border-audit-border px-5 py-4">
           <h2 className="text-xl font-semibold">Revenue by project</h2>
           <p className="mt-1 text-sm text-audit-muted">
@@ -211,7 +255,10 @@ export default async function ProductDashboardPage({ searchParams }: { searchPar
                     <td className="px-5 py-4 font-medium">
                       {project.client_name}
                       {project.is_demo ? (
-                        <span className="ml-2 rounded border border-zinc-300 bg-zinc-100 px-1.5 py-0.5 text-xs font-semibold text-zinc-700">
+                        <span className="
+                          ml-2 rounded-sm border border-zinc-300 bg-zinc-100
+                          px-1.5 py-0.5 text-xs font-semibold text-zinc-700
+                        ">
                           Demo
                         </span>
                       ) : null}
@@ -243,7 +290,9 @@ export default async function ProductDashboardPage({ searchParams }: { searchPar
         </div>
       </section>
 
-      <section className="rounded-md border border-audit-border bg-white shadow-audit">
+      <section className="
+        rounded-md border border-audit-border bg-white shadow-audit
+      ">
         <div className="border-b border-audit-border px-5 py-4">
           <h2 className="text-xl font-semibold">Revenue by client</h2>
         </div>
@@ -264,11 +313,16 @@ export default async function ProductDashboardPage({ searchParams }: { searchPar
             <tbody>
               {dashboard.revenueByClient.length ? (
                 dashboard.revenueByClient.map((row) => (
-                  <tr key={`${row.client_name}-${row.is_demo}`} className="border-t border-audit-border">
+                  <tr key={`${row.client_name}-${row.is_demo}`} className="
+                    border-t border-audit-border
+                  ">
                     <td className="px-5 py-4 font-medium">
                       {row.client_name}
                       {row.is_demo ? (
-                        <span className="ml-2 rounded border border-zinc-300 bg-zinc-100 px-1.5 py-0.5 text-xs font-semibold text-zinc-700">
+                        <span className="
+                          ml-2 rounded-sm border border-zinc-300 bg-zinc-100
+                          px-1.5 py-0.5 text-xs font-semibold text-zinc-700
+                        ">
                           Demo
                         </span>
                       ) : null}

@@ -19,6 +19,7 @@ export function dollarsToCents(dollars: number): number {
   if (!Number.isFinite(dollars)) {
     throw new Error("Cannot convert a non-finite dollar value to cents.");
   }
+
   return Math.round(dollars * 100);
 }
 
@@ -26,6 +27,7 @@ export function assertIntegerCents(value: number, label = "amount_cents"): numbe
   if (!Number.isInteger(value) || value < 0) {
     throw new Error(`${label} must be a non-negative integer number of cents.`);
   }
+
   return value;
 }
 

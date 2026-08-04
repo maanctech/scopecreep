@@ -35,6 +35,7 @@ function evidence(finding: ScopeFinding) {
 
 function opportunity(row: MessageWithFinding & { finding: ScopeFinding }, index: number) {
   const finding = row.finding;
+
   return `### ${index + 1}. ${finding.classification}: ${markdownText(row.message.message_text)}
 
 - Request type: ${finding.request_type}
@@ -75,6 +76,7 @@ export function generateReportDocument(input: ReportInput) {
           `${index + 1}. **${row.finding.classification}** - ${markdownText(row.message.message_text)} (${formatDollars(potential(row.finding))}; ${row.finding.workflow_status})`
       )
       .join("\n");
+
     return `${reportHeader(input)}
 
 ## Summary
@@ -124,6 +126,7 @@ ${evidence(row.finding)}
 ${markdownText(row.finding.client_facing_explanation)}`
       )
       .join("\n\n");
+
     return `${reportHeader(input, true)}
 
 ## Purpose
@@ -154,6 +157,7 @@ Client-facing draft - not sent:
 ${markdownText(row.finding.client_facing_explanation)}`
       )
       .join("\n\n");
+
     return `${reportHeader(input, true)}
 
 ${drafts || "No flagged requests are available for a change-order draft."}
@@ -180,6 +184,7 @@ ${footer}`;
       (sum, row) => sum + (row.finding.approved_amount_cents || 0),
       0
     );
+
     return `${reportHeader(input)}
 
 ## Approved Separately Billable Work
@@ -227,7 +232,9 @@ ${footer}`;
 
 function csvCell(value: unknown) {
   let text = value == null ? "" : String(value);
+
   if (/^[=+\-@]/.test(text)) text = `'${text}`;
+
   return `"${text.replace(/"/g, '""')}"`;
 }
 
@@ -268,5 +275,6 @@ export function generateFindingsCsv(project: Project, rows: MessageWithFinding[]
       : (row.finding.approved_amount_cents / 100).toFixed(2),
     row.finding.relevant_sow_sections.join(" | ")
   ]);
+
   return [header, ...body].map((row) => row.map(csvCell).join(",")).join("\r\n");
 }

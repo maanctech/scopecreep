@@ -15,6 +15,7 @@ describe("password security", () => {
 
   it("hashes and verifies strong passwords with Argon2id", async () => {
     const encoded = await hashPassword("CorrectHorse7Battery");
+
     expect(encoded).toMatch(/^\$argon2id\$/);
     await expect(verifyPassword(encoded, "CorrectHorse7Battery")).resolves.toBe(true);
     await expect(verifyPassword(encoded, "WrongPassword7Here")).resolves.toBe(false);
@@ -63,6 +64,7 @@ describe("runtime transport headers", () => {
     const response = proxy(new NextRequest("https://scopeledger.example/api/health", {
       headers: { "x-correlation-id": "invalid correlation value" }
     }));
+
     expect(response.headers.get("strict-transport-security")).toContain("max-age=31536000");
     expect(response.headers.get("x-correlation-id")).toMatch(/^[a-f0-9-]{36}$/);
   });
@@ -70,6 +72,7 @@ describe("runtime transport headers", () => {
   it("does not emit HSTS for the supported loopback HTTP installation", () => {
     vi.stubEnv("APP_URL", "http://127.0.0.1:3000");
     const response = proxy(new NextRequest("http://127.0.0.1:3000/api/health"));
+
     expect(response.headers.has("strict-transport-security")).toBe(false);
   });
 });

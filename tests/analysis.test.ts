@@ -157,6 +157,7 @@ Thanks.`,
       suggested_change_order: "Review.",
       internal_note: "Review."
     };
+
     expect(() => parseAnalysisJson(JSON.stringify(base), 100)).toThrow(/requires SOW evidence/);
     expect(() => parseAnalysisJson(JSON.stringify({ ...base, relevant_sow_sections: ["Excluded."], surprise: true }), 100)).toThrow();
   });
@@ -220,6 +221,7 @@ describe("validateAnalysisResult", () => {
       suggested_change_order: "Review.",
       internal_note: "Review."
     }, 100);
+
     expect(() => validateSowEvidence(analysis, "The project includes a five page marketing website.")).toThrow(/not grounded/);
   });
 });
@@ -228,6 +230,7 @@ describe("analyzeClientRequest local fallback", () => {
   it("does not call included work out of scope just because a keyword appears in the SOW", async () => {
     const oldKey = process.env.OPENAI_API_KEY;
     const oldModel = process.env.OPENAI_MODEL;
+
     delete process.env.OPENAI_API_KEY;
     delete process.env.OPENAI_MODEL;
 
@@ -239,6 +242,7 @@ describe("analyzeClientRequest local fallback", () => {
 
     if (oldKey === undefined) delete process.env.OPENAI_API_KEY;
     else process.env.OPENAI_API_KEY = oldKey;
+
     if (oldModel === undefined) delete process.env.OPENAI_MODEL;
     else process.env.OPENAI_MODEL = oldModel;
 
@@ -247,6 +251,7 @@ describe("analyzeClientRequest local fallback", () => {
 
   it("flags login portal requests when the SOW excludes user accounts", async () => {
     const oldKey = process.env.OPENAI_API_KEY;
+
     delete process.env.OPENAI_API_KEY;
 
     const result = await analyzeClientRequest({
@@ -264,6 +269,7 @@ describe("analyzeClientRequest local fallback", () => {
 
   it("flags dashboard requests when the SOW excludes custom dashboards", async () => {
     const oldKey = process.env.OPENAI_API_KEY;
+
     delete process.env.OPENAI_API_KEY;
 
     const result = await analyzeClientRequest({
@@ -281,6 +287,7 @@ describe("analyzeClientRequest local fallback", () => {
 
   it("recognizes exclusions written after a listed deliverable", async () => {
     const oldKey = process.env.OPENAI_API_KEY;
+
     delete process.env.OPENAI_API_KEY;
 
     const result = await analyzeClientRequest({

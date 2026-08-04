@@ -54,6 +54,7 @@ describe("platform connector contracts", () => {
   it("performs an incremental Slack channel sync with a checkpoint", async () => {
     const fetcher = vi.fn(async (input: string | URL | Request) => {
       const url = new URL(String(input));
+
       if (url.pathname.endsWith("conversations.history"))
         return response({
           ok: true,
@@ -62,6 +63,7 @@ describe("platform connector contracts", () => {
           ],
           response_metadata: { next_cursor: "" },
         });
+
       if (url.pathname.endsWith("users.info"))
         return response({
           ok: true,
@@ -70,6 +72,7 @@ describe("platform connector contracts", () => {
             profile: { email: "client@example.com" },
           },
         });
+
       throw new Error(`Unexpected Slack request ${url}`);
     });
     const result = await createSlackConnector(fetcher as typeof fetch).sync(
@@ -82,6 +85,7 @@ describe("platform connector contracts", () => {
       { "bot-token": "xoxb-test" },
       { channels: { C123: "1710000000.000001" } },
     );
+
     expect(result.messages).toHaveLength(1);
     expect(result.checkpoint).toEqual({
       channels: { C123: "1720000000.000001" },
@@ -105,6 +109,7 @@ describe("platform connector contracts", () => {
         body: { data: encoded },
       },
     };
+
     expect(normalizeGmailMessage(gmailMessage)).toMatchObject({
       externalId: "m1",
       externalThreadId: "t1",
@@ -113,17 +118,21 @@ describe("platform connector contracts", () => {
     });
     const fetcher = vi.fn(async (input: string | URL | Request) => {
       const url = String(input);
+
       if (url.includes("/history?"))
         return response({
           history: [{ messagesAdded: [{ message: { id: "m1" } }] }],
           historyId: "101",
         });
+
       if (url.includes("/messages/m1")) return response(gmailMessage);
+
       if (url.endsWith("/profile"))
         return response({
           emailAddress: "owner@example.com",
           historyId: "102",
         });
+
       throw new Error(`Unexpected Gmail request ${url}`);
     });
     const result = await createGoogleConnector(fetcher as typeof fetch).sync(
@@ -137,6 +146,7 @@ describe("platform connector contracts", () => {
       { "access-token": "token" },
       { historyId: "100" },
     );
+
     expect(result.messages).toHaveLength(1);
     expect(result.checkpoint.historyId).toBe("102");
   });
@@ -150,6 +160,7 @@ describe("platform connector contracts", () => {
       from: { emailAddress: { name: "Client", address: "client@example.com" } },
       receivedDateTime: "2026-07-22T12:00:00Z",
     };
+
     expect(normalizeGraphMail(message)).toMatchObject({
       externalId: "mail:mail-1",
       externalThreadId: "mail:conversation-1",
@@ -172,12 +183,14 @@ describe("platform connector contracts", () => {
       { "access-token": "token" },
       {},
     );
+
     expect(result.messages).toHaveLength(1);
     expect(result.checkpoint.mailDeltaLink).toBe(deltaLink);
   });
 
   it("builds provider-specific OAuth endpoints and least-purpose scopes", () => {
     const google = oauthProviderDefinition("Google", {});
+
     expect(google.authorizeUrl).toContain("accounts.google.com");
     expect(google.scopes).toContain(
       "https://www.googleapis.com/auth/gmail.readonly",
@@ -185,6 +198,7 @@ describe("platform connector contracts", () => {
     const microsoft = oauthProviderDefinition("Microsoft", {
       tenantId: "tenant-1",
     });
+
     expect(microsoft.authorizeUrl).toContain("tenant-1");
     expect(microsoft.scopes).toContain("Mail.Read");
   });

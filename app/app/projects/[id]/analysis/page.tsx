@@ -12,12 +12,17 @@ export default async function AnalysisPage({
 }) {
   await requirePagePermission("findings:review");
   const { id } = await params;
+
+  let workspace: Awaited<ReturnType<typeof analysisWorkspace>>;
+
   try {
-    const workspace = await analysisWorkspace(id);
-    return <AnalysisWorkspaceClient projectId={id} workspace={workspace} />;
+    workspace = await analysisWorkspace(id);
   } catch (error) {
     if (error instanceof Error && error.message === "Project not found.")
       notFound();
+
     throw error;
   }
+
+  return <AnalysisWorkspaceClient projectId={id} workspace={workspace} />;
 }

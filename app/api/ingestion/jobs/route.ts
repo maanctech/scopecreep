@@ -5,6 +5,7 @@ import { listIngestionJobs } from "@/lib/ingestion/service";
 export async function GET(request: Request) {
   try {
     await requireApiPermission(request, "integrations:read");
+
     return NextResponse.json({ jobs: await listIngestionJobs() });
   } catch (error) {
     return (

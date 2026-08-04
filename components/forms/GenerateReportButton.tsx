@@ -21,6 +21,7 @@ export function GenerateReportButton({
   async function generate() {
     setError(null);
     setIsSubmitting(true);
+
     try {
       const response = await fetch(`/api/projects/${encodeURIComponent(projectId)}/report`, {
         method: "POST",
@@ -28,9 +29,11 @@ export function GenerateReportButton({
         body: JSON.stringify({ reportType })
       });
       const json = (await response.json()) as { error?: string };
+
       if (!response.ok) {
         throw new Error(json.error || "The report could not be generated.");
       }
+
       router.refresh();
     } catch (submitError) {
       setError(
@@ -49,7 +52,10 @@ export function GenerateReportButton({
           value={reportType}
           onChange={(event) => setReportType(event.target.value as ReportType)}
           disabled={isSubmitting}
-          className="min-h-11 w-full rounded-md border border-audit-border bg-white px-3 text-sm"
+          className="
+            min-h-11 w-full rounded-md border border-audit-border bg-white px-3
+            text-sm
+          "
         >
           {REPORT_TYPES.map((type) => <option key={type}>{type}</option>)}
         </select>
@@ -58,7 +64,12 @@ export function GenerateReportButton({
         type="button"
         onClick={generate}
         disabled={isSubmitting}
-        className="inline-flex h-11 items-center justify-center rounded-md bg-ink px-5 text-sm font-semibold text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60"
+        className="
+          inline-flex h-11 items-center justify-center rounded-md bg-ink px-5
+          text-sm font-semibold text-white
+          hover:bg-zinc-800
+          disabled:cursor-not-allowed disabled:opacity-60
+        "
       >
         {isSubmitting
           ? "Generating report..."

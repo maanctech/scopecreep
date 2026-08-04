@@ -6,6 +6,7 @@ export async function GET(request: Request) {
   try {
     await requireApiPermission(request, "settings:read");
     const content = JSON.stringify(await supportBundle(), null, 2);
+
     return new NextResponse(content, {
       headers: {
         "Content-Type": "application/json; charset=utf-8",

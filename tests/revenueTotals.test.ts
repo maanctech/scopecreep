@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { demoFindings } from "@/lib/demoData";
+import { demoFindings } from "@/lib/demo";
 import { applyFindingAction } from "@/lib/domain/findingTransitions";
 import { dollarsToCents, formatCents } from "@/lib/domain/money";
 import {
@@ -61,6 +61,7 @@ describe("money rules", () => {
         approved_amount_cents: 1010
       })
     );
+
     expect(computeRevenueTotals(findings).billable_cents).toBe(10100);
   });
 });
@@ -96,6 +97,7 @@ describe("financial buckets", () => {
     ];
 
     const buckets = variants.map(findingBucket);
+
     expect(buckets).toEqual([
       "needs_review",
       "none",
@@ -129,6 +131,7 @@ describe("financial buckets", () => {
 
   it("moves a finding across buckets as the workflow advances", () => {
     let finding = makeFinding({ estimated_revenue: 1750 });
+
     expect(findingBucket(finding)).toBe("needs_review");
 
     finding = applyFindingAction(finding, "Mark as Billable", {
@@ -150,6 +153,7 @@ describe("financial buckets", () => {
     expect(findingBucket(finding)).toBe("paid");
 
     const totals = computeRevenueTotals([finding]);
+
     expect(totals.paid_cents).toBe(175000);
     expect(totals.billable_cents + totals.invoiced_cents).toBe(0);
   });
@@ -159,11 +163,13 @@ describe("demo data totals", () => {
   it("preserves the Northstar demo: 12 findings and $13,475 potential", () => {
     expect(demoFindings).toHaveLength(12);
     const totals = computeRevenueTotals(demoFindings);
+
     expect(totals.potential_dollars).toBe(13475);
   });
 
   it("matches the seeded demo workflow buckets exactly", () => {
     const totals = computeRevenueTotals(demoFindings);
+
     expect(totals.needs_review_count).toBe(3);
     expect(totals.needs_review_dollars).toBe(1225);
     expect(totals.discussing_dollars).toBe(2100);
@@ -196,6 +202,7 @@ describe("demo data totals", () => {
     });
 
     const split = computeSplitRevenueTotals([...demoFindings, realFinding]);
+
     expect(split.demo.potential_dollars).toBe(13475);
     expect(split.demo.paid_cents).toBe(210000);
     expect(split.real.potential_dollars).toBe(999);

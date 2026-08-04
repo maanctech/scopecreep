@@ -23,6 +23,7 @@ export async function PATCH(
     await requireApiPermission(request, "leads:write");
     const { id } = await context.params;
     let json: unknown;
+
     try {
       json = await request.json();
     } catch {
@@ -39,8 +40,11 @@ export async function PATCH(
     return NextResponse.json({ lead });
   } catch (error) {
     const authResponse = authErrorResponse(error);
+
     if (authResponse) return authResponse;
+
     const status = error instanceof z.ZodError ? 400 : 500;
+
     return NextResponse.json(
       {
         error:

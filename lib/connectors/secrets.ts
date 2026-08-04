@@ -22,6 +22,7 @@ export async function saveConnectionSecret(
     value,
     secretContext(organizationId, connectionId, name),
   );
+
   await client.query(
     `INSERT INTO encrypted_secrets (id,organization_id,connection_id,name,ciphertext,initialization_vector,auth_tag)
      VALUES ($1,$2,$3,$4,$5,$6,$7)
@@ -59,6 +60,7 @@ export async function connectionSecrets(
         initialization_vector: string;
         auth_tag: string;
       }>(statement, values);
+
   return Object.fromEntries(
     result.rows.map((row) => [
       row.name,

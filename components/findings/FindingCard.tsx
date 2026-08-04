@@ -1,6 +1,6 @@
-import { Badge } from "@/components/Badge";
-import { FindingHistory } from "@/components/FindingHistory";
-import { FindingStatusBadge } from "@/components/FindingStatusBadge";
+import { Badge } from "@/components/ui/Badge";
+import { FindingHistory } from "@/components/findings/FindingHistory";
+import { FindingStatusBadge } from "@/components/ui/FindingStatusBadge";
 import { FindingReviewForm } from "@/components/forms/FindingReviewForm";
 import { recommendedNextStep } from "@/lib/domain/findingTransitions";
 import { formatCents, formatDollars } from "@/lib/domain/money";
@@ -19,7 +19,9 @@ export function FindingCard({
 
   if (!finding) {
     return (
-      <article className="rounded-md border border-audit-border bg-white p-5 shadow-audit">
+      <article className="
+        rounded-md border border-audit-border bg-white p-5 shadow-audit
+      ">
         <p className="text-sm text-audit-muted">No analysis saved for this message.</p>
         <p className="mt-2 text-base">{row.message.message_text}</p>
       </article>
@@ -27,12 +29,17 @@ export function FindingCard({
   }
 
   return (
-    <article className="rounded-md border border-audit-border bg-white p-6 shadow-audit">
+    <article className="
+      rounded-md border border-audit-border bg-white p-6 shadow-audit
+    ">
       <div className="flex flex-wrap items-center gap-2">
         <Badge classification={finding.classification} />
         <FindingStatusBadge finding={finding} />
         {finding.is_demo ? (
-          <span className="inline-flex items-center rounded-md border border-zinc-300 bg-zinc-100 px-2.5 py-1 text-sm font-semibold text-zinc-700">
+          <span className="
+            inline-flex items-center rounded-md border border-zinc-300
+            bg-zinc-100 px-2.5 py-1 text-sm font-semibold text-zinc-700
+          ">
             Fictional demo data
           </span>
         ) : null}
@@ -40,7 +47,7 @@ export function FindingCard({
 
       <section className="mt-4">
         <h3 className="text-base font-semibold">Client request</h3>
-        <p className="mt-1 text-base leading-7 text-ink">{row.message.message_text}</p>
+        <p className="mt-1 text-base/7 text-ink">{row.message.message_text}</p>
         <p className="mt-1 text-sm text-audit-muted">
           {row.message.source}
           {row.message.sender ? ` from ${row.message.sender}` : ""}
@@ -48,10 +55,13 @@ export function FindingCard({
         </p>
       </section>
 
-      <div className="mt-5 grid gap-5 lg:grid-cols-2">
+      <div className="
+        mt-5 grid gap-5
+        lg:grid-cols-2
+      ">
         <section>
           <h3 className="text-base font-semibold">Why this may be outside the agreement</h3>
-          <p className="mt-2 text-sm leading-6 text-zinc-700">{finding.reasoning}</p>
+          <p className="mt-2 text-sm/6 text-zinc-700">{finding.reasoning}</p>
           <p className="mt-2 text-sm text-audit-muted">
             AI confidence: {Math.round(finding.confidence_score * 100)}%. AI suggestions require
             human review before billing.
@@ -59,7 +69,7 @@ export function FindingCard({
         </section>
         <section>
           <h3 className="text-base font-semibold">Evidence from the SOW</h3>
-          <ul className="mt-2 list-disc space-y-2 pl-5 text-sm leading-6 text-zinc-700">
+          <ul className="mt-2 list-disc space-y-2 pl-5 text-sm/6 text-zinc-700">
             {finding.relevant_sow_sections.length ? (
               finding.relevant_sow_sections.map((section) => <li key={section}>{section}</li>)
             ) : (
@@ -69,7 +79,11 @@ export function FindingCard({
         </section>
       </div>
 
-      <dl className="mt-5 grid gap-3 rounded-md border border-audit-border bg-audit-soft p-4 sm:grid-cols-2 lg:grid-cols-4">
+      <dl className="
+        mt-5 grid gap-3 rounded-md border border-audit-border bg-audit-soft p-4
+        sm:grid-cols-2
+        lg:grid-cols-4
+      ">
         <div>
           <dt className="text-sm text-audit-muted">Suggested hours (AI)</dt>
           <dd className="mt-1 text-lg font-semibold">{finding.estimated_hours}</dd>
@@ -94,7 +108,10 @@ export function FindingCard({
         </div>
       </dl>
 
-      <dl className="mt-3 grid gap-3 sm:grid-cols-2">
+      <dl className="
+        mt-3 grid gap-3
+        sm:grid-cols-2
+      ">
         <div>
           <dt className="text-sm text-audit-muted">Current decision</dt>
           <dd className="mt-1 text-base font-semibold">{finding.billing_decision}</dd>
@@ -107,7 +124,7 @@ export function FindingCard({
 
       <section className="mt-4 rounded-md border border-sky-200 bg-sky-50 p-4">
         <h3 className="text-base font-semibold text-sky-900">Recommended next step</h3>
-        <p className="mt-1 text-sm leading-6 text-sky-900">{recommendedNextStep(finding)}</p>
+        <p className="mt-1 text-sm/6 text-sky-900">{recommendedNextStep(finding)}</p>
       </section>
 
       <section className="mt-4">
@@ -115,7 +132,10 @@ export function FindingCard({
         <p className="mt-1 text-sm text-audit-muted">
           Nothing is sent automatically. You copy and send this yourself if you want to.
         </p>
-        <p className="mt-2 whitespace-pre-wrap rounded-md border border-audit-border bg-white p-3 text-sm leading-6 text-zinc-700">
+        <p className="
+          mt-2 rounded-md border border-audit-border bg-white p-3 text-sm/6
+          whitespace-pre-wrap text-zinc-700
+        ">
           {finding.client_facing_explanation}
         </p>
       </section>
@@ -123,7 +143,7 @@ export function FindingCard({
       {finding.internal_note ? (
         <section className="mt-4">
           <h3 className="text-base font-semibold">Internal note (private)</h3>
-          <p className="mt-1 text-sm leading-6 text-zinc-700">{finding.internal_note}</p>
+          <p className="mt-1 text-sm/6 text-zinc-700">{finding.internal_note}</p>
         </section>
       ) : null}
 
@@ -132,7 +152,10 @@ export function FindingCard({
           <FindingReviewForm key={`${finding.id}-${finding.version}`} finding={finding} />
         </section>
       ) : (
-        <p className="mt-6 rounded-md border border-audit-border bg-audit-soft p-4 text-sm text-audit-muted">
+        <p className="
+          mt-6 rounded-md border border-audit-border bg-audit-soft p-4 text-sm
+          text-audit-muted
+        ">
           Read-only access. A Reviewer, Admin, or Owner must make billing decisions or edit this finding.
         </p>
       )}

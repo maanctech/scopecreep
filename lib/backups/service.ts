@@ -23,15 +23,21 @@ type BackupRow = {
 
 async function backupAdministrator() {
   const auth = await currentAuthContext();
+
   if (!auth) throw new Error("A valid organization session is required.");
+
   assertPermission(auth.role, "backups:write");
+
   if (!auth.isSystemAdmin) throw new Error("Installation backups require a system administrator.");
+
   return auth;
 }
 
 export async function listBackups() {
   const auth = await currentAuthContext();
+
   if (!auth) throw new Error("A valid organization session is required.");
+
   assertPermission(auth.role, "backups:read");
   const result = await query<BackupRow>(
     `SELECT id,status,storage_path,checksum_sha256,byte_size,error_message,backup_version,manifest,
@@ -41,6 +47,7 @@ export async function listBackups() {
      ORDER BY created_at DESC LIMIT 50`,
     [auth.organizationId]
   );
+
   return result.rows.map((row) => ({
     ...row,
     byte_size: row.byte_size == null ? null : Number(row.byte_size),
@@ -52,12 +59,15 @@ export async function listBackups() {
 export async function createBackup() {
   const auth = await backupAdministrator();
   const id = randomUUID();
+
   await query(
     "INSERT INTO backup_records (id,organization_id,status,created_by,manifest) VALUES ($1,$2,'Running',$3,$4::jsonb)",
     [id, auth.organizationId, auth.userId, JSON.stringify({ kind: "scopeledger-installation" })]
   );
+
   try {
     const backup = await createInstallationBackup();
+
     await query(
       `UPDATE backup_records SET status='Succeeded',storage_path=$1,checksum_sha256=$2,byte_size=$3,
          manifest=$4::jsonb,includes_database=true,includes_documents=$5,includes_encrypted_secrets=true,completed_at=now()
@@ -71,6 +81,7 @@ export async function createBackup() {
       [randomUUID(), auth.organizationId, auth.userId, id,
        JSON.stringify({ complete: backup.manifest.complete, bytes: backup.bytes, sha256: backup.sha256 })]
     );
+
     return { id, path: backup.bundle, bytes: backup.bytes, sha256: backup.sha256, complete: backup.manifest.complete };
   } catch (error) {
     logEvent("error", "backup.creation_failed", {

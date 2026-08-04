@@ -8,6 +8,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   try {
     await requireApiPermission(request, "projects:write");
     const { id } = await params;
+
     return NextResponse.json(await generateSowReview(id), { status: 201 });
   } catch (error) {
     return authErrorResponse(error) || NextResponse.json({ error: error instanceof Error && /reliable boundary map|active SOW/.test(error.message) ? error.message : "The SOW review could not be generated. Check AI Status and try again." }, { status: 422 });

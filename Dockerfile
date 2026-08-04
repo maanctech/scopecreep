@@ -9,7 +9,7 @@ RUN npm ci
 COPY app ./app
 COPY components ./components
 COPY lib ./lib
-COPY next-env.d.ts next.config.mjs postcss.config.js proxy.ts tailwind.config.ts tsconfig.json ./
+COPY next-env.d.ts next.config.mjs postcss.config.js proxy.ts tsconfig.json ./
 RUN npm run build
 
 FROM node:22-bookworm-slim AS runtime

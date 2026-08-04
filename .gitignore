@@ -22,3 +22,18 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .DS_Store
+
+# Caches produced by the toolchain.
+.turbo
+.eslintcache
+
+# Local Compose overrides frequently hold host ports and credentials.
+compose.override.yaml
+compose.override.yml
+
+# Editor directories.
+.idea
+.vscode
+
+.superpowers/
+docs/superpowers/

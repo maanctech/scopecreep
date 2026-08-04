@@ -26,11 +26,12 @@ export async function persistConnectorSync(input: {
   messages: ConnectorSyncResult["messages"];
 }) {
   const { client } = input;
-  let source = await client.query<{ id: string }>(
+  const source = await client.query<{ id: string }>(
     "SELECT id FROM communication_sources WHERE organization_id=$1 AND connection_id=$2 AND external_id='provider-sync'",
     [input.organizationId, input.connectionId],
   );
   const sourceId = source.rows[0]?.id || randomUUID();
+
   if (!source.rows[0])
     await client.query(
       "INSERT INTO communication_sources (id,organization_id,connection_id,project_id,external_id,source_type,name) VALUES ($1,$2,$3,$4,'provider-sync',$5,$6)",
@@ -43,16 +44,21 @@ export async function persistConnectorSync(input: {
         `${input.provider} synchronized communications`,
       ],
     );
+
   let inserted = 0;
   let updated = 0;
+
   for (const message of input.messages) {
     let threadId: string | null = null;
+
     if (message.externalThreadId) {
       const thread = await client.query<{ id: string }>(
         "SELECT id FROM communication_threads WHERE organization_id=$1 AND source_id=$2 AND external_id=$3",
         [input.organizationId, sourceId, message.externalThreadId],
       );
+
       threadId = thread.rows[0]?.id || randomUUID();
+
       if (!thread.rows[0])
         await client.query(
           `INSERT INTO communication_threads (id,organization_id,source_id,project_id,external_id,subject,participants,first_message_at,last_message_at)
@@ -70,12 +76,15 @@ export async function persistConnectorSync(input: {
             message.timestamp,
           ],
         );
+
       const selected = await client.query<{ id: string }>(
         "SELECT id FROM communication_threads WHERE organization_id=$1 AND source_id=$2 AND external_id=$3",
         [input.organizationId, sourceId, message.externalThreadId],
       );
+
       threadId = selected.rows[0]?.id || threadId;
     }
+
     const result = await client.query<{ inserted: boolean }>(
       `INSERT INTO client_messages
        (id,organization_id,project_id,source_id,thread_id,external_id,source,sender,sender_email,recipients,subject,message_text,message_date,edited_at,deleted_at,content_sha256,raw_metadata,ingested_at)
@@ -108,14 +117,17 @@ export async function persistConnectorSync(input: {
         JSON.stringify(message.rawMetadata),
       ],
     );
+
     if (result.rows[0]?.inserted) inserted += 1;
     else if (result.rows[0]) updated += 1;
+
     if (threadId && result.rows[0])
       await client.query(
         "UPDATE communication_threads SET last_message_at=GREATEST(last_message_at,$1),updated_at=now() WHERE id=$2 AND organization_id=$3",
         [message.timestamp, threadId, input.organizationId],
       );
   }
+
   return {
     received: input.messages.length,
     inserted,

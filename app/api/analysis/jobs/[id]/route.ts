@@ -17,16 +17,22 @@ export async function POST(
     await requireApiPermission(request, "findings:review");
     const { id } = await params;
     const { action } = schema.parse(await request.json());
+
     if (action === "cancel")
       return NextResponse.json({ result: await cancelAnalysisJob(id) });
+
     const retried = await retryAnalysisJob(id);
+
     after(async () => {
       await processAnalysisBatch(retried.organizationId, retried.batchId);
     });
+
     return NextResponse.json({ result: { status: "Queued" } }, { status: 202 });
   } catch (error) {
     const auth = authErrorResponse(error);
+
     if (auth) return auth;
+
     return NextResponse.json(
       {
         error:
