@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 import { AuthorizationError, assertPermission } from "@/lib/auth/authorization";
+import { isTestRuntime } from "@/lib/config/runtime";
 import { getAuthContext } from "@/lib/auth/service";
 import { assertSameOrigin, checkRateLimit, InvalidOriginError, RateLimitError } from "@/lib/auth/security";
 import type { AuthContext, Permission } from "@/lib/auth/types";
@@ -23,7 +24,7 @@ export async function requireApiPermission(
 ): Promise<AuthContext | null> {
   assertSameOrigin(request);
 
-  if (process.env.NODE_ENV === "test") return null;
+  if (isTestRuntime()) return null;
 
   const token = cookieValue(request.headers.get("cookie"), SESSION_COOKIE_NAME);
 

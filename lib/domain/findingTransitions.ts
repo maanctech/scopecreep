@@ -2,6 +2,7 @@ import { dollarsToCents } from "@/lib/domain/money";
 import type {
   BillingDecision,
   BillingEventType,
+  Classification,
   ScopeFinding,
   WorkflowStatus
 } from "@/lib/types";
@@ -68,6 +69,23 @@ export class TransitionError extends Error {
   ) {
     super(message);
   }
+}
+
+/**
+ * The state a newly analyzed finding starts in. Creating a finding is not one
+ * of the ACTIONS above, so it cannot go through applyFindingAction — but the
+ * pair it produces still has to be one COMPATIBLE_STATUSES permits, and three
+ * separate writers need it (both stores and the analysis job). Deriving it here
+ * is what keeps them from drifting apart from the state machine.
+ */
+export function initialFindingState(classification: Classification): {
+  billing_decision: BillingDecision;
+  workflow_status: WorkflowStatus;
+} {
+  return {
+    billing_decision: "Undecided",
+    workflow_status: classification === "In Scope" ? "New" : "Needs Review"
+  };
 }
 
 export function isDecisionStatusConsistent(

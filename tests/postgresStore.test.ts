@@ -8,12 +8,11 @@ import { VersionConflictError } from "@/lib/storeErrors";
 import type { AuthContext } from "@/lib/auth/types";
 
 /**
- * The store facade (`@/lib/store`) is unusable here: `shouldUsePostgresStorage()`
- * hardcodes `process.env.NODE_ENV !== "test"`, which is always false under
- * Vitest, so the facade would silently exercise the JSON store instead of the
- * code under test. `requireContext()` also depends on `next/headers`
- * `cookies()`, which only resolves inside a real request scope. Both mean the
- * postgres store must be imported directly and its auth dependency mocked.
+ * The postgres store is imported directly rather than through the facade
+ * (`@/lib/store`). The facade defaults to the JSON store under Vitest, and
+ * while `SCOPELEDGER_STORAGE=postgres` now overrides that, `requireContext()`
+ * still depends on `next/headers` `cookies()`, which only resolves inside a
+ * real request scope — so the auth dependency has to be mocked either way.
  */
 vi.mock("@/lib/auth/current", () => ({
   currentAuthContext: vi.fn()

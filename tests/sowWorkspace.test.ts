@@ -17,8 +17,21 @@ describe("SOW document extraction", () => {
 
   it("rejects unsupported and content-free files with actionable errors", async () => {
     await expect(extractSowFile({ buffer: Buffer.from("content"), filename: "agreement.exe" })).rejects.toThrow(/TXT, DOCX/);
-    await expect(extractSowFile({ buffer: Buffer.from("tiny"), filename: "scan.pdf" })).rejects.toThrow(/PDF.*paste/);
+    await expect(
+      extractSowFile({ buffer: Buffer.from("%PDF-1.4 truncated and unreadable"), filename: "scan.pdf" })
+    ).rejects.toThrow(/PDF.*paste/);
     expect(() => safeDocumentFilename("../.." )).toThrow(/filename/);
+  });
+
+  it("rejects a file whose bytes do not match its extension", async () => {
+    // The extension chooses the parser, so a mismatch would hand arbitrary
+    // content to the zip or PDF reader.
+    await expect(
+      extractSowFile({ buffer: Buffer.from("this is plain text"), filename: "payload.docx" })
+    ).rejects.toThrow(/do not match its extension/);
+    await expect(
+      extractSowFile({ buffer: Buffer.from("PK zip pretending to be a pdf"), filename: "payload.pdf" })
+    ).rejects.toThrow(/do not match its extension/);
   });
 
   it("creates stable ordered sections", () => {

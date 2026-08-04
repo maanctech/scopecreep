@@ -3,6 +3,7 @@ import type { PoolClient } from "pg";
 import { analyzeClientRequestDetailed } from "@/lib/analysis";
 import { query, transaction } from "@/lib/db/client";
 import { activeControllers, boundaryText } from "@/lib/analysisJobs/context";
+import { initialFindingState } from "@/lib/domain/findingTransitions";
 import type { Row } from "@/lib/analysisJobs/types";
 
 async function claimJob(organizationId: string, jobId: string) {
@@ -44,15 +45,14 @@ async function persistFinding(
       finding.estimated_hours * Number(input.project.hourly_rate_cents),
     ),
   );
-  const workflowStatus =
-    finding.classification === "In Scope" ? "New" : "Needs Review";
+  const initialState = initialFindingState(finding.classification);
 
   await client.query(
     `INSERT INTO scope_findings
      (id,organization_id,project_id,client_message_id,analysis_job_id,classification,confidence_score,reasoning,
       relevant_sow_sections,request_type,estimated_hours,estimated_revenue_cents,suggested_change_order,
       billing_decision,workflow_status,client_facing_explanation,internal_note,version,is_demo,created_at,updated_at)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb,$10,$11,$12,$13,'Undecided',$14,$15,$16,1,$17,$18,$18)`,
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb,$10,$11,$12,$13,$14,$15,$16,$17,1,$18,$19,$19)`,
     [
       findingId,
       input.organizationId,
@@ -67,7 +67,8 @@ async function persistFinding(
       finding.estimated_hours,
       estimatedRevenueCents,
       finding.suggested_change_order,
-      workflowStatus,
+      initialState.billing_decision,
+      initialState.workflow_status,
       finding.suggested_change_order,
       finding.internal_note,
       Boolean(input.project.is_demo),
@@ -80,8 +81,7 @@ async function persistFinding(
     client_message_id: String(input.job.client_message_id),
     ...finding,
     estimated_revenue: estimatedRevenueCents / 100,
-    billing_decision: "Undecided",
-    workflow_status: workflowStatus,
+    ...initialState,
     approved_hours: null,
     approved_amount_cents: null,
     client_facing_explanation: finding.suggested_change_order,
@@ -100,13 +100,14 @@ async function persistFinding(
   await client.query(
     `INSERT INTO billing_events
      (id,organization_id,project_id,scope_finding_id,event_type,previous_status,new_status,previous_decision,new_decision,note,actor_label,is_demo,created_at)
-     VALUES ($1,$2,$3,$4,'Finding Created',NULL,$5,NULL,'Undecided','AI analysis saved. Human review required before billing.','AI Analysis',$6,$7)`,
+     VALUES ($1,$2,$3,$4,'Finding Created',NULL,$5,NULL,$6,'AI analysis saved. Human review required before billing.','AI Analysis',$7,$8)`,
     [
       randomUUID(),
       input.organizationId,
       input.job.project_id,
       findingId,
-      workflowStatus,
+      initialState.workflow_status,
+      initialState.billing_decision,
       Boolean(input.project.is_demo),
       timestamp,
     ],

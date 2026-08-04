@@ -4,7 +4,7 @@ import { setSessionCookie } from "@/lib/auth/cookies";
 import { checkRateLimit } from "@/lib/auth/security";
 import { createInitialOwner, createSession, hasAnyUsers } from "@/lib/auth/service";
 import { authErrorResponse, requestIp } from "@/lib/auth/api";
-import { assertSameOrigin } from "@/lib/auth/security";
+import { assertSameOrigin, PublicError } from "@/lib/auth/security";
 
 export const runtime = "nodejs";
 
@@ -46,9 +46,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: error.issues[0]?.message || "Invalid setup details." }, { status: 400 });
     }
 
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Setup failed." },
-      { status: 400 }
-    );
+    if (error instanceof PublicError) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+
+    return NextResponse.json({ error: "Setup failed." }, { status: 500 });
   }
 }

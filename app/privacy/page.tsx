@@ -1,6 +1,11 @@
+import { connection } from "next/server";
 import Link from "next/link";
 
-export default function PrivacyPage() {
+// The nonce in the Content-Security-Policy is per request, so a page
+// prerendered at build time would carry script tags the policy rejects.
+export default async function PrivacyPage() {
+  await connection();
+
   return (
     <div className="mx-auto max-w-4xl space-y-10">
       <header className="border-b border-audit-border pb-8">

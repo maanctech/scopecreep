@@ -46,8 +46,9 @@ export async function snapshot(organizationId: string): Promise<Snapshot> {
     query("SELECT * FROM leads WHERE organization_id = $1 ORDER BY created_at DESC", [organizationId]),
     query("SELECT * FROM audit_requests WHERE organization_id = $1 ORDER BY created_at DESC", [organizationId]),
     query(`SELECT p.*, COALESCE(sv.content, p.legacy_sow_text) AS sow_text
-           FROM projects p LEFT JOIN sow_documents sd ON sd.project_id = p.id AND sd.status = 'Active'
-           LEFT JOIN sow_versions sv ON sv.id = sd.current_version_id
+           FROM projects p
+           LEFT JOIN sow_documents sd ON sd.project_id = p.id AND sd.organization_id = p.organization_id AND sd.status = 'Active'
+           LEFT JOIN sow_versions sv ON sv.id = sd.current_version_id AND sv.organization_id = sd.organization_id
            WHERE p.organization_id = $1 AND p.archived_at IS NULL ORDER BY p.created_at DESC`, [organizationId]),
     query("SELECT * FROM client_messages WHERE organization_id = $1 ORDER BY created_at DESC", [organizationId]),
     query("SELECT * FROM scope_findings WHERE organization_id = $1 ORDER BY created_at DESC", [organizationId]),

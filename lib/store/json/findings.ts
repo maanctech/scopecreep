@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { mutateLocalStore, now } from "@/lib/store/json/persistence";
-import { applyFindingAction, TransitionError, type FindingActionName } from "@/lib/domain/findingTransitions";
+import { applyFindingAction, initialFindingState, TransitionError, type FindingActionName } from "@/lib/domain/findingTransitions";
 import { assertIntegerCents } from "@/lib/domain/money";
 import { NotFoundError, VersionConflictError } from "@/lib/storeErrors";
 import type { AnalysisInput, BillingEvent, ClientMessage, MessageSource, ScopeFinding } from "@/lib/types";
@@ -40,8 +40,7 @@ export async function saveMessageWithFinding(input: {
       project_id: project.id,
       client_message_id: message.id,
       ...input.analysis,
-      billing_decision: "Undecided",
-      workflow_status: input.analysis.classification === "In Scope" ? "New" : "Needs Review",
+      ...initialFindingState(input.analysis.classification),
       approved_hours: null,
       approved_amount_cents: null,
       client_facing_explanation: input.analysis.suggested_change_order,

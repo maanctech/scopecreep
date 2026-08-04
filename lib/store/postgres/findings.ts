@@ -3,7 +3,7 @@ import type { PoolClient } from "pg";
 import { transaction } from "@/lib/db/client";
 import { cents, requireContext, type Context, type DbRow } from "@/lib/store/postgres/client";
 import { mapFinding } from "@/lib/store/postgres/mappers";
-import { applyFindingAction, TransitionError, type FindingActionName } from "@/lib/domain/findingTransitions";
+import { applyFindingAction, initialFindingState, TransitionError, type FindingActionName } from "@/lib/domain/findingTransitions";
 import { assertIntegerCents } from "@/lib/domain/money";
 import { NotFoundError, VersionConflictError } from "@/lib/storeErrors";
 import type { AnalysisInput, BillingEvent, ClientMessage, MessageSource, ScopeFinding } from "@/lib/types";
@@ -79,7 +79,7 @@ export async function saveMessageWithFinding(input: {
 
     const finding: ScopeFinding = {
       id: randomUUID(), project_id: input.project_id, client_message_id: message.id, ...input.analysis,
-      billing_decision: "Undecided", workflow_status: input.analysis.classification === "In Scope" ? "New" : "Needs Review",
+      ...initialFindingState(input.analysis.classification),
       approved_hours: null, approved_amount_cents: null, client_facing_explanation: input.analysis.suggested_change_order,
       reviewed_by: null, reviewed_at: null, created_at: timestamp, updated_at: timestamp, version: 1,
       is_demo: Boolean(projectResult.rows[0].is_demo)

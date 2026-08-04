@@ -1,3 +1,9 @@
+import { isTestRuntime } from "@/lib/config/runtime";
+
 export function shouldUsePostgresStorage() {
-  return process.env.NODE_ENV !== "test" && process.env.SCOPELEDGER_STORAGE !== "json";
+  if (process.env.SCOPELEDGER_STORAGE === "json") return false;
+
+  if (process.env.SCOPELEDGER_STORAGE === "postgres") return true;
+
+  return !isTestRuntime();
 }

@@ -1,11 +1,27 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
+import { isIP } from "node:net";
 import type { PoolClient } from "pg";
 import { hashPassword, verifyPassword } from "@/lib/auth/password";
-import { normalizeEmail } from "@/lib/auth/security";
+import { normalizeEmail, PublicError } from "@/lib/auth/security";
 import type { AuthContext, OrganizationRole } from "@/lib/auth/types";
 import { query, transaction } from "@/lib/db/client";
 
 const SESSION_DURATION_MS = 12 * 60 * 60 * 1000;
+
+/**
+ * A session also dies after this long without a request, so an unattended
+ * browser stops being a valid credential well before the absolute expiry.
+ * `last_seen_at` is advanced on every authenticated request.
+ */
+const SESSION_IDLE_TIMEOUT = "4 hours";
+
+/**
+ * Verified against when no user matches, so that a sign-in attempt for an
+ * unknown address costs the same Argon2 work as one for a real account. Without
+ * it the response time alone reveals which addresses are registered.
+ */
+const ABSENT_USER_PASSWORD_HASH =
+  "$argon2id$v=19$m=19456,t=3,p=1$JLm6Q7FbCwozRZZj7xzZ3w$LU543tIVKLOHUuBlB7kwxdSs/apvsQrtTECkxAyBIgc";
 
 function hashToken(token: string) {
   return createHash("sha256").update(token).digest("hex");
@@ -22,6 +38,16 @@ function slugify(value: string) {
   return slug || `workspace-${randomUUID().slice(0, 8)}`;
 }
 
+/**
+ * `user_sessions.ip_address` and `audit_logs.ip_address` are both `inet`, and
+ * the caller's value comes from an X-Forwarded-For header that is absent on a
+ * direct connection and arbitrary when present. Anything that is not a literal
+ * address has to become NULL or PostgreSQL rejects the whole statement.
+ */
+function inetOrNull(value: string | null | undefined) {
+  return value && isIP(value) ? value : null;
+}
+
 async function writeAuditLog(
   client: PoolClient,
   input: {
@@ -31,12 +57,13 @@ async function writeAuditLog(
     resourceType: string;
     resourceId?: string | null;
     metadata?: Record<string, unknown>;
+    ipAddress?: string | null;
   }
 ) {
   await client.query(
     `INSERT INTO audit_logs
-      (id, organization_id, actor_user_id, action, resource_type, resource_id, metadata)
-     VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)`,
+      (id, organization_id, actor_user_id, action, resource_type, resource_id, metadata, ip_address)
+     VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8)`,
     [
       randomUUID(),
       input.organizationId,
@@ -44,7 +71,8 @@ async function writeAuditLog(
       input.action,
       input.resourceType,
       input.resourceId ?? null,
-      JSON.stringify(input.metadata ?? {})
+      JSON.stringify(input.metadata ?? {}),
+      inetOrNull(input.ipAddress)
     ]
   );
 }
@@ -68,7 +96,7 @@ export async function createInitialOwner(input: {
     await client.query("LOCK TABLE users IN EXCLUSIVE MODE");
     const existing = await client.query("SELECT 1 FROM users LIMIT 1");
 
-    if (existing.rowCount) throw new Error("Initial setup has already been completed.");
+    if (existing.rowCount) throw new PublicError("Initial setup has already been completed.");
 
     const organizationId = randomUUID();
     const userId = randomUUID();
@@ -161,10 +189,12 @@ export async function authenticateUser(email: string, password: string) {
     normalizeEmail(email)
   ]);
   const user = result.rows[0];
+  const matches = await verifyPassword(
+    user?.password_hash ?? ABSENT_USER_PASSWORD_HASH,
+    password
+  );
 
-  if (!user || user.disabled_at || !(await verifyPassword(user.password_hash, password))) {
-    return null;
-  }
+  if (!user || user.disabled_at || !matches) return null;
 
   return user.id;
 }
@@ -190,53 +220,90 @@ export async function createSession(input: {
 
   const token = randomBytes(32).toString("base64url");
   const expiresAt = new Date(Date.now() + SESSION_DURATION_MS);
+  const sessionId = randomUUID();
 
-  await query(
-    `INSERT INTO user_sessions
-      (id, user_id, organization_id, token_hash, expires_at, ip_address, user_agent)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-    [
-      randomUUID(),
-      input.userId,
-      membership.organization_id,
-      hashToken(token),
-      expiresAt,
-      input.ipAddress ?? null,
-      input.userAgent?.slice(0, 500) ?? null
-    ]
-  );
+  await transaction(async (client) => {
+    await client.query(
+      `INSERT INTO user_sessions
+        (id, user_id, organization_id, token_hash, expires_at, ip_address, user_agent)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        sessionId,
+        input.userId,
+        membership.organization_id,
+        hashToken(token),
+        expiresAt,
+        inetOrNull(input.ipAddress),
+        input.userAgent?.slice(0, 500) ?? null
+      ]
+    );
+    await writeAuditLog(client, {
+      organizationId: membership.organization_id,
+      actorUserId: input.userId,
+      action: "user.signed_in",
+      resourceType: "user_session",
+      resourceId: sessionId,
+      metadata: { role: membership.role },
+      ipAddress: input.ipAddress
+    });
+  });
 
-  return { token, expiresAt };
+  return { token, expiresAt, organizationId: membership.organization_id };
 }
 
 export async function getAuthContext(token: string): Promise<AuthContext | null> {
   const result = await query<AuthContext & { expires_at: string }>(
-    `SELECT
-       s.id AS "sessionId", u.id AS "userId", o.id AS "organizationId",
+    `WITH touched AS (
+       UPDATE user_sessions s SET last_seen_at = now()
+       WHERE s.token_hash = $1 AND s.revoked_at IS NULL AND s.expires_at > now()
+         AND s.last_seen_at > now() - $2::interval
+       RETURNING s.id, s.user_id, s.organization_id, s.expires_at
+     )
+     SELECT
+       t.id AS "sessionId", u.id AS "userId", o.id AS "organizationId",
        o.name AS "organizationName", u.email, u.display_name AS "displayName",
-       m.role, u.is_system_admin AS "isSystemAdmin", s.expires_at AS "expiresAt"
-     FROM user_sessions s
-     JOIN users u ON u.id = s.user_id
-     JOIN organizations o ON o.id = s.organization_id
+       m.role, u.is_system_admin AS "isSystemAdmin", t.expires_at AS "expiresAt"
+     FROM touched t
+     JOIN users u ON u.id = t.user_id
+     JOIN organizations o ON o.id = t.organization_id
      JOIN organization_memberships m
-       ON m.user_id = s.user_id AND m.organization_id = s.organization_id
-     WHERE s.token_hash = $1 AND s.revoked_at IS NULL AND s.expires_at > now()
-       AND u.disabled_at IS NULL`,
-    [hashToken(token)]
+       ON m.user_id = t.user_id AND m.organization_id = t.organization_id
+     WHERE u.disabled_at IS NULL`,
+    [hashToken(token), SESSION_IDLE_TIMEOUT]
   );
 
   return result.rows[0] ?? null;
 }
 
 export async function revokeSession(token: string) {
-  await query(
-    "UPDATE user_sessions SET revoked_at = now() WHERE token_hash = $1 AND revoked_at IS NULL",
-    [hashToken(token)]
-  );
+  await transaction(async (client) => {
+    const revoked = await client.query<{
+      id: string;
+      user_id: string;
+      organization_id: string;
+    }>(
+      `UPDATE user_sessions SET revoked_at = now()
+       WHERE token_hash = $1 AND revoked_at IS NULL
+       RETURNING id, user_id, organization_id`,
+      [hashToken(token)]
+    );
+    const session = revoked.rows[0];
+
+    if (!session) return;
+
+    await writeAuditLog(client, {
+      organizationId: session.organization_id,
+      actorUserId: session.user_id,
+      action: "user.signed_out",
+      resourceType: "user_session",
+      resourceId: session.id
+    });
+  });
 }
 
 export async function changePassword(input: {
   userId: string;
+  organizationId: string;
   currentPassword: string;
   newPassword: string;
   keepSessionId: string;
@@ -250,17 +317,26 @@ export async function changePassword(input: {
     );
 
     if (!result.rows[0] || !(await verifyPassword(result.rows[0].password_hash, input.currentPassword))) {
-      throw new Error("Current password is incorrect.");
+      throw new PublicError("Current password is incorrect.");
     }
 
     await client.query(
       "UPDATE users SET password_hash = $1, password_changed_at = now(), updated_at = now() WHERE id = $2",
       [passwordHash, input.userId]
     );
-    await client.query(
+    const revoked = await client.query(
       "UPDATE user_sessions SET revoked_at = now() WHERE user_id = $1 AND id <> $2 AND revoked_at IS NULL",
       [input.userId, input.keepSessionId]
     );
+
+    await writeAuditLog(client, {
+      organizationId: input.organizationId,
+      actorUserId: input.userId,
+      action: "user.password_changed",
+      resourceType: "user",
+      resourceId: input.userId,
+      metadata: { revokedSessions: revoked.rowCount ?? 0 }
+    });
   });
 }
 
@@ -295,17 +371,31 @@ export async function resetPassword(token: string, newPassword: string) {
     );
     const reset = result.rows[0];
 
-    if (!reset) throw new Error("This password reset link is invalid or expired.");
+    if (!reset) throw new PublicError("This password reset link is invalid or expired.");
 
     await client.query(
       "UPDATE users SET password_hash = $1, password_changed_at = now(), updated_at = now() WHERE id = $2",
       [passwordHash, reset.user_id]
     );
     await client.query("UPDATE password_reset_tokens SET consumed_at = now() WHERE id = $1", [reset.id]);
-    await client.query(
+
+    const revoked = await client.query(
       "UPDATE user_sessions SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL",
       [reset.user_id]
     );
+    const membership = await client.query<{ organization_id: string }>(
+      "SELECT organization_id FROM organization_memberships WHERE user_id = $1 ORDER BY created_at LIMIT 1",
+      [reset.user_id]
+    );
+
+    await writeAuditLog(client, {
+      organizationId: membership.rows[0]?.organization_id ?? null,
+      actorUserId: reset.user_id,
+      action: "user.password_reset",
+      resourceType: "user",
+      resourceId: reset.user_id,
+      metadata: { revokedSessions: revoked.rowCount ?? 0 }
+    });
 
     return reset.user_id;
   });

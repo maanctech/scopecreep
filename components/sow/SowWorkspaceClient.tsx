@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { BoundaryItem, SowWorkspace } from "@/lib/sow/types";
 import { BOUNDARY_TYPES } from "@/lib/sow/types";
@@ -11,12 +11,15 @@ export function SowWorkspaceClient({ projectId, initialWorkspace, canEdit }: { p
   const [items, setItems] = useState<BoundaryItem[]>(initialWorkspace.boundaryMap?.items || []);
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState<{ kind: "success" | "error"; text: string } | null>(null);
+  const [syncedBoundaryMap, setSyncedBoundaryMap] = useState(initialWorkspace.boundaryMap);
 
-  useEffect(() => {
-    // Resyncs editable boundary items after router.refresh() delivers a fresh workspace prop; deriving during render would shift paint timing.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+  // router.refresh() delivers a fresh workspace prop, and the editable items
+  // have to follow it. Adjusting during render rather than in an effect means
+  // the stale items are never painted first.
+  if (syncedBoundaryMap !== initialWorkspace.boundaryMap) {
+    setSyncedBoundaryMap(initialWorkspace.boundaryMap);
     setItems(initialWorkspace.boundaryMap?.items || []);
-  }, [initialWorkspace.boundaryMap]);
+  }
 
   async function submitVersion(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault(); setBusy("version"); setMessage(null);

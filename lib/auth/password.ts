@@ -1,4 +1,5 @@
 import { hash, verify, type Options } from "@node-rs/argon2";
+import { PublicError } from "@/lib/auth/security";
 
 const options: Options = {
   algorithm: 2,
@@ -12,13 +13,13 @@ export const MIN_PASSWORD_LENGTH = 12;
 
 export function validatePassword(password: string) {
   if (password.length < MIN_PASSWORD_LENGTH) {
-    throw new Error(`Password must be at least ${MIN_PASSWORD_LENGTH} characters.`);
+    throw new PublicError(`Password must be at least ${MIN_PASSWORD_LENGTH} characters.`);
   }
 
-  if (password.length > 256) throw new Error("Password must be 256 characters or fewer.");
+  if (password.length > 256) throw new PublicError("Password must be 256 characters or fewer.");
 
   if (!/[a-z]/.test(password) || !/[A-Z]/.test(password) || !/\d/.test(password)) {
-    throw new Error("Password must include an uppercase letter, lowercase letter, and number.");
+    throw new PublicError("Password must include an uppercase letter, lowercase letter, and number.");
   }
 }
 

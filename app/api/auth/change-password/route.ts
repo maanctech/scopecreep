@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { authErrorResponse, requireApiPermission } from "@/lib/auth/api";
+import { PublicError } from "@/lib/auth/security";
 import { changePassword } from "@/lib/auth/service";
 
 const schema = z.object({
@@ -18,6 +19,7 @@ export async function POST(request: Request) {
 
     await changePassword({
       userId: context.userId,
+      organizationId: context.organizationId,
       keepSessionId: context.sessionId,
       currentPassword: body.currentPassword,
       newPassword: body.newPassword
@@ -33,9 +35,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Check the password fields and try again." }, { status: 400 });
     }
 
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Password update failed." },
-      { status: 400 }
-    );
+    if (error instanceof PublicError) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+
+    return NextResponse.json({ error: "Password update failed." }, { status: 500 });
   }
 }

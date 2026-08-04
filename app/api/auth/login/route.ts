@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { authErrorResponse, requestIp } from "@/lib/auth/api";
 import { setSessionCookie } from "@/lib/auth/cookies";
-import { assertSameOrigin, checkRateLimit } from "@/lib/auth/security";
+import { assertSameOrigin, checkRateLimit, normalizeEmail } from "@/lib/auth/security";
 import { authenticateUser, createSession } from "@/lib/auth/service";
 
 export const runtime = "nodejs";
@@ -19,6 +19,11 @@ export async function POST(request: Request) {
 
     checkRateLimit(`login:${ip}`, 10, 15 * 60 * 1000);
     const body = schema.parse(await request.json());
+
+    // The IP limit above is keyed on a client-supplied forwarding header, so an
+    // attacker rotating it would otherwise get unlimited attempts. The account
+    // key cannot be spoofed.
+    checkRateLimit(`login-account:${normalizeEmail(body.email)}`, 10, 15 * 60 * 1000);
     const userId = await authenticateUser(body.email, body.password);
 
     if (!userId) {

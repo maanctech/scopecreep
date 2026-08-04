@@ -90,7 +90,7 @@ export async function createSowVersion(input: { projectId: string; text: string;
 
       if (!document.rows[0]) await client.query("INSERT INTO sow_documents (id,organization_id,project_id,title,status,created_by) VALUES ($1,$2,$3,$4,'Active',$5)", [documentId, auth.organizationId, input.projectId, `${project.rows[0].project_name} Statement of Work`, auth.userId]);
 
-      const next = await client.query<{ value: number }>("SELECT COALESCE(MAX(version_number),0)+1 AS value FROM sow_versions WHERE sow_document_id=$1", [documentId]);
+      const next = await client.query<{ value: number }>("SELECT COALESCE(MAX(version_number),0)+1 AS value FROM sow_versions WHERE sow_document_id=$1 AND organization_id=$2", [documentId, auth.organizationId]);
       const versionNumber = Number(next.rows[0].value);
 
       await client.query(`INSERT INTO sow_versions (id,organization_id,sow_document_id,version_number,source_type,content,content_sha256,change_note,created_by,source_filename,media_type,byte_size,storage_path,extraction_status,extraction_warning) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,'Succeeded',$14)`, [versionId, auth.organizationId, documentId, versionNumber, input.extracted?.sourceType || "Pasted Text", content, createHash("sha256").update(content).digest("hex"), input.changeNote?.trim() || null, auth.userId, input.extracted?.safeFilename || null, input.extracted?.mediaType || null, input.fileBuffer?.length || null, storagePath, input.extracted?.warning || null]);

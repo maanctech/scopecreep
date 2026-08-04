@@ -3,7 +3,37 @@ import mammoth from "mammoth";
 import { extractText } from "unpdf";
 
 export const MAX_SOW_FILE_BYTES = 10 * 1024 * 1024;
+
+/**
+ * A DOCX is a zip and a PDF carries its own compression, so a small upload can
+ * decompress into an unbounded amount of text. The cap is applied to whatever
+ * the parser returns before it reaches the database or a model prompt. It does
+ * not bound the parser's own memory use — see docs/security-audit.md.
+ */
+export const MAX_EXTRACTED_CHARACTERS = 2 * 1024 * 1024;
+
 const ALLOWED_EXTENSIONS = new Set([".txt", ".docx", ".pdf"]);
+
+/**
+ * The extension picks the parser, so it has to agree with the bytes. Without
+ * this a file named `.docx` can be fed to the zip reader as arbitrary content.
+ */
+const REQUIRED_FILE_SIGNATURES: Record<string, readonly number[]> = {
+  ".pdf": [0x25, 0x50, 0x44, 0x46],
+  ".docx": [0x50, 0x4b, 0x03, 0x04]
+};
+
+function assertSignatureMatchesExtension(buffer: Buffer, extension: string) {
+  const signature = REQUIRED_FILE_SIGNATURES[extension];
+
+  if (!signature) return;
+
+  const matches = signature.every((byte, index) => buffer[index] === byte);
+
+  if (!matches) {
+    throw new Error("The file contents do not match its extension. Upload a genuine TXT, DOCX, or PDF file.");
+  }
+}
 
 export type ExtractedSow = {
   text: string;
@@ -35,6 +65,7 @@ export async function extractSowFile(input: { buffer: Buffer; filename: string; 
 
   if (!ALLOWED_EXTENSIONS.has(extension)) throw new Error("Use a TXT, DOCX, or text-based PDF file.");
 
+  assertSignatureMatchesExtension(input.buffer, extension);
   let text = "";
 
   if (extension === ".txt") text = input.buffer.toString("utf8");
@@ -47,6 +78,10 @@ export async function extractSowFile(input: { buffer: Buffer; filename: string; 
     } catch {
       throw new Error("This PDF could not be read safely. Use a valid text-based PDF or paste the SOW text manually.");
     }
+  }
+
+  if (text.length > MAX_EXTRACTED_CHARACTERS) {
+    throw new Error("This document contains far more text than a statement of work should. Upload the contract itself.");
   }
 
   text = cleanText(text);

@@ -2,6 +2,15 @@ import path from "node:path";
 
 type RuntimeEnvironment = Record<string, string | undefined>;
 
+/**
+ * Test-only code paths disable authentication and origin checks, so a stray
+ * NODE_ENV=test on a server would expose the whole API. Requiring the runner's
+ * own marker as well means the bypass cannot engage outside `vitest`.
+ */
+export function isTestRuntime(env: RuntimeEnvironment = process.env) {
+  return env.NODE_ENV === "test" && Boolean(env.VITEST);
+}
+
 function isLoopback(hostname: string) {
   return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "[::1]";
 }
@@ -16,6 +25,10 @@ function positiveInteger(env: RuntimeEnvironment, name: string, errors: string[]
 
 export function validateProductionConfiguration(env: RuntimeEnvironment = process.env) {
   const errors: string[] = [];
+
+  if (env.NODE_ENV === "test") {
+    errors.push("NODE_ENV=test disables authentication and origin checks and cannot be used for a commercial production start.");
+  }
 
   if (!env.DATABASE_URL?.trim()) {
     errors.push("DATABASE_URL is required.");
@@ -75,6 +88,20 @@ export function validateProductionConfiguration(env: RuntimeEnvironment = proces
 
     if (decoded.length !== 32 || decoded.toString("base64") !== encoded) {
       errors.push("SCOPELEDGER_MASTER_KEY must be canonical base64 for exactly 32 bytes.");
+    }
+  }
+
+  const previousKey = env.SCOPELEDGER_PREVIOUS_MASTER_KEY?.trim();
+
+  if (previousKey) {
+    const decoded = Buffer.from(previousKey, "base64");
+
+    if (decoded.length !== 32 || decoded.toString("base64") !== previousKey) {
+      errors.push("SCOPELEDGER_PREVIOUS_MASTER_KEY must be canonical base64 for exactly 32 bytes.");
+    }
+
+    if (previousKey === env.SCOPELEDGER_MASTER_KEY?.trim()) {
+      errors.push("SCOPELEDGER_PREVIOUS_MASTER_KEY must differ from SCOPELEDGER_MASTER_KEY; it exists to retire an old key.");
     }
   }
 

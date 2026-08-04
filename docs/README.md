@@ -19,6 +19,7 @@ One line per document in `docs/`, grouped by topic.
 - [Model Selection Guide](model-selection.md) - how ScopeLedger picks an Ollama model and how to validate one before real use.
 - [Ollama Setup](ollama-setup.md) - installing and configuring the default local AI provider.
 - [Security Model](security-model.md) - trust boundaries and current security controls.
+- [Security Audit](security-audit.md) - whole-repository review of authentication, tenancy, credentials, and dependencies, with what was fixed and what remains open.
 - [Privacy Model](privacy-model.md) - product data-handling behavior (not a legal privacy policy).
 - [Troubleshooting](troubleshooting.md) - fixes for common startup and runtime problems.
 - [Professional User Guide](user-guide.md) - the end-to-end audit workflow for a signed-in professional.

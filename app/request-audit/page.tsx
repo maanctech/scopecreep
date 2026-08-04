@@ -1,6 +1,11 @@
+import { connection } from "next/server";
 import { LeadCaptureForm } from "@/components/forms/LeadCaptureForm";
 
-export default function RequestAuditPage() {
+// The nonce in the Content-Security-Policy is per request, so a page
+// prerendered at build time would carry script tags the policy rejects.
+export default async function RequestAuditPage() {
+  await connection();
+
   return (
     <div className="mx-auto max-w-4xl space-y-8">
       <section className="border-b border-audit-border pb-6">
