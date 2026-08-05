@@ -16,7 +16,7 @@ export const dynamic = "force-dynamic";
 
 type ProjectPageProps = {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ created?: string; show?: string }>;
+  searchParams: Promise<{ created?: string; show?: string; finding?: string }>;
 };
 
 const REVIEW_FILTERS = [
@@ -58,8 +58,14 @@ export default async function ProjectPage({ params, searchParams }: ProjectPageP
     .map((row) => row.finding)
     .filter((finding): finding is ScopeFinding => Boolean(finding));
   const totals = computeRevenueTotals(findings);
+  const boundaryApproved = Boolean(detail.project.active_boundary_map_id);
   const filter = REVIEW_FILTERS.some((item) => item.key === query.show) ? query.show! : "all";
-  const visibleRows = detail.messages.filter((row) => matchesFilter(row.finding, filter));
+  const selectedFindingExists = Boolean(
+    query.finding && detail.messages.some((row) => row.finding?.id === query.finding)
+  );
+  const visibleRows = selectedFindingExists
+    ? detail.messages.filter((row) => row.finding?.id === query.finding)
+    : detail.messages.filter((row) => matchesFilter(row.finding, filter));
 
   return (
     <div className="space-y-8">
@@ -81,11 +87,11 @@ export default async function ProjectPage({ params, searchParams }: ProjectPageP
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
-          <Link href={`/app/projects/${detail.project.id}/analysis`} className="
+          {boundaryApproved ? <Link href={`/app/projects/${detail.project.id}/analysis`} className="
             inline-flex h-11 items-center justify-center rounded-md border
             border-ink px-4 text-sm font-semibold
             hover:bg-audit-soft
-          ">Analyze imported messages</Link>
+          ">Analyze imported messages</Link> : null}
           <Link href={`/app/projects/${detail.project.id}/sow`} className="
             inline-flex h-11 items-center justify-center rounded-md border
             border-ink px-4 text-sm font-semibold
@@ -113,7 +119,7 @@ export default async function ProjectPage({ params, searchParams }: ProjectPageP
           rounded-md border border-emerald-200 bg-emerald-50 p-4 text-sm
           text-emerald-800
         ">
-          Project saved. Paste a client request below to start the scope audit.
+          Project saved. Review and approve the SOW boundary before analyzing client requests.
         </div>
       ) : null}
 
@@ -140,10 +146,25 @@ export default async function ProjectPage({ params, searchParams }: ProjectPageP
         </p>
       </section>
 
-      {canReview ? (
+      {canReview && boundaryApproved ? (
         <section className="space-y-4">
           <h2 className="text-xl font-semibold">Analyze a new client message</h2>
           <MessageAnalysisForm projectId={detail.project.id} />
+        </section>
+      ) : canReview ? (
+        <section className="
+          rounded-md border border-amber-300 bg-amber-50 p-5 text-amber-950
+        ">
+          <h2 className="text-xl font-semibold">Approve the scope boundary before analysis</h2>
+          <p className="mt-2 max-w-2xl text-sm/6">
+            The SOW is saved, but no boundary map has professional approval yet. Analysis remains
+            unavailable so findings cannot be based on an unreviewed contract interpretation.
+          </p>
+          <Link className="
+            mt-4 inline-block font-semibold underline underline-offset-4
+          " href={`/app/projects/${detail.project.id}/sow`}>
+            Review and approve the SOW
+          </Link>
         </section>
       ) : null}
 
@@ -184,18 +205,19 @@ export default async function ProjectPage({ params, searchParams }: ProjectPageP
         <div className="grid gap-5">
           {visibleRows.length ? (
             visibleRows.map((row) => (
-              <FindingCard
-                key={row.message.id}
-                row={row}
-                events={
-                  row.finding
-                    ? allEvents
-                        .filter((item) => item.event.scope_finding_id === row.finding!.id)
-                        .map((item) => item.event)
-                    : []
-                }
-                canReview={canReview}
-              />
+              <div key={row.message.id} id={row.finding ? `finding-${row.finding.id}` : undefined}>
+                <FindingCard
+                  row={row}
+                  events={
+                    row.finding
+                      ? allEvents
+                          .filter((item) => item.event.scope_finding_id === row.finding!.id)
+                          .map((item) => item.event)
+                      : []
+                  }
+                  canReview={canReview}
+                />
+              </div>
             ))
           ) : (
             <div className="

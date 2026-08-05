@@ -85,7 +85,10 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     }
 
     if (error instanceof VersionConflictError) {
-      return NextResponse.json({ error: error.message }, { status: 409 });
+      return NextResponse.json(
+        { error: error.message, finding: error.currentFinding },
+        { status: 409 },
+      );
     }
 
     if (error instanceof TransitionError) {

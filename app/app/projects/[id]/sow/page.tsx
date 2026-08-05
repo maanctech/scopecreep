@@ -8,8 +8,15 @@ import { getSowWorkspace } from "@/lib/sow/service";
 
 export const dynamic = "force-dynamic";
 
-export default async function SowWorkspacePage({ params }: { params: Promise<{ id: string }> }) {
+export default async function SowWorkspacePage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ created?: string }>;
+}) {
   const { id } = await params;
+  const query = await searchParams;
   const [project, workspace, auth] = await Promise.all([getProjectDetail(id), getSowWorkspace(id), currentAuthContext()]);
 
   if (!project || !workspace) notFound();
@@ -30,6 +37,14 @@ export default async function SowWorkspacePage({ params }: { params: Promise<{ i
         rounded-md border border-amber-300 bg-amber-50 p-4 text-sm/6
         text-amber-950
       "><strong>Professional approval required.</strong> AI suggestions are a review aid, not legal advice or billing authorization. A new SOW version does not rewrite prior findings.</div>
+      {query.created === "project" ? (
+        <div className="
+          rounded-md border border-emerald-300 bg-emerald-50 p-4 text-sm
+          text-emerald-900
+        ">
+          Project saved. Generate, review, and approve the boundary map before analyzing requests.
+        </div>
+      ) : null}
       <SowWorkspaceClient projectId={id} initialWorkspace={workspace} canEdit={canEdit} />
     </div>
   );

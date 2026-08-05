@@ -134,6 +134,7 @@ export type Project = {
   project_value: number | null;
   sow_text: string;
   active_sow_version_id?: string | null;
+  active_boundary_map_id?: string | null;
   created_at: string;
   /** True for the fictional Northstar/ApertureOps demonstration project. */
   is_demo: boolean;

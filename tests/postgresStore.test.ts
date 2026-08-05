@@ -6,6 +6,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { query, resetPoolForTesting, setPoolForTesting } from "@/lib/db/client";
 import { VersionConflictError } from "@/lib/storeErrors";
 import type { AuthContext } from "@/lib/auth/types";
+import { getSowWorkspace, saveBoundaryMap } from "@/lib/sow/service";
 
 /**
  * The postgres store is imported directly rather than through the facade
@@ -237,6 +238,64 @@ describe("PostgreSQL store", () => {
     expect(detail?.messages).toEqual([]);
   });
 
+  it("keeps the approved boundary authoritative while exposing a newer draft", async () => {
+    actingAs(AUTH_CONTEXT_A);
+    const sow = await query<{ active_sow_version_id: string }>(
+      "SELECT active_sow_version_id FROM projects WHERE id=$1",
+      [projectAId],
+    );
+    const activeMapId = "41000000-0000-4000-8000-000000000001";
+    const draftMapId = "41000000-0000-4000-8000-000000000002";
+
+    await query(
+      `INSERT INTO scope_boundary_maps
+       (id,organization_id,project_id,sow_version_id,name,status,created_by,approved_by,approved_at)
+       VALUES ($1,$2,$3,$4,'Approved map','Active',$5,$5,now()),
+              ($6,$2,$3,$4,'Regenerated draft','Draft',$5,NULL,NULL)`,
+      [activeMapId, ORGANIZATION_A, projectAId, sow.rows[0].active_sow_version_id, USER_A, draftMapId],
+    );
+    await query(
+      `INSERT INTO scope_boundary_items
+       (id,organization_id,boundary_map_id,boundary_type,category,description,evidence,ordinal)
+       VALUES ('41000000-0000-4000-8000-000000000011',$1,$2,'Included','Pages','Five pages','five marketing pages',0),
+              ('41000000-0000-4000-8000-000000000012',$1,$3,'Excluded','Portal','No portal','portals are excluded',0)`,
+      [ORGANIZATION_A, activeMapId, draftMapId],
+    );
+    await query(
+      "UPDATE projects SET active_boundary_map_id=$1 WHERE id=$2 AND organization_id=$3",
+      [activeMapId, projectAId, ORGANIZATION_A],
+    );
+
+    const workspace = await getSowWorkspace(projectAId);
+
+    expect(workspace?.activeBoundaryMap?.id).toBe(activeMapId);
+    expect(workspace?.draftBoundaryMap?.id).toBe(draftMapId);
+
+    await saveBoundaryMap({
+      projectId: projectAId,
+      mapId: draftMapId,
+      approve: true,
+      items: [{
+        boundaryType: "Excluded",
+        category: "Portal",
+        description: "No portal",
+        evidence: "portals are excluded",
+      }],
+    });
+    const approved = await getSowWorkspace(projectAId);
+
+    expect(approved?.activeBoundaryMap?.id).toBe(draftMapId);
+    expect(approved?.draftBoundaryMap).toBeNull();
+    await expect(
+      saveBoundaryMap({
+        projectId: projectAId,
+        mapId: activeMapId,
+        approve: false,
+        items: [{ boundaryType: "Included", category: "Unsafe", description: "Edit", evidence: "" }],
+      }),
+    ).rejects.toThrow(/no longer editable/i);
+  });
+
   it("saves a message with its finding atomically", async () => {
     actingAs(AUTH_CONTEXT_A);
 
@@ -281,7 +340,8 @@ describe("PostgreSQL store", () => {
       finding_id: findingId,
       expected_version: 1,
       action: "Mark as Billable",
-      note: "Confirmed the add-on scope with the client."
+      note: "Confirmed the add-on scope with the client.",
+      review: { approved_hours: 8.5, approved_amount_cents: 123_456 },
     });
 
     expect(updated.billing_decision).toBe("Bill Separately");

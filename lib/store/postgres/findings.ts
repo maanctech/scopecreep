@@ -3,7 +3,7 @@ import type { PoolClient } from "pg";
 import { transaction } from "@/lib/db/client";
 import { cents, requireContext, type Context, type DbRow } from "@/lib/store/postgres/client";
 import { mapFinding } from "@/lib/store/postgres/mappers";
-import { applyFindingAction, initialFindingState, TransitionError, type FindingActionName } from "@/lib/domain/findingTransitions";
+import { applyFindingAction, initialFindingState, TransitionError, type FindingActionName, type FindingReviewChanges } from "@/lib/domain/findingTransitions";
 import { assertIntegerCents } from "@/lib/domain/money";
 import { NotFoundError, VersionConflictError } from "@/lib/storeErrors";
 import type { AnalysisInput, BillingEvent, ClientMessage, MessageSource, ScopeFinding } from "@/lib/types";
@@ -142,7 +142,7 @@ export async function updateFindingDetails(input: {
   return transaction(async (client) => {
     const finding = await lockedFinding(client, context, input.finding_id);
 
-    if (finding.version !== input.expected_version) throw new VersionConflictError();
+    if (finding.version !== input.expected_version) throw new VersionConflictError(undefined, finding);
 
     const wantsAmountChange = input.approved_hours !== undefined || input.approved_amount_cents !== undefined;
 
@@ -188,16 +188,21 @@ export async function updateFindingDetails(input: {
 
 export async function performFindingAction(input: {
   finding_id: string; expected_version: number; action: FindingActionName; note?: string | null;
+  review?: FindingReviewChanges;
 }) {
   const context = await requireContext();
 
   return transaction(async (client) => {
     const finding = await lockedFinding(client, context, input.finding_id);
 
-    if (finding.version !== input.expected_version) throw new VersionConflictError();
+    if (finding.version !== input.expected_version) throw new VersionConflictError(undefined, finding);
 
     const timestamp = new Date().toISOString();
-    const applied = applyFindingAction(finding, input.action, { now: timestamp, actor: context.actor });
+    const applied = applyFindingAction(finding, input.action, {
+      now: timestamp,
+      actor: context.actor,
+      review: input.review,
+    });
 
     await persistFinding(client, context, applied.finding);
     await insertFindingHistory(client, context.organizationId, applied.finding, context.userId, input.action);

@@ -11,6 +11,12 @@
 | Public intake default | Pass in implementation and route tests | New organizations default disabled; disabled route returns 503 |
 | Migration 009 | Pass in automated gates | Fresh PGlite migration suite and full checksum/idempotency tests passed |
 | Milestone 1 full gates | Pass | Typecheck, lint, 178 tests passed; one Docker-only test skipped |
+| AI estimates remain unapproved | Pass | Transition and API tests assert billable actions leave approved hours/cents null |
+| Dirty amount to invoice | Pass | API test records 61,234 cents and 3.5 hours atomically in the Invoiced event |
+| SOW gate and draft visibility | Pass in store/UI tests | Project analysis is gated; approved and pending draft maps remain separately addressable |
+| Boundary immutability | Pass | Approved map edit is rejected; approval is limited to the current SOW version |
+| Milestone 2 focused tests | Pass | 60 transition, API, revenue, PostgreSQL, and SOW tests passed |
+| Milestone 2 full gates | Pass | Typecheck, lint, 179 tests passed; one Docker-only test skipped |
 
 Last updated: 2026-07-22 after Milestone 10 commit `bd5ec5f`. Branch: `commercial-beta-local-first`.
 

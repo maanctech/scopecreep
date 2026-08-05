@@ -10,7 +10,13 @@ const actionSchema = z
   .object({
     action: z.enum(FINDING_ACTIONS),
     expected_version: z.number().int().min(1),
-    note: z.string().trim().max(500).optional().nullable()
+    note: z.string().trim().max(500).optional().nullable(),
+    review: z.object({
+      approved_hours: z.number().finite().min(0).max(10000).nullable().optional(),
+      approved_amount_cents: z.number().int().min(0).max(1_000_000_000).nullable().optional(),
+      client_facing_explanation: z.string().trim().min(1).max(4000).optional(),
+      internal_note: z.string().trim().max(4000).nullable().optional(),
+    }).strict().optional(),
   })
   .strict();
 
@@ -35,7 +41,8 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       finding_id: id,
       expected_version: body.expected_version,
       action: body.action,
-      note: body.note
+      note: body.note,
+      review: body.review,
     });
 
     return NextResponse.json({ finding });
@@ -53,7 +60,10 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     }
 
     if (error instanceof VersionConflictError) {
-      return NextResponse.json({ error: error.message }, { status: 409 });
+      return NextResponse.json(
+        { error: error.message, finding: error.currentFinding },
+        { status: 409 },
+      );
     }
 
     if (error instanceof TransitionError) {

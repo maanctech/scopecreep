@@ -7,18 +7,19 @@ import { BOUNDARY_TYPES } from "@/lib/sow/types";
 
 export function SowWorkspaceClient({ projectId, initialWorkspace, canEdit }: { projectId: string; initialWorkspace: SowWorkspace; canEdit: boolean }) {
   const router = useRouter();
+  const displayedBoundaryMap = initialWorkspace.draftBoundaryMap ?? initialWorkspace.activeBoundaryMap;
   const [mode, setMode] = useState<"paste" | "upload">("paste");
-  const [items, setItems] = useState<BoundaryItem[]>(initialWorkspace.boundaryMap?.items || []);
+  const [items, setItems] = useState<BoundaryItem[]>(displayedBoundaryMap?.items || []);
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState<{ kind: "success" | "error"; text: string } | null>(null);
-  const [syncedBoundaryMap, setSyncedBoundaryMap] = useState(initialWorkspace.boundaryMap);
+  const [syncedBoundaryMap, setSyncedBoundaryMap] = useState(displayedBoundaryMap);
 
   // router.refresh() delivers a fresh workspace prop, and the editable items
   // have to follow it. Adjusting during render rather than in an effect means
   // the stale items are never painted first.
-  if (syncedBoundaryMap !== initialWorkspace.boundaryMap) {
-    setSyncedBoundaryMap(initialWorkspace.boundaryMap);
-    setItems(initialWorkspace.boundaryMap?.items || []);
+  if (syncedBoundaryMap !== displayedBoundaryMap) {
+    setSyncedBoundaryMap(displayedBoundaryMap);
+    setItems(displayedBoundaryMap?.items || []);
   }
 
   async function submitVersion(event: React.FormEvent<HTMLFormElement>) {
@@ -57,14 +58,14 @@ export function SowWorkspaceClient({ projectId, initialWorkspace, canEdit }: { p
   }
 
   async function saveMap(approve: boolean) {
-    if (!initialWorkspace.boundaryMap) return;
+    if (!initialWorkspace.draftBoundaryMap) return;
 
     if (approve && !window.confirm("Approve this boundary map as the authoritative scope reference for future analysis? This stays private and contacts no client.")) return;
 
     setBusy(approve ? "approve" : "save"); setMessage(null);
 
     try {
-      const response = await fetch(`/api/projects/${projectId}/sow/boundary`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ mapId: initialWorkspace.boundaryMap.id, approve, items: items.map(({ boundaryType, category, description, evidence }) => ({ boundaryType, category, description, evidence })) }) });
+      const response = await fetch(`/api/projects/${projectId}/sow/boundary`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ mapId: initialWorkspace.draftBoundaryMap.id, approve, items: items.map(({ boundaryType, category, description, evidence }) => ({ boundaryType, category, description, evidence })) }) });
       const data = await response.json() as { error?: string };
 
       if (!response.ok) throw new Error(data.error || "Could not save the boundary map.");
@@ -90,10 +91,13 @@ export function SowWorkspaceClient({ projectId, initialWorkspace, canEdit }: { p
         text-xl font-semibold
       ">Active agreement</h2><p className="mt-2 text-sm text-zinc-700">{initialWorkspace.activeVersion ? `Version ${initialWorkspace.activeVersion.versionNumber} / ${initialWorkspace.activeVersion.sourceType}` : "No active version"}</p></div><span className={`
         rounded-md border px-3 py-1 text-sm font-semibold
-        ${initialWorkspace.boundaryMap?.status === "Active" ? `
+        ${initialWorkspace.activeBoundaryMap ? `
           border-emerald-300 bg-emerald-50 text-emerald-900
         ` : `border-amber-300 bg-amber-50 text-amber-900`}
-      `}>{initialWorkspace.boundaryMap?.status === "Active" ? "Boundary approved" : "Approval required"}</span></div>
+      `}>{initialWorkspace.activeBoundaryMap ? "Boundary approved" : "Approval required"}</span></div>
+      {initialWorkspace.draftBoundaryMap ? <p className="
+        mt-3 text-sm font-semibold text-amber-800
+      ">A newer draft review is pending. The approved map remains authoritative until this draft is approved.</p> : null}
       {initialWorkspace.activeVersion ? <details className="mt-5"><summary className="
         cursor-pointer font-medium
       ">Read extracted agreement text</summary><pre className="
@@ -156,9 +160,9 @@ export function SowWorkspaceClient({ projectId, initialWorkspace, canEdit }: { p
 
     <section className="space-y-4"><div><h2 className="text-xl font-semibold">Scope Boundary Map</h2><p className="
       mt-2 text-sm/6 text-zinc-700
-    ">This map becomes authoritative only after a professional approves it.</p></div>{initialWorkspace.boundaryMap ? <div className="
+    ">A draft becomes authoritative only after a professional approves it.</p></div>{displayedBoundaryMap ? <div className="
       space-y-4
-    ">{items.map((item, index) => <fieldset key={item.id || index} disabled={!canEdit || initialWorkspace.boundaryMap?.status === "Active"} className="
+    ">{items.map((item, index) => <fieldset key={item.id || index} disabled={!canEdit || displayedBoundaryMap.status === "Active"} className="
       grid gap-4 rounded-md border border-audit-border bg-white p-5 shadow-audit
     "><legend className="px-2 text-sm font-semibold">Boundary item {index + 1}</legend><div className="
       grid gap-4
@@ -173,7 +177,7 @@ export function SowWorkspaceClient({ projectId, initialWorkspace, canEdit }: { p
       mt-2 w-full rounded-md border border-audit-border p-3
     " /></label><label><span className="text-sm font-medium">Agreement evidence</span><textarea value={item.evidence} onChange={(event) => updateItem(index, "evidence", event.target.value)} rows={2} className="
       mt-2 w-full rounded-md border border-audit-border p-3
-    " /></label></fieldset>)}{canEdit && initialWorkspace.boundaryMap.status === "Draft" ? <div className="
+    " /></label></fieldset>)}{canEdit && initialWorkspace.draftBoundaryMap ? <div className="
       flex flex-wrap gap-3
     "><button onClick={() => saveMap(false)} disabled={Boolean(busy)} className="
       h-11 rounded-md border border-ink px-4 text-sm font-semibold

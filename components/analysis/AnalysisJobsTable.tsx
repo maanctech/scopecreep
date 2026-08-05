@@ -92,7 +92,7 @@ export function AnalysisJobsTable({
                       </span>
                     ) : job.result?.findingId ? (
                       <Link
-                        href={`/app/projects/${projectId}?show=needs-review`}
+                        href={`/app/projects/${projectId}?finding=${job.result.findingId}#finding-${job.result.findingId}`}
                         className="font-semibold underline"
                       >
                         Review finding

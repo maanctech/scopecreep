@@ -82,6 +82,9 @@ export function mapProject(row: DbRow): Project {
     active_sow_version_id: row.active_sow_version_id
       ? String(row.active_sow_version_id)
       : null,
+    active_boundary_map_id: row.active_boundary_map_id
+      ? String(row.active_boundary_map_id)
+      : null,
     created_at: iso(row.created_at),
     is_demo: Boolean(row.is_demo),
   };

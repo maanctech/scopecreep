@@ -35,11 +35,20 @@ export type RiskItem = {
   evidence: string;
 };
 
+export type BoundaryMapView = {
+  id: string;
+  name: string;
+  status: "Draft" | "Active" | "Archived";
+  approvedAt: string | null;
+  items: BoundaryItem[];
+};
+
 export type SowWorkspace = {
   document: { id: string; title: string } | null;
   versions: SowVersion[];
   activeVersion: SowVersion | null;
   sections: SowSection[];
-  boundaryMap: { id: string; name: string; status: "Draft" | "Active" | "Archived"; approvedAt: string | null; items: BoundaryItem[] } | null;
+  activeBoundaryMap: BoundaryMapView | null;
+  draftBoundaryMap: BoundaryMapView | null;
   riskReview: { id: string; status: "Draft" | "Reviewed"; summary: string; provider: string; model: string; items: RiskItem[] } | null;
 };

@@ -136,7 +136,8 @@ describe("financial buckets", () => {
 
     finding = applyFindingAction(finding, "Mark as Billable", {
       now: "2026-07-21T12:00:00.000Z",
-      actor: "Professional"
+      actor: "Professional",
+      review: { approved_hours: 10, approved_amount_cents: 175000 }
     }).finding;
     expect(findingBucket(finding)).toBe("billable");
 

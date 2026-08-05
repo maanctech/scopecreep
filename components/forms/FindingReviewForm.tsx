@@ -53,6 +53,42 @@ export function FindingReviewForm({ finding }: { finding: ScopeFinding }) {
   const actions = availableActions(currentFinding);
   const amountsEditable = currentFinding.workflow_status === "Decided";
 
+  function adoptFinding(next: ScopeFinding) {
+    setCurrentFinding(next);
+    setApprovedHours(next.approved_hours === null ? "" : String(next.approved_hours));
+    setApprovedDollars(
+      next.approved_amount_cents === null ? "" : (next.approved_amount_cents / 100).toFixed(2)
+    );
+    setExplanation(next.client_facing_explanation);
+    setNote(next.internal_note ?? "");
+  }
+
+  function currentReviewPayload() {
+    const review: Record<string, unknown> = {
+      client_facing_explanation: explanation.trim() || currentFinding.client_facing_explanation,
+      internal_note: note.trim() || null
+    };
+
+    if (!amountsEditable) return review;
+
+    const hours = approvedHours.trim() === "" ? null : Number(approvedHours);
+
+    if (hours !== null && (!Number.isFinite(hours) || hours < 0)) {
+      throw new Error("Approved hours must be a number of 0 or more.");
+    }
+
+    const dollars = approvedDollars.trim() === "" ? null : Number(approvedDollars);
+
+    if (dollars !== null && (!Number.isFinite(dollars) || dollars < 0)) {
+      throw new Error("Approved amount must be a dollar amount of 0 or more.");
+    }
+
+    review.approved_hours = hours;
+    review.approved_amount_cents = dollars === null ? null : dollarsToCents(dollars);
+
+    return review;
+  }
+
   async function submitAction(action: FindingActionName) {
     const confirmation = CONFIRMATIONS[action];
 
@@ -68,12 +104,20 @@ export function FindingReviewForm({ finding }: { finding: ScopeFinding }) {
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action, expected_version: currentFinding.version })
+          body: JSON.stringify({
+            action,
+            expected_version: currentFinding.version,
+            review: currentReviewPayload()
+          })
         }
       );
       const json = (await response.json()) as { error?: string; finding?: ScopeFinding };
 
       if (!response.ok) {
+        if (response.status === 409 && json.finding) {
+          adoptFinding(json.finding);
+        }
+
         throw new Error(json.error || "The action could not be completed.");
       }
 
@@ -81,15 +125,7 @@ export function FindingReviewForm({ finding }: { finding: ScopeFinding }) {
         throw new Error("The server saved the action but returned no updated finding.");
       }
 
-      setCurrentFinding(json.finding);
-      setApprovedHours(
-        json.finding.approved_hours === null ? "" : String(json.finding.approved_hours)
-      );
-      setApprovedDollars(
-        json.finding.approved_amount_cents === null
-          ? ""
-          : (json.finding.approved_amount_cents / 100).toFixed(2)
-      );
+      adoptFinding(json.finding);
       setSuccess(`Saved: ${action}.`);
       router.refresh();
     } catch (submitError) {
@@ -144,6 +180,10 @@ export function FindingReviewForm({ finding }: { finding: ScopeFinding }) {
       const json = (await response.json()) as { error?: string; finding?: ScopeFinding };
 
       if (!response.ok) {
+        if (response.status === 409 && json.finding) {
+          adoptFinding(json.finding);
+        }
+
         throw new Error(json.error || "Your changes could not be saved.");
       }
 
@@ -151,7 +191,7 @@ export function FindingReviewForm({ finding }: { finding: ScopeFinding }) {
         throw new Error("The server saved your changes but returned no updated finding.");
       }
 
-      setCurrentFinding(json.finding);
+      adoptFinding(json.finding);
       setSuccess("Your changes were saved.");
       router.refresh();
     } catch (submitError) {

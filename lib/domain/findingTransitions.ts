@@ -1,4 +1,3 @@
-import { dollarsToCents } from "@/lib/domain/money";
 import type {
   BillingDecision,
   BillingEventType,
@@ -40,6 +39,13 @@ export const FINDING_ACTIONS = [
 ] as const;
 
 export type FindingActionName = (typeof FINDING_ACTIONS)[number];
+
+export type FindingReviewChanges = {
+  approved_hours?: number | null;
+  approved_amount_cents?: number | null;
+  client_facing_explanation?: string;
+  internal_note?: string | null;
+};
 
 /** Which workflow statuses are legal for each billing decision. */
 export const COMPATIBLE_STATUSES: Record<BillingDecision, readonly WorkflowStatus[]> = {
@@ -211,7 +217,7 @@ const ACTION_EVENT_TYPES: Record<FindingActionName, BillingEventType> = {
 export function applyFindingAction(
   finding: ScopeFinding,
   action: FindingActionName,
-  input: { now: string; actor: string }
+  input: { now: string; actor: string; review?: FindingReviewChanges }
 ): AppliedAction {
   if (!availableActions(finding).includes(action)) {
     throw new TransitionError(
@@ -226,25 +232,52 @@ export function applyFindingAction(
     amountCents: finding.approved_amount_cents
   };
 
+  const review = input.review ?? {};
+  const wantsAmountChange =
+    review.approved_hours !== undefined || review.approved_amount_cents !== undefined;
+  const canEditAmounts =
+    finding.workflow_status === "Decided" ||
+    action === "Mark as Billable" ||
+    action === "Include in Retainer";
+
+  if (wantsAmountChange && !canEditAmounts) {
+    throw new TransitionError(
+      "Make or retain a billing decision before setting professional-approved amounts.",
+      "invalid_action"
+    );
+  }
+
+  if (
+    review.approved_hours !== undefined &&
+    review.approved_hours !== null &&
+    (!Number.isFinite(review.approved_hours) || review.approved_hours < 0)
+  ) {
+    throw new TransitionError("Approved hours must be a finite number of 0 or more.", "invalid_action");
+  }
+
+  if (
+    review.approved_amount_cents !== undefined &&
+    review.approved_amount_cents !== null &&
+    (!Number.isSafeInteger(review.approved_amount_cents) || review.approved_amount_cents < 0)
+  ) {
+    throw new TransitionError("Approved amount must be a non-negative integer number of cents.", "invalid_action");
+  }
+
   let decision = finding.billing_decision;
   let status = finding.workflow_status;
-  let approvedHours = finding.approved_hours;
-  let approvedAmountCents = finding.approved_amount_cents;
+  let approvedHours = review.approved_hours !== undefined ? review.approved_hours : finding.approved_hours;
+  let approvedAmountCents = review.approved_amount_cents !== undefined
+    ? review.approved_amount_cents
+    : finding.approved_amount_cents;
 
   switch (action) {
     case "Mark as Billable":
       decision = "Bill Separately";
       status = "Decided";
-      // Default the approved values from the AI estimate the first time; the
-      // professional can edit them afterwards.
-      approvedHours = approvedHours ?? finding.estimated_hours;
-      approvedAmountCents = approvedAmountCents ?? dollarsToCents(finding.estimated_revenue);
       break;
     case "Include in Retainer":
       decision = "Include In Retainer";
       status = "Decided";
-      approvedHours = approvedHours ?? finding.estimated_hours;
-      approvedAmountCents = approvedAmountCents ?? dollarsToCents(finding.estimated_revenue);
       break;
     case "Discuss With Client":
       decision = "Discuss With Client";
@@ -291,6 +324,9 @@ export function applyFindingAction(
     workflow_status: status,
     approved_hours: approvedHours,
     approved_amount_cents: approvedAmountCents,
+    client_facing_explanation:
+      review.client_facing_explanation ?? finding.client_facing_explanation,
+    internal_note: review.internal_note !== undefined ? review.internal_note : finding.internal_note,
     reviewed_by: input.actor,
     reviewed_at: input.now,
     updated_at: input.now,

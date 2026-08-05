@@ -5,7 +5,7 @@ import { currentAuthContext } from "@/lib/auth/current";
 import { query, transaction } from "@/lib/db/client";
 import { analyzeSowForReview } from "@/lib/sow/analysis";
 import { splitSowSections, type ExtractedSow } from "@/lib/sow/extraction";
-import type { BoundaryItem, BoundaryType, RiskItem, SowSection, SowVersion, SowWorkspace } from "@/lib/sow/types";
+import type { BoundaryItem, BoundaryMapView, BoundaryType, RiskItem, SowSection, SowVersion, SowWorkspace } from "@/lib/sow/types";
 
 type Row = Record<string, unknown>;
 
@@ -30,10 +30,11 @@ export async function getSowWorkspace(projectId: string): Promise<SowWorkspace |
   if (!project.rows[0]) return null;
 
   const activeVersionId = project.rows[0].active_sow_version_id ? String(project.rows[0].active_sow_version_id) : null;
+  const activeBoundaryMapId = project.rows[0].active_boundary_map_id ? String(project.rows[0].active_boundary_map_id) : null;
   const documents = await query<Row>("SELECT * FROM sow_documents WHERE project_id=$1 AND organization_id=$2 ORDER BY created_at LIMIT 1", [projectId, auth.organizationId]);
   const document = documents.rows[0];
 
-  if (!document) return { document: null, versions: [], activeVersion: null, sections: [], boundaryMap: null, riskReview: null };
+  if (!document) return { document: null, versions: [], activeVersion: null, sections: [], activeBoundaryMap: null, draftBoundaryMap: null, riskReview: null };
 
   const versionsResult = await query<Row>("SELECT * FROM sow_versions WHERE sow_document_id=$1 AND organization_id=$2 ORDER BY version_number DESC", [document.id, auth.organizationId]);
   const versions = versionsResult.rows.map((row) => mapVersion(row, activeVersionId));
@@ -42,17 +43,51 @@ export async function getSowWorkspace(projectId: string): Promise<SowWorkspace |
   const sectionsResult = activeVersion ? await query<Row>("SELECT * FROM sow_sections WHERE sow_version_id=$1 AND organization_id=$2 ORDER BY ordinal", [activeVersion.id, auth.organizationId]) : { rows: [] as Row[] };
   const sections: SowSection[] = sectionsResult.rows.map((row) => ({ id: String(row.id), heading: row.heading ? String(row.heading) : null, body: String(row.body), ordinal: Number(row.ordinal) }));
 
-  const maps = await query<Row>("SELECT * FROM scope_boundary_maps WHERE project_id=$1 AND organization_id=$2 AND sow_version_id=$3 ORDER BY (status='Active') DESC, created_at DESC LIMIT 1", [projectId, auth.organizationId, effectiveActive]);
-  const map = maps.rows[0];
-  const mapItems = map ? await query<Row>("SELECT * FROM scope_boundary_items WHERE boundary_map_id=$1 AND organization_id=$2 ORDER BY ordinal", [map.id, auth.organizationId]) : { rows: [] as Row[] };
-  const boundaryMap = map ? { id: String(map.id), name: String(map.name), status: map.status as "Draft" | "Active" | "Archived", approvedAt: map.approved_at ? iso(map.approved_at) : null, items: mapItems.rows.map((row): BoundaryItem => ({ id: String(row.id), boundaryType: row.boundary_type as BoundaryType, category: String(row.category), description: String(row.description), evidence: String(row.evidence || ""), ordinal: Number(row.ordinal) })) } : null;
+  const maps = effectiveActive ? await query<Row>(
+    `SELECT * FROM scope_boundary_maps
+     WHERE project_id=$1 AND organization_id=$2 AND sow_version_id=$3
+       AND status IN ('Active','Draft')
+     ORDER BY created_at DESC`,
+    [projectId, auth.organizationId, effectiveActive],
+  ) : { rows: [] as Row[] };
+
+  async function mapView(map: Row | undefined): Promise<BoundaryMapView | null> {
+    if (!map) return null;
+
+    const mapItems = await query<Row>(
+      "SELECT * FROM scope_boundary_items WHERE boundary_map_id=$1 AND organization_id=$2 ORDER BY ordinal",
+      [map.id, auth.organizationId],
+    );
+
+    return {
+      id: String(map.id),
+      name: String(map.name),
+      status: map.status as BoundaryMapView["status"],
+      approvedAt: map.approved_at ? iso(map.approved_at) : null,
+      items: mapItems.rows.map((row): BoundaryItem => ({
+        id: String(row.id),
+        boundaryType: row.boundary_type as BoundaryType,
+        category: String(row.category),
+        description: String(row.description),
+        evidence: String(row.evidence || ""),
+        ordinal: Number(row.ordinal),
+      })),
+    };
+  }
+
+  const activeBoundaryMap = await mapView(
+    maps.rows.find(
+      (row) => row.status === "Active" && String(row.id) === activeBoundaryMapId,
+    ),
+  );
+  const draftBoundaryMap = await mapView(maps.rows.find((row) => row.status === "Draft"));
 
   const reviews = await query<Row>("SELECT * FROM sow_risk_reviews WHERE sow_version_id=$1 AND organization_id=$2 ORDER BY created_at DESC LIMIT 1", [effectiveActive, auth.organizationId]);
   const review = reviews.rows[0];
   const riskItemsResult = review ? await query<Row>("SELECT * FROM sow_risk_items WHERE risk_review_id=$1 AND organization_id=$2 ORDER BY ordinal", [review.id, auth.organizationId]) : { rows: [] as Row[] };
   const riskReview = review ? { id: String(review.id), status: review.status as "Draft" | "Reviewed", summary: String(review.summary), provider: String(review.provider), model: String(review.model), items: riskItemsResult.rows.map((row): RiskItem => ({ id: String(row.id), severity: row.severity as RiskItem["severity"], category: String(row.category), description: String(row.description), recommendation: String(row.recommendation), evidence: String(row.evidence) })) } : null;
 
-  return { document: { id: String(document.id), title: String(document.title) }, versions, activeVersion, sections, boundaryMap, riskReview };
+  return { document: { id: String(document.id), title: String(document.title) }, versions, activeVersion, sections, activeBoundaryMap, draftBoundaryMap, riskReview };
 }
 
 export async function createSowVersion(input: { projectId: string; text: string; changeNote?: string | null; extracted?: ExtractedSow; fileBuffer?: Buffer }) {
@@ -124,6 +159,18 @@ export async function generateSowReview(projectId: string) {
   const analyzed = await analyzeSowForReview(workspace.activeVersion.content);
 
   return transaction(async (client) => {
+    const project = await client.query<Row>(
+      "SELECT active_sow_version_id FROM projects WHERE id=$1 AND organization_id=$2 FOR UPDATE",
+      [projectId, auth.organizationId],
+    );
+
+    if (
+      !project.rows[0] ||
+      String(project.rows[0].active_sow_version_id) !== workspace.activeVersion!.id
+    ) {
+      throw new Error("The active SOW changed while the review was running. Generate a new review for the current version.");
+    }
+
     await client.query("UPDATE scope_boundary_maps SET status='Archived',updated_at=now() WHERE project_id=$1 AND organization_id=$2 AND status='Draft'", [projectId, auth.organizationId]);
     const mapId = randomUUID();
 
@@ -149,9 +196,19 @@ export async function saveBoundaryMap(input: { projectId: string; mapId: string;
   if (!input.items.length) throw new Error("A boundary map must contain at least one item.");
 
   return transaction(async (client) => {
+    const project = await client.query<Row>(
+      "SELECT active_sow_version_id FROM projects WHERE id=$1 AND organization_id=$2 FOR UPDATE",
+      [input.projectId, auth.organizationId],
+    );
     const map = await client.query<Row>("SELECT * FROM scope_boundary_maps WHERE id=$1 AND project_id=$2 AND organization_id=$3 FOR UPDATE", [input.mapId, input.projectId, auth.organizationId]);
 
-    if (!map.rows[0] || map.rows[0].status === "Archived") throw new Error("Boundary map not found or no longer editable.");
+    if (!project.rows[0] || !map.rows[0] || map.rows[0].status !== "Draft") {
+      throw new Error("Boundary map not found or no longer editable.");
+    }
+
+    if (String(project.rows[0].active_sow_version_id) !== String(map.rows[0].sow_version_id)) {
+      throw new Error("This boundary draft belongs to an older SOW version and cannot be approved.");
+    }
 
     await client.query("DELETE FROM scope_boundary_items WHERE boundary_map_id=$1 AND organization_id=$2", [input.mapId, auth.organizationId]);
 

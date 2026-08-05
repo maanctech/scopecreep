@@ -9,6 +9,10 @@
 - Audit onboarding uses the same normalization and persistence primitive as authenticated manual import and never triggers analysis.
 - `TRUSTED_PROXY_HOPS=0` is the fail-closed default; forwarded addresses are trusted only at an explicitly configured right-hand boundary.
 - Local JSON schema version 3 retains intake token and public-intake setting parity, while PostgreSQL remains the commercial runtime.
+- AI-proposed hours and revenue are never defaults for professional-approved fields. Null remains null until explicit human input.
+- Consequential finding actions accept review edits in the same optimistic-concurrency transaction; no client-side save-then-action sequence is authoritative.
+- An approved SOW boundary remains active while a regenerated draft is reviewed. Approval atomically archives the prior active map.
+- A boundary draft belongs permanently to one SOW version and cannot reactivate superseded agreement text.
 
 Last updated: 2026-07-22 after Milestone 10 commit `bd5ec5f`. Branch: `commercial-beta-local-first`.
 

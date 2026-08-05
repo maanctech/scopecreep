@@ -34,7 +34,7 @@ export function ProjectForm() {
         throw new Error(json.error || "Failed to create project.");
       }
 
-      router.push(`/app/projects/${encodeURIComponent(json.project.id)}?created=project`);
+      router.push(`/app/projects/${encodeURIComponent(json.project.id)}/sow?created=project`);
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : "Failed to create project.");
     } finally {

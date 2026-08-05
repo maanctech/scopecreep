@@ -2,7 +2,7 @@ import * as jsonStore from "@/lib/store/json";
 import * as postgresStore from "@/lib/store/postgres";
 import { shouldUsePostgresStorage } from "@/lib/runtimeStorage";
 import type { LeadInput, AuditRequestInput, ProjectInput, AppDashboard } from "@/lib/store/json";
-import type { FindingActionName } from "@/lib/domain/findingTransitions";
+import type { FindingActionName, FindingReviewChanges } from "@/lib/domain/findingTransitions";
 import type {
   AnalysisInput,
   BillingEvent,
@@ -137,6 +137,7 @@ export async function performFindingAction(input: {
   expected_version: number;
   action: FindingActionName;
   note?: string | null;
+  review?: FindingReviewChanges;
 }) {
   if (shouldUsePostgresStorage()) return postgresStore.performFindingAction(input);
 

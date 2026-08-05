@@ -193,7 +193,7 @@ describe("POST /api/findings/[id]/actions", () => {
     const billableJson = await billable.json();
 
     expect(billableJson.finding.workflow_status).toBe("Decided");
-    expect(billableJson.finding.approved_amount_cents).toBe(52500);
+    expect(billableJson.finding.approved_amount_cents).toBeNull();
     expect(billableJson.finding.version).toBe(2);
 
     const stale = await postActionRoute(
@@ -202,13 +202,39 @@ describe("POST /api/findings/[id]/actions", () => {
     );
 
     expect(stale.status).toBe(409);
+    await expect(stale.json()).resolves.toMatchObject({
+      finding: { version: 2, approved_amount_cents: null },
+    });
 
-    const invoiced = await postActionRoute(
+    const missingAmount = await postActionRoute(
       jsonRequest("POST", { action: "Mark as Invoiced", expected_version: 2 }),
       params(SECURITY_FINDING)
     );
 
+    expect(missingAmount.status).toBe(400);
+
+    const invoiced = await postActionRoute(
+      jsonRequest("POST", {
+        action: "Mark as Invoiced",
+        expected_version: 2,
+        review: {
+          approved_hours: 3.5,
+          approved_amount_cents: 61234,
+          internal_note: "Professional override saved with invoice action."
+        }
+      }),
+      params(SECURITY_FINDING)
+    );
+
     expect(invoiced.status).toBe(200);
+    await expect(invoiced.clone().json()).resolves.toMatchObject({
+      finding: {
+        workflow_status: "Invoiced",
+        approved_hours: 3.5,
+        approved_amount_cents: 61234,
+        version: 3,
+      },
+    });
 
     const paid = await postActionRoute(
       jsonRequest("POST", { action: "Mark as Paid", expected_version: 3, note: "Paid by check." }),
@@ -227,6 +253,11 @@ describe("POST /api/findings/[id]/actions", () => {
     expect(types).toContain("Approved Internally");
     expect(types).toContain("Invoiced");
     expect(types).toContain("Paid");
+    const invoicedEvent = eventsJson.events.find(
+      (event: { event_type: string }) => event.event_type === "Invoiced"
+    );
+
+    expect(invoicedEvent.amount_cents).toBe(61234);
   });
 
   it("keeps rejected findings unbillable until intentionally reopened", async () => {

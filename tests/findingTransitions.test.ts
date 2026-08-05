@@ -43,12 +43,23 @@ function makeFinding(overrides: Partial<ScopeFinding> = {}): ScopeFinding {
   };
 }
 
-function apply(finding: ScopeFinding, action: FindingActionName) {
-  return applyFindingAction(finding, action, { now: NOW, actor: ACTOR });
+function apply(
+  finding: ScopeFinding,
+  action: FindingActionName,
+  review?: Parameters<typeof applyFindingAction>[2]["review"],
+) {
+  return applyFindingAction(finding, action, { now: NOW, actor: ACTOR, review });
 }
 
 function chain(finding: ScopeFinding, actions: FindingActionName[]) {
   return actions.reduce((current, action) => apply(current, action).finding, finding);
+}
+
+function approvedBillable(finding = makeFinding()) {
+  return apply(finding, "Mark as Billable", {
+    approved_hours: 10,
+    approved_amount_cents: 175000,
+  }).finding;
 }
 
 describe("valid transitions", () => {
@@ -86,31 +97,37 @@ describe("valid transitions", () => {
   });
 
   it("walks the full billing path: billable, invoiced, paid", () => {
-    const billed = chain(makeFinding(), ["Mark as Billable", "Mark as Invoiced", "Mark as Paid"]);
+    const billed = chain(approvedBillable(), ["Mark as Invoiced", "Mark as Paid"]);
 
     expect(billed.billing_decision).toBe("Bill Separately");
     expect(billed.workflow_status).toBe("Paid");
     expect(billed.version).toBe(4);
   });
 
-  it("defaults approved values from the AI estimate on Mark as Billable, in integer cents", () => {
+  it("never copies AI estimates into professional-approved values", () => {
     const result = apply(makeFinding({ estimated_hours: 6, estimated_revenue: 1200.5 }), "Mark as Billable");
 
-    expect(result.finding.approved_hours).toBe(6);
-    expect(result.finding.approved_amount_cents).toBe(120050);
+    expect(result.finding.approved_hours).toBeNull();
+    expect(result.finding.approved_amount_cents).toBeNull();
   });
 
-  it("keeps professionally edited amounts when moving to invoiced", () => {
-    const decided = apply(makeFinding(), "Mark as Billable").finding;
-    const edited = { ...decided, approved_amount_cents: 99900 };
-    const invoiced = apply(edited, "Mark as Invoiced");
+  it("applies professionally edited amounts atomically when moving to invoiced", () => {
+    const decided = approvedBillable();
+    const invoiced = apply(decided, "Mark as Invoiced", {
+      approved_hours: 7.5,
+      approved_amount_cents: 99900,
+      internal_note: "Approved after client discussion.",
+    });
 
     expect(invoiced.finding.approved_amount_cents).toBe(99900);
+    expect(invoiced.finding.approved_hours).toBe(7.5);
+    expect(invoiced.finding.internal_note).toBe("Approved after client discussion.");
     expect(invoiced.event.amount_cents).toBe(99900);
+    expect(invoiced.event.previous_amount_cents).toBe(175000);
   });
 
   it("supports intentional reopen from Invoiced, Paid, and Closed", () => {
-    const paid = chain(makeFinding(), ["Mark as Billable", "Mark as Invoiced", "Mark as Paid"]);
+    const paid = chain(approvedBillable(), ["Mark as Invoiced", "Mark as Paid"]);
     const reopened = apply(paid, "Reopen Finding").finding;
 
     expect(reopened.billing_decision).toBe("Undecided");
@@ -122,7 +139,7 @@ describe("valid transitions", () => {
 
     expect(apply(rejected, "Reopen Finding").finding.workflow_status).toBe("Needs Review");
 
-    const invoiced = chain(makeFinding(), ["Mark as Billable", "Mark as Invoiced"]);
+    const invoiced = apply(approvedBillable(), "Mark as Invoiced").finding;
 
     expect(apply(invoiced, "Reopen Finding").finding.workflow_status).toBe("Needs Review");
   });
@@ -169,7 +186,7 @@ describe("invalid transitions", () => {
   });
 
   it("locks decision actions once invoiced or paid", () => {
-    const invoiced = chain(makeFinding(), ["Mark as Billable", "Mark as Invoiced"]);
+    const invoiced = apply(approvedBillable(), "Mark as Invoiced").finding;
 
     expectRejected(invoiced, "Mark as Billable");
     expectRejected(invoiced, "Reject Finding");
@@ -202,10 +219,10 @@ describe("state consistency", () => {
     const seeds: ScopeFinding[] = [
       makeFinding(),
       makeFinding({ workflow_status: "New" }),
-      apply(makeFinding(), "Mark as Billable").finding,
+      approvedBillable(),
       apply(makeFinding(), "Discuss With Client").finding,
-      chain(makeFinding(), ["Mark as Billable", "Mark as Invoiced"]),
-      chain(makeFinding(), ["Mark as Billable", "Mark as Invoiced", "Mark as Paid"]),
+      apply(approvedBillable(), "Mark as Invoiced").finding,
+      chain(approvedBillable(), ["Mark as Invoiced", "Mark as Paid"]),
       apply(makeFinding(), "Reject Finding").finding
     ];
 
@@ -245,7 +262,7 @@ describe("state consistency", () => {
     );
     expect(findingDisplayLabel(apply(makeFinding(), "Reject Finding").finding)).toBe("Rejected");
     expect(
-      findingDisplayLabel(chain(makeFinding(), ["Mark as Billable", "Mark as Invoiced"]))
+      findingDisplayLabel(apply(approvedBillable(), "Mark as Invoiced").finding)
     ).toBe("Invoiced");
     expect(
       findingDisplayLabel(
