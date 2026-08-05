@@ -23,6 +23,7 @@
 - Saved report versions are immutable audit artifacts. Deletion affects all newly generated reports, while prior versions remain available only through an explicit authorized historical-version request.
 - Report history is metadata-only; Markdown and CSV bodies are selected one version at a time. Normal projections join only `reports.current_version_id`.
 - Navigation visibility mirrors role permissions for usability, while server route and API authorization remain the security boundary.
+- `npm run build` explicitly uses Next.js's supported webpack builder on this host. Turbopack remains a development option but its CSS worker cannot bind an internal port under the release host's process policy.
 
 Last updated: 2026-07-22 after Milestone 10 commit `bd5ec5f`. Branch: `commercial-beta-local-first`.
 

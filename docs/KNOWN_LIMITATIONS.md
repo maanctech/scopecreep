@@ -11,6 +11,7 @@
 - Analysis restart is intentionally available only once after an exhausted attempt budget. Further failure requires correcting provider/input conditions rather than repeatedly resetting the same job.
 - Stale recovery uses installation-configured time thresholds, not a distributed worker heartbeat. Operators should size thresholds above expected model and mailbox execution time.
 - Historical report versions are immutable and can retain text from a communication later soft-deleted at the source. Authorized professionals must treat historical exports as retained audit records; newly generated reports exclude that communication.
+- The current verification host has no PostgreSQL server/client or container runtime, so the final protected browser walkthrough could not be repeated for this release. Automated PostgreSQL-compatible integration tests pass, but they do not replace that deployment-host walkthrough.
 
 Last updated: 2026-07-22 after Milestone 10 commit `bd5ec5f`. Branch: `commercial-beta-local-first`.
 

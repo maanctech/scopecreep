@@ -26,6 +26,12 @@
 | Role-aware navigation | Pass | Reviewer sees manual import but not Admin; Read Only sees findings but no import/Admin |
 | First-run and error states | Pass in implementation review | Enforced three-step audit checklist; obsolete local JSON recovery instructions removed |
 | Milestone 4 full gates | Pass | Typecheck, lint, 189 tests passed; one Docker-only test skipped |
+| Fresh/repeated migrations 001-009 | Pass | Migration runner applied exactly nine checksum-tracked files; second run applied none |
+| Local JSON migration/persistence | Pass | Full suite preserves schema v3, fictional $13,475 demo totals, atomic writes, and report history behavior |
+| Final automated suite | Pass | Typecheck, lint, 190 tests passed; one Docker-only Compose test skipped |
+| Production build | Pass | `npm run build` compiled all routes with Next.js webpack |
+| Public browser states | Pass | Landing, closed public intake, disclaimer, and live ROI recalculation inspected |
+| Protected browser workflow | Blocked on host | PostgreSQL server/client and container runtime unavailable; auth correctly refuses JSON-only mode |
 
 Last updated: 2026-07-22 after Milestone 10 commit `bd5ec5f`. Branch: `commercial-beta-local-first`.
 

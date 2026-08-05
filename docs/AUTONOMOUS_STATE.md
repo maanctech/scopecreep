@@ -1,13 +1,13 @@
 # Autonomous Work State
 
-Last updated: 2026-08-05 during Integrity Release Milestone 4.
+Last updated: 2026-08-05 during Integrity Release final validation.
 
 ## Repository State
 
 - Branch: `codex/integrity-release`
-- Current commit: `b4c9c98` (`Recover stalled jobs and enforce strict AI output`)
-- Milestone 4 changes passed focused and full gates and are awaiting the milestone commit.
-- Exact next objective: commit Milestone 4, run fresh/repeated migrations and all final automated gates, then complete the manual browser workflow and production build.
+- Current commit: `920d5d8` (`Correct report projections and role-aware workspace states`)
+- Final validation updates are awaiting the release-gate commit.
+- Exact next objective: commit final validation, then rerun the protected browser workflow on a host with PostgreSQL and customer-grade AI configuration.
 
 ## Completed Work
 
@@ -48,6 +48,10 @@ Last updated: 2026-08-05 during Integrity Release Milestone 4.
 - Milestone 3 full gates: typecheck and lint passed; 185 tests passed with one Docker-only skip.
 - Milestone 4 focused tests: 50 existing report/store/security tests plus 15 deletion, history isolation, and role-navigation tests passed.
 - Milestone 4 full gates: typecheck and lint passed; 189 tests passed with one Docker-only skip.
+- Final migration runner gate applies migrations 001-009 to a fresh PGlite PostgreSQL-compatible database and proves an idempotent second run.
+- Final automated gates: typecheck and lint passed; 190 tests passed with one Docker-only skip.
+- `npm run build` passes through Next.js's supported webpack production builder; all 55 application/API routes compile.
+- Browser evidence: marketing page, disabled confidential-intake state, and ROI recalculation from 175 x 10 x 3 to $5,250 passed.
 
 ## Milestone 1 Skeptical Review
 
@@ -72,6 +76,14 @@ Last updated: 2026-08-05 during Integrity Release Milestone 4.
 - No known Milestone 1 failure remains.
 - Docker and live backup/restore evidence remain unavailable on this host.
 - Live third-party connector verification still requires customer credentials.
+- The protected browser walkthrough is blocked on this host because no PostgreSQL server/client or container runtime is installed. Authentication intentionally does not run against legacy JSON storage.
+
+## Final Skeptical Review
+
+- Migration safety: the actual checksum migration runner, not only raw SQL fixtures, applies exactly 001-009 and returns no work on rerun.
+- Build reproducibility: dependency versions and lockfile are unchanged; the build script explicitly selects supported webpack because Turbopack's CSS helper cannot bind its internal port under this host policy.
+- Security/data: no live lead, SOW, communication, credential, token, or secret was created during browser validation; only fictional local demo data was read.
+- Release evidence: protected flow remains an explicit external blocker rather than being represented as passed through test-mode authentication.
 
 ## Milestone 3 Skeptical Review
 
