@@ -80,7 +80,9 @@ describe("migrateStoreShape (pure)", () => {
     const { store, migrated } = migrateStoreShape(legacy);
 
     expect(migrated).toBe(true);
-    expect(store.schema_version).toBe(2);
+    expect(store.schema_version).toBe(3);
+    expect(store.auditIntakeTokens).toEqual([]);
+    expect(store.settings.publicLeadCapture).toBe(false);
     expect(store.scopeFindings).toHaveLength(12);
     expect(store.clientMessages).toHaveLength(12);
     expect(store.leads).toHaveLength(legacy.leads.length);
@@ -167,7 +169,7 @@ describe("migrateStoreShape (pure)", () => {
     expect(demoFinding?.is_demo).toBe(true);
   });
 
-  it("passes v2 stores through unchanged", () => {
+  it("passes current stores through unchanged", () => {
     const { store, migrated } = migrateStoreShape(buildDemoStore());
 
     expect(migrated).toBe(false);
@@ -198,7 +200,7 @@ describe("store file migration (filesystem)", () => {
 
     const persisted = JSON.parse(await fs.readFile(dataFile, "utf8"));
 
-    expect(persisted.schema_version).toBe(2);
+    expect(persisted.schema_version).toBe(3);
     expect(persisted.scopeFindings).toHaveLength(12);
   });
 

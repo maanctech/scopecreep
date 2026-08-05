@@ -30,7 +30,7 @@ function safeError(error: unknown) {
 
 export async function POST(request: Request) {
   try {
-    await requireApiPermission(request, "integrations:write");
+    await requireApiPermission(request, "communications:write");
     const contentLength = Number(request.headers.get("content-length") || 0);
 
     if (

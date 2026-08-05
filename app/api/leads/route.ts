@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { MAX_HOURLY_RATE } from "@/lib/limits";
-import { createLead } from "@/lib/store";
+import { createLead, getPublicIntakeAvailability } from "@/lib/store";
 import { authErrorResponse, requestIp } from "@/lib/auth/api";
 import { assertSameOrigin, checkRateLimit } from "@/lib/auth/security";
+import { setAuditIntakeCookie } from "@/lib/auth/cookies";
 
 export const runtime = "nodejs";
 
@@ -54,6 +55,14 @@ export async function POST(request: Request) {
   try {
     assertSameOrigin(request);
     checkRateLimit(`lead-capture:${requestIp(request)}`, 8, 60 * 60 * 1000);
+
+    if (!(await getPublicIntakeAvailability()).enabled) {
+      return NextResponse.json(
+        { error: "Public audit requests are not currently accepting submissions." },
+        { status: 503 },
+      );
+    }
+
     let json: unknown;
 
     try {
@@ -63,6 +72,7 @@ export async function POST(request: Request) {
     }
 
     const body = leadSchema.parse(json);
+
     const lead = await createLead({
       ...body,
       website: body.website || null,
@@ -70,7 +80,11 @@ export async function POST(request: Request) {
       hourly_rate: body.hourly_rate ?? null
     });
 
-    return NextResponse.json({ lead: { id: lead.id } }, { status: 201 });
+    const response = NextResponse.json({ ok: true }, { status: 201 });
+
+    setAuditIntakeCookie(response, lead.intakeToken, lead.intakeExpiresAt);
+
+    return response;
   } catch (error) {
     const authResponse = authErrorResponse(error);
 

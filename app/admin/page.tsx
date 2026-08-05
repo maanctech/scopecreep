@@ -125,8 +125,10 @@ export default async function AdminDashboardPage() {
           </div>
           <div className="divide-y divide-audit-border">
             {dashboard.auditRequests.length ? (
-              dashboard.auditRequests.map((request) => (
-                <div key={request.id} className="p-5">
+              dashboard.auditRequests.map((request) => {
+                const project = dashboard.projects.find((item) => item.audit_request_id === request.id);
+
+                return <div key={request.id} className="p-5">
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <div className="font-semibold">{request.client_name}</div>
@@ -141,8 +143,22 @@ export default async function AdminDashboardPage() {
                   {request.suspected_scope_creep_notes ? (
                     <p className="mt-3 text-sm/6 text-zinc-700">{request.suspected_scope_creep_notes}</p>
                   ) : null}
-                </div>
-              ))
+                  {project ? (
+                    <div className="mt-4 flex flex-wrap gap-3">
+                      <Link className="
+                        font-semibold underline underline-offset-4
+                      " href={`/app/projects/${project.id}/sow`}>
+                        Review SOW
+                      </Link>
+                      <Link className="
+                        font-semibold underline underline-offset-4
+                      " href={`/app/projects/${project.id}`}>
+                        Open audit
+                      </Link>
+                    </div>
+                  ) : null}
+                </div>;
+              })
             ) : (
               <div className="p-5 text-sm text-audit-muted">No audit requests submitted yet.</div>
             )}

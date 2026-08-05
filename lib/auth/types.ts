@@ -25,6 +25,7 @@ export const PERMISSIONS = [
   "reports:read",
   "reports:write",
   "exports:read",
+  "communications:write",
   "integrations:read",
   "integrations:write",
   "members:read",

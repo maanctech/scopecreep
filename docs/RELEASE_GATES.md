@@ -1,5 +1,17 @@
 # Release Gates and Evidence
 
+## Integrity Release Milestone 1 (2026-08-05)
+
+| Gate | State | Evidence or blocker |
+| --- | --- | --- |
+| Current remote baseline | Pass | Fast-forwarded to `0e2c412` and created `codex/integrity-release` |
+| Secure public continuation | Pass in automated tests | No public IDs, HttpOnly credential, hashed persistence, expiry and one-time consumption |
+| Onboarding-to-message import | Pass in PostgreSQL integration test | Two messages imported atomically; zero analysis jobs created |
+| Reviewer manual import | Pass in authorization tests | Reviewer has `communications:write` and lacks `integrations:write` |
+| Public intake default | Pass in implementation and route tests | New organizations default disabled; disabled route returns 503 |
+| Migration 009 | Pass in automated gates | Fresh PGlite migration suite and full checksum/idempotency tests passed |
+| Milestone 1 full gates | Pass | Typecheck, lint, 178 tests passed; one Docker-only test skipped |
+
 Last updated: 2026-07-22 after Milestone 10 commit `bd5ec5f`. Branch: `commercial-beta-local-first`.
 
 | Gate | State | Evidence or blocker |

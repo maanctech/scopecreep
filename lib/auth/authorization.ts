@@ -10,6 +10,7 @@ const reviewerPermissions: Permission[] = [
   "reports:read",
   "reports:write",
   "exports:read",
+  "communications:write",
   "integrations:read",
   "settings:read"
 ];

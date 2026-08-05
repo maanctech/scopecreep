@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { isIP } from "node:net";
 import { NextResponse } from "next/server";
 import { AuthorizationError, assertPermission } from "@/lib/auth/authorization";
 import { isTestRuntime } from "@/lib/config/runtime";
@@ -66,6 +67,22 @@ export function authErrorResponse(error: unknown) {
   return null;
 }
 
-export function requestIp(request: Request) {
-  return request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "local";
+export function requestIp(
+  request: Request,
+  env: Record<string, string | undefined> = process.env,
+) {
+  const trustedHops = Number(env.TRUSTED_PROXY_HOPS || 0);
+
+  if (!Number.isSafeInteger(trustedHops) || trustedHops < 1) return "127.0.0.1";
+
+  const forwarded = request.headers
+    .get("x-forwarded-for")
+    ?.split(",")
+    .map((value) => value.trim());
+
+  if (!forwarded?.length || forwarded.some((value) => !isIP(value))) return "127.0.0.1";
+
+  const clientIndex = forwarded.length - trustedHops;
+
+  return clientIndex >= 0 ? forwarded[clientIndex] : "127.0.0.1";
 }

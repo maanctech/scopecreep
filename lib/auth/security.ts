@@ -48,13 +48,7 @@ const SWEEP_INTERVAL_MS = 60_000;
 const SWEEP_SIZE_THRESHOLD = 10_000;
 let nextSweepAt = 0;
 
-/**
- * Keys embed a client-supplied forwarding header, so an attacker can mint
- * unlimited distinct ones. Entries for keys that never recur would otherwise
- * stay in the map forever and grow it without bound. The size trigger matters
- * as much as the clock: a fast attacker can add far more entries between two
- * timed sweeps than the interval alone would suggest.
- */
+/** Expired buckets are swept on time or size thresholds to bound memory use. */
 function dropExpiredEntries(currentTime: number) {
   if (currentTime < nextSweepAt && rateLimits.size < SWEEP_SIZE_THRESHOLD) return;
 

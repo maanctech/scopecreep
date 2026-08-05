@@ -5,13 +5,14 @@ import { createAuditRequest } from "@/lib/store";
 import { NotFoundError } from "@/lib/storeErrors";
 import { authErrorResponse, requestIp } from "@/lib/auth/api";
 import { assertSameOrigin, checkRateLimit } from "@/lib/auth/security";
+import { auditIntakeCookieValue } from "@/lib/publicIntake";
+import { clearAuditIntakeCookie } from "@/lib/auth/cookies";
 
 export const runtime = "nodejs";
 
 const blankToUndefined = (value: unknown) => (value === "" || value == null ? undefined : value);
 
 const auditRequestSchema = z.object({
-  lead_id: z.string().trim().uuid("Audit link is invalid.").optional().nullable(),
   client_name: z.string().trim().min(2, "Client name is required.").max(160),
   project_value: z.preprocess(
     blankToUndefined,
@@ -52,15 +53,26 @@ export async function POST(request: Request) {
     }
 
     const body = auditRequestSchema.parse(json);
+    const intakeToken = auditIntakeCookieValue(request);
 
-    await createAuditRequest({
+    if (!intakeToken) {
+      throw new NotFoundError("Audit link is invalid or expired.");
+    }
+
+    const created = await createAuditRequest({
       ...body,
-      lead_id: body.lead_id || null,
+      intake_token: intakeToken,
       project_value: body.project_value ?? null,
       suspected_scope_creep_notes: body.suspected_scope_creep_notes || null
     });
+    const response = NextResponse.json(
+      { ok: true, importedCount: created.importResult.inserted },
+      { status: 201 },
+    );
 
-    return NextResponse.json({ ok: true }, { status: 201 });
+    clearAuditIntakeCookie(response);
+
+    return response;
   } catch (error) {
     const authResponse = authErrorResponse(error);
 

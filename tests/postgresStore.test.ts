@@ -20,13 +20,16 @@ vi.mock("@/lib/auth/current", () => ({
 
 import { currentAuthContext } from "@/lib/auth/current";
 import {
+  createAuditRequest,
   createLead,
   createProject,
   getAppDashboard,
   getBillingEvents,
   getProjectDetail,
+  getPublicIntakeAvailability,
   performFindingAction,
-  saveMessageWithFinding
+  saveMessageWithFinding,
+  setPublicIntakeSetting,
 } from "@/lib/store/postgres";
 
 const ORGANIZATION_A = "40000000-0000-4000-8000-000000000001";
@@ -125,6 +128,8 @@ afterAll(async () => {
 describe("PostgreSQL store", () => {
   let projectAId: string;
   let findingId: string;
+  let intakeToken: string;
+  let intakeLeadId: string;
 
   it("creates a lead scoped to the public organization", async () => {
     const lead = await createLead({
@@ -143,6 +148,8 @@ describe("PostgreSQL store", () => {
     expect(lead.name).toBe("Priya Shah");
     expect(lead.email).toBe("priya@example.com");
     expect(lead.status).toBe("New");
+    intakeToken = lead.intakeToken;
+    intakeLeadId = lead.id;
 
     const persisted = await query<{ organization_id: string; company: string }>(
       "SELECT organization_id, company FROM leads WHERE id = $1",
@@ -150,6 +157,60 @@ describe("PostgreSQL store", () => {
     );
 
     expect(persisted.rows[0]).toEqual({ organization_id: ORGANIZATION_A, company: "Northwind Devshop" });
+  });
+
+  it("atomically turns public intake text into project messages and consumes the token", async () => {
+    await expect(
+      createAuditRequest({
+        intake_token: intakeToken,
+        client_name: "Northwind Client",
+        hourly_rate: 185,
+        sow_text: null as unknown as string,
+        message_export_text: "This transaction must roll back.",
+      }),
+    ).rejects.toThrow();
+    const afterFailure = await query<{ consumed_at: string | null }>(
+      "SELECT consumed_at FROM audit_intake_tokens WHERE lead_id=$1",
+      [intakeLeadId],
+    );
+    const failedAudits = await query<{ count: number }>(
+      "SELECT COUNT(*)::int AS count FROM audit_requests WHERE lead_id=$1",
+      [intakeLeadId],
+    );
+
+    expect(afterFailure.rows[0].consumed_at).toBeNull();
+    expect(Number(failedAudits.rows[0].count)).toBe(0);
+
+    const created = await createAuditRequest({
+      intake_token: intakeToken,
+      client_name: "Northwind Client",
+      project_value: 50_000,
+      hourly_rate: 185,
+      sow_text: "The agency will redesign five marketing pages. Custom portals and integrations are excluded.",
+      message_export_text: "Please update the approved homepage headline.\n---\nCan you also build a customer login portal?",
+      suspected_scope_creep_notes: "The login portal appears excluded.",
+    });
+    const messages = await query<{ message_text: string }>(
+      "SELECT message_text FROM client_messages WHERE project_id=$1 ORDER BY message_text",
+      [created.project.id],
+    );
+    const analyses = await query<{ count: number }>(
+      "SELECT COUNT(*)::int AS count FROM analysis_jobs WHERE project_id=$1",
+      [created.project.id],
+    );
+
+    expect(created.importResult.inserted).toBe(2);
+    expect(messages.rows).toHaveLength(2);
+    expect(Number(analyses.rows[0].count)).toBe(0);
+    await expect(
+      createAuditRequest({
+        intake_token: intakeToken,
+        client_name: "Replay",
+        hourly_rate: 185,
+        sow_text: "This agreement text is deliberately long enough for intake validation.",
+        message_export_text: "Replay should fail.",
+      }),
+    ).rejects.toThrow(/invalid or expired/i);
   });
 
   it("creates a project with its SOW and round-trips it through getProjectDetail", async () => {
@@ -316,6 +377,15 @@ describe("PostgreSQL store", () => {
 
     const dashboardA = await getAppDashboard();
 
-    expect(dashboardA.projects.map((entry) => entry.id)).toEqual([projectAId]);
+    expect(dashboardA.projects.map((entry) => entry.id)).toContain(projectAId);
+    expect(dashboardA.projects.map((entry) => entry.id)).not.toContain(orgBProject.id);
+    expect(dashboardA.projects).toHaveLength(2);
+  });
+
+  it("prevents two organizations from enabling public intake", async () => {
+    actingAs(AUTH_CONTEXT_B);
+
+    await expect(setPublicIntakeSetting(true)).rejects.toThrow(/another organization/i);
+    await expect(getPublicIntakeAvailability()).resolves.toEqual({ enabled: true });
   });
 });

@@ -9,12 +9,14 @@ export { demoFindings } from "@/lib/demo/findings";
 
 export function buildDemoStore() {
   return {
-    schema_version: 2,
+    schema_version: 3,
     users: [demoUser],
     companies: [demoCompany],
     leads: [demoLead],
     leadStatusHistory: demoLeadStatusHistory,
     auditRequests: [demoAuditRequest],
+    auditIntakeTokens: [],
+    settings: { publicLeadCapture: false },
     projects: [demoProject],
     clientMessages: demoMessages,
     scopeFindings: demoFindings,

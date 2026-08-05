@@ -1,10 +1,12 @@
 import { connection } from "next/server";
 import { LeadCaptureForm } from "@/components/forms/LeadCaptureForm";
+import { getPublicIntakeAvailability } from "@/lib/store";
 
 // The nonce in the Content-Security-Policy is per request, so a page
 // prerendered at build time would carry script tags the policy rejects.
 export default async function RequestAuditPage() {
   await connection();
+  const intake = await getPublicIntakeAvailability();
 
   return (
     <div className="mx-auto max-w-4xl space-y-8">
@@ -24,7 +26,19 @@ export default async function RequestAuditPage() {
         <div><strong className="block text-ink">2. Private intake</strong>SOW text and representative messages saved to the professional workspace.</div>
         <div><strong className="block text-ink">3. Human review</strong>Evidence and estimates are validated before any findings are discussed.</div>
       </section>
-      <LeadCaptureForm />
+      {intake.enabled ? (
+        <LeadCaptureForm />
+      ) : (
+        <section className="
+          rounded-md border border-amber-300 bg-amber-50 p-6 text-amber-950
+        ">
+          <h2 className="text-xl font-semibold">Public audit requests are currently closed</h2>
+          <p className="mt-2 max-w-2xl text-sm/6">
+            This installation is not accepting confidential SOW or client-message submissions.
+            An authorized operator must enable public intake before this form becomes available.
+          </p>
+        </section>
+      )}
       <p className="text-xs/5 text-zinc-600">
         This form does not subscribe you to automated marketing or contact a client. Submitted
         materials may contain confidential business information and should only be provided when

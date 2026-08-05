@@ -23,6 +23,14 @@ function positiveInteger(env: RuntimeEnvironment, name: string, errors: string[]
   }
 }
 
+function nonNegativeInteger(env: RuntimeEnvironment, name: string, errors: string[]) {
+  const value = env[name];
+
+  if (value && (!/^\d+$/.test(value) || !Number.isSafeInteger(Number(value)))) {
+    errors.push(`${name} must be a non-negative integer.`);
+  }
+}
+
 export function validateProductionConfiguration(env: RuntimeEnvironment = process.env) {
   const errors: string[] = [];
 
@@ -55,6 +63,7 @@ export function validateProductionConfiguration(env: RuntimeEnvironment = proces
   positiveInteger(env, "AI_TIMEOUT_MS", errors);
   positiveInteger(env, "AI_MAX_ATTEMPTS", errors);
   positiveInteger(env, "ANALYSIS_JOB_MAX_ATTEMPTS", errors);
+  nonNegativeInteger(env, "TRUSTED_PROXY_HOPS", errors);
 
   if (env.SCOPELEDGER_STORAGE === "json") {
     errors.push("SCOPELEDGER_STORAGE=json is not supported for a commercial production start.");

@@ -1,8 +1,10 @@
 import { randomUUID } from "node:crypto";
-import { mutateLocalStore, now, seedStore, writeLocalStore } from "@/lib/store/json/persistence";
+import { mutateLocalStore, now, readLocalStore, seedStore, writeLocalStore } from "@/lib/store/json/persistence";
 import { findOrCreateCompany } from "@/lib/store/json/projections";
 import { NotFoundError } from "@/lib/storeErrors";
-import type { AuditRequest, Lead, LeadStatus, LeadStatusHistory, Project } from "@/lib/types";
+import { parseManualImport } from "@/lib/ingestion/manual";
+import { auditIntakeTokenHash, createAuditIntakeCredential } from "@/lib/publicIntake";
+import type { AuditRequest, ClientMessage, Lead, LeadStatus, LeadStatusHistory, Project } from "@/lib/types";
 
 export type LeadInput = {
   name: string;
@@ -18,7 +20,7 @@ export type LeadInput = {
 };
 
 export type AuditRequestInput = {
-  lead_id?: string | null;
+  intake_token: string;
   client_name: string;
   project_value?: number | null;
   hourly_rate: number;
@@ -48,6 +50,11 @@ export async function resetLocalDemoStore() {
 
 export async function createLead(input: LeadInput) {
   return mutateLocalStore((store) => {
+    if (!store.settings.publicLeadCapture) {
+      throw new Error("Public audit intake is not configured.");
+    }
+
+    const credential = createAuditIntakeCredential();
     const company = findOrCreateCompany(store, {
       name: input.company,
       website: input.website,
@@ -83,8 +90,20 @@ export async function createLead(input: LeadInput) {
 
     store.leads.unshift(lead);
     store.leadStatusHistory.unshift(history);
+    store.auditIntakeTokens.push({
+      id: randomUUID(),
+      lead_id: lead.id,
+      token_sha256: credential.tokenHash,
+      expires_at: credential.expiresAt.toISOString(),
+      consumed_at: null,
+      created_at: now(),
+    });
 
-    return lead;
+    return {
+      ...lead,
+      intakeToken: credential.token,
+      intakeExpiresAt: credential.expiresAt,
+    };
   });
 }
 
@@ -112,11 +131,24 @@ export async function updateLeadStatus(input: { lead_id: string; status: LeadSta
 
 export async function createAuditRequest(input: AuditRequestInput) {
   return mutateLocalStore((store) => {
-    const lead = input.lead_id ? store.leads.find((item) => item.id === input.lead_id) : null;
-
-    if (input.lead_id && !lead) {
+    if (!store.settings.publicLeadCapture) {
       throw new NotFoundError("Audit link is invalid or expired.");
     }
+
+    const tokenHash = auditIntakeTokenHash(input.intake_token);
+    const token = store.auditIntakeTokens.find(
+      (item) =>
+        item.token_sha256 === tokenHash &&
+        item.consumed_at === null &&
+        new Date(item.expires_at).getTime() > Date.now(),
+    );
+    const lead = token ? store.leads.find((item) => item.id === token.lead_id) : null;
+
+    if (!token || !lead) {
+      throw new NotFoundError("Audit link is invalid or expired.");
+    }
+
+    const preview = parseManualImport({ content: input.message_export_text, format: "Text" });
 
     const company = lead?.company_id
       ? store.companies.find((item) => item.id === lead.company_id) ?? null
@@ -158,21 +190,81 @@ export async function createAuditRequest(input: AuditRequestInput) {
     store.auditRequests.unshift(auditRequest);
     store.projects.unshift(project);
 
-    if (lead) {
-      const previousStatus = lead.status;
+    let inserted = 0;
+    let duplicates = 0;
 
-      lead.status = "Audit Running";
-      store.leadStatusHistory.unshift({
+    for (const message of preview.messages) {
+      const duplicate = store.clientMessages.some(
+        (existing) =>
+          existing.project_id === project.id &&
+          existing.sender === message.sender &&
+          existing.message_date === message.timestamp &&
+          existing.message_text === message.text,
+      );
+
+      if (duplicate) {
+        duplicates += 1;
+        continue;
+      }
+
+      const clientMessage: ClientMessage = {
         id: randomUUID(),
-        lead_id: lead.id,
-        from_status: previousStatus,
-        to_status: "Audit Running",
-        note: "Onboarding intake submitted.",
-        created_at: now()
-      });
+        project_id: project.id,
+        source: "Other",
+        sender: message.sender,
+        message_text: message.text,
+        message_date: message.timestamp,
+        created_at: now(),
+      };
+
+      store.clientMessages.unshift(clientMessage);
+      inserted += 1;
     }
 
-    return { auditRequest, project };
+    const previousStatus = lead.status;
+
+    lead.status = "Audit Running";
+    store.leadStatusHistory.unshift({
+      id: randomUUID(),
+      lead_id: lead.id,
+      from_status: previousStatus,
+      to_status: "Audit Running",
+      note: "Onboarding intake submitted.",
+      created_at: now()
+    });
+    token.consumed_at = now();
+
+    return {
+      auditRequest,
+      project,
+      importResult: {
+        received: preview.messages.length,
+        inserted,
+        duplicates,
+        warnings: preview.warnings,
+        repeated: false,
+      },
+    };
+  });
+}
+
+export async function getPublicIntakeAvailability() {
+  const store = await readLocalStore();
+
+  return { enabled: store.settings.publicLeadCapture };
+}
+
+export async function getPublicIntakeSetting() {
+  const store = await readLocalStore();
+
+  return store.settings.publicLeadCapture;
+}
+
+export async function setPublicIntakeSetting(enabled: boolean) {
+  return mutateLocalStore((store) => {
+    store.settings.publicLeadCapture = enabled;
+
+    return enabled;
   });
 }
 

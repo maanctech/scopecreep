@@ -1,7 +1,7 @@
 import { OnboardingForm } from "@/components/forms/OnboardingForm";
 
 type OnboardingPageProps = {
-  searchParams: Promise<{ leadId?: string; submitted?: string }>;
+  searchParams: Promise<{ submitted?: string }>;
 };
 
 export default async function OnboardingPage({ searchParams }: OnboardingPageProps) {
@@ -37,7 +37,7 @@ export default async function OnboardingPage({ searchParams }: OnboardingPagePro
           Audit request saved. Add the SOW and message export below to create the audit workspace.
         </div>
       ) : null}
-      {params.submitted !== "audit" ? <OnboardingForm leadId={params.leadId} /> : null}
+      {params.submitted !== "audit" ? <OnboardingForm /> : null}
     </div>
   );
 }

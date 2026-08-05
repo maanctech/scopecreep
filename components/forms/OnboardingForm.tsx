@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { MAX_MESSAGE_LENGTH, MAX_SOW_LENGTH } from "@/lib/limits";
 
-export function OnboardingForm({ leadId }: { leadId?: string }) {
+export function OnboardingForm() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -16,7 +16,6 @@ export function OnboardingForm({ leadId }: { leadId?: string }) {
 
     const form = new FormData(event.currentTarget);
     const payload = {
-      lead_id: leadId || null,
       client_name: String(form.get("client_name") || ""),
       project_value: String(form.get("project_value") || ""),
       hourly_rate: String(form.get("hourly_rate") || ""),
@@ -33,6 +32,7 @@ export function OnboardingForm({ leadId }: { leadId?: string }) {
       });
       const json = (await response.json().catch(() => null)) as {
         ok?: boolean;
+        importedCount?: number;
         error?: string;
       } | null;
 

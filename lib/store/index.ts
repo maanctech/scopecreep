@@ -53,6 +53,24 @@ export async function createProject(input: ProjectInput) {
   return jsonStore.createProject(input);
 }
 
+export async function getPublicIntakeAvailability() {
+  if (shouldUsePostgresStorage()) return postgresStore.getPublicIntakeAvailability();
+
+  return jsonStore.getPublicIntakeAvailability();
+}
+
+export async function getPublicIntakeSetting() {
+  if (shouldUsePostgresStorage()) return postgresStore.getPublicIntakeSetting();
+
+  return jsonStore.getPublicIntakeSetting();
+}
+
+export async function setPublicIntakeSetting(enabled: boolean) {
+  if (shouldUsePostgresStorage()) return postgresStore.setPublicIntakeSetting(enabled);
+
+  return jsonStore.setPublicIntakeSetting(enabled);
+}
+
 export async function getAppDashboard(): Promise<AppDashboard> {
   if (shouldUsePostgresStorage()) return postgresStore.getAppDashboard();
 

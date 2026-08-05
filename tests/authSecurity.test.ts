@@ -4,6 +4,7 @@ import { hasPermission } from "@/lib/auth/authorization";
 import { hashPassword, validatePassword, verifyPassword } from "@/lib/auth/password";
 import { assertSameOrigin, InvalidOriginError } from "@/lib/auth/security";
 import { proxy } from "@/proxy";
+import { requestIp } from "@/lib/auth/api";
 
 afterEach(() => vi.unstubAllEnvs());
 
@@ -28,6 +29,8 @@ describe("organization authorization", () => {
     expect(hasPermission("Read Only", "billing:write")).toBe(false);
     expect(hasPermission("Read Only", "leads:read")).toBe(false);
     expect(hasPermission("Reviewer", "billing:write")).toBe(true);
+    expect(hasPermission("Reviewer", "communications:write")).toBe(true);
+    expect(hasPermission("Reviewer", "integrations:write")).toBe(false);
     expect(hasPermission("Reviewer", "leads:write")).toBe(false);
     expect(hasPermission("Admin", "integrations:write")).toBe(true);
     expect(hasPermission("Admin", "leads:write")).toBe(true);
@@ -55,6 +58,30 @@ describe("same-origin mutation defense", () => {
         })
       )
     ).toThrow(InvalidOriginError);
+  });
+});
+
+describe("trusted proxy address resolution", () => {
+  const request = new Request("https://scopeledger.test/api", {
+    headers: { "x-forwarded-for": "198.51.100.10, 203.0.113.20" },
+  });
+
+  it("ignores spoofable forwarding headers unless proxy trust is configured", () => {
+    expect(requestIp(request, { TRUSTED_PROXY_HOPS: "0" })).toBe("127.0.0.1");
+  });
+
+  it("selects the address at the configured right-hand trust boundary", () => {
+    expect(requestIp(request, { TRUSTED_PROXY_HOPS: "1" })).toBe("203.0.113.20");
+    expect(requestIp(request, { TRUSTED_PROXY_HOPS: "2" })).toBe("198.51.100.10");
+  });
+
+  it("fails closed for malformed or insufficient forwarding chains", () => {
+    expect(requestIp(request, { TRUSTED_PROXY_HOPS: "3" })).toBe("127.0.0.1");
+    expect(
+      requestIp(new Request("https://scopeledger.test", { headers: { "x-forwarded-for": "spoofed" } }), {
+        TRUSTED_PROXY_HOPS: "1",
+      }),
+    ).toBe("127.0.0.1");
   });
 });
 

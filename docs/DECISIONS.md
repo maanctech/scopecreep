@@ -1,5 +1,15 @@
 # Product and Architecture Decisions
 
+## Integrity Release Decisions (2026-08-05)
+
+- Public audit intake is opt-in and disabled for newly created organizations.
+- A public lead receives a random 256-bit continuation credential in an HttpOnly, SameSite cookie. Only its SHA-256 hash is stored, it expires after 24 hours, and it is consumed in the audit-creation transaction.
+- Public APIs never return lead, organization, project, SOW, or message identifiers or content.
+- Manual communication import uses `communications:write`; Reviewer may import, while connector configuration remains restricted by `integrations:write`.
+- Audit onboarding uses the same normalization and persistence primitive as authenticated manual import and never triggers analysis.
+- `TRUSTED_PROXY_HOPS=0` is the fail-closed default; forwarded addresses are trusted only at an explicitly configured right-hand boundary.
+- Local JSON schema version 3 retains intake token and public-intake setting parity, while PostgreSQL remains the commercial runtime.
+
 Last updated: 2026-07-22 after Milestone 10 commit `bd5ec5f`. Branch: `commercial-beta-local-first`.
 
 ## Control and Money

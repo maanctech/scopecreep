@@ -37,15 +37,15 @@ export function LeadCaptureForm() {
         body: JSON.stringify(payload)
       });
       const json = (await response.json().catch(() => null)) as {
-        lead?: { id: string };
+        ok?: boolean;
         error?: string;
       } | null;
 
-      if (!response.ok || !json?.lead) {
+      if (!response.ok || !json?.ok) {
         throw new Error(json?.error || "Failed to submit audit request. Please try again.");
       }
 
-      router.push(`/onboarding?leadId=${encodeURIComponent(json.lead.id)}&submitted=lead`);
+      router.push("/onboarding?submitted=lead");
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : "Failed to submit audit request.");
     } finally {

@@ -1,6 +1,7 @@
 import { DEMO_PROJECT_ID } from "@/lib/demo";
 import type {
   AuditRequest,
+  AuditIntakeToken,
   BillingEvent,
   ClientMessage,
   Company,
@@ -20,13 +21,15 @@ import type {
  *   with AI-only `scopeAnalyses` records.
  * - Version 2: `scopeAnalyses` become reviewable `scopeFindings`, plus an
  *   append-only `billingEvents` history and `is_demo` markers.
+ * - Version 3: one-time public-intake credentials and the public-intake
+ *   setting are persisted with fail-closed defaults.
  *
  * The v1 -> v2 migration is deterministic and repeatable: it derives every
  * new field from existing data (no wall-clock timestamps, no random ids), so
  * migrating the same v1 file always produces the same v2 file. The store
  * layer backs up the original file before writing the migrated version.
  */
-export const CURRENT_SCHEMA_VERSION = 2;
+export const CURRENT_SCHEMA_VERSION = 3;
 
 export type BusinessStore = {
   schema_version: number;
@@ -35,6 +38,8 @@ export type BusinessStore = {
   leads: Lead[];
   leadStatusHistory: LeadStatusHistory[];
   auditRequests: AuditRequest[];
+  auditIntakeTokens: AuditIntakeToken[];
+  settings: { publicLeadCapture: boolean };
   projects: Project[];
   clientMessages: ClientMessage[];
   scopeFindings: ScopeFinding[];
@@ -129,7 +134,7 @@ function migrationCreatedEvent(finding: ScopeFinding): BillingEvent {
   };
 }
 
-function migrateV1ToV2(raw: Record<string, unknown>): BusinessStore {
+function migrateLegacyToCurrent(raw: Record<string, unknown>): BusinessStore {
   const clientMessages = asArray<ClientMessage>(raw.clientMessages);
   const legacyAnalyses = asArray<LegacyScopeAnalysis>(raw.scopeAnalyses);
   const messageById = new Map(clientMessages.map((message) => [message.id, message]));
@@ -155,6 +160,8 @@ function migrateV1ToV2(raw: Record<string, unknown>): BusinessStore {
     leads: asArray<Lead>(raw.leads),
     leadStatusHistory: asArray<LeadStatusHistory>(raw.leadStatusHistory),
     auditRequests: asArray<AuditRequest>(raw.auditRequests),
+    auditIntakeTokens: [],
+    settings: { publicLeadCapture: false },
     projects,
     clientMessages,
     scopeFindings,
@@ -164,7 +171,7 @@ function migrateV1ToV2(raw: Record<string, unknown>): BusinessStore {
   };
 }
 
-function normalizeV2(raw: Record<string, unknown>): BusinessStore {
+function normalizeCurrent(raw: Record<string, unknown>): BusinessStore {
   // Missing collections become EMPTY arrays. Real data is never silently
   // replaced with demo data; seeding only happens when no store file exists.
   return {
@@ -174,6 +181,13 @@ function normalizeV2(raw: Record<string, unknown>): BusinessStore {
     leads: asArray<Lead>(raw.leads),
     leadStatusHistory: asArray<LeadStatusHistory>(raw.leadStatusHistory),
     auditRequests: asArray<AuditRequest>(raw.auditRequests),
+    auditIntakeTokens: asArray<AuditIntakeToken>(raw.auditIntakeTokens),
+    settings: {
+      publicLeadCapture:
+        typeof (raw.settings as { publicLeadCapture?: unknown } | undefined)?.publicLeadCapture === "boolean"
+          ? Boolean((raw.settings as { publicLeadCapture: boolean }).publicLeadCapture)
+          : false,
+    },
     projects: asArray<Project>(raw.projects),
     clientMessages: asArray<ClientMessage>(raw.clientMessages),
     scopeFindings: asArray<ScopeFinding>(raw.scopeFindings),
@@ -197,11 +211,15 @@ export function migrateStoreShape(raw: unknown): { store: BusinessStore; migrate
   const version = record.schema_version;
 
   if (version === undefined || version === 1) {
-    return { store: migrateV1ToV2(record), migrated: true };
+    return { store: migrateLegacyToCurrent(record), migrated: true };
+  }
+
+  if (version === 2) {
+    return { store: normalizeCurrent(record), migrated: true };
   }
 
   if (version === CURRENT_SCHEMA_VERSION) {
-    return { store: normalizeV2(record), migrated: false };
+    return { store: normalizeCurrent(record), migrated: false };
   }
 
   throw new LocalStoreFormatError(

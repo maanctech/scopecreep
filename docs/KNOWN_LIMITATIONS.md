@@ -1,5 +1,13 @@
 # Known Limitations
 
+## Integrity Release Notes (2026-08-05)
+
+- Public intake rate limits remain process-local. With `TRUSTED_PROXY_HOPS=0`, all public callers intentionally share one conservative bucket.
+- Independent lead-capture retries can still create duplicate leads; the one-time credential prevents audit workspace replay, not duplicate lead submissions.
+- Public intake supports pasted text separated by a line containing `---`; complex export formats still use the authenticated manual import workflow.
+- Historical IMAP messages skipped by sender filters are not recovered if those filters are widened later. Filter changes apply to future syncs in this release.
+- Installation backups remain installation-wide and are restricted to system administrators; organization-scoped export is deferred.
+
 Last updated: 2026-07-22 after Milestone 10 commit `bd5ec5f`. Branch: `commercial-beta-local-first`.
 
 - Docker, Podman, and Colima are unavailable on the verification host. Image build and Compose startup are not directly evidenced.

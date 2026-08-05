@@ -118,7 +118,7 @@ export async function createInitialOwner(input: {
     );
     await client.query(
       "INSERT INTO organization_settings (organization_id, settings) VALUES ($1, $2::jsonb)",
-      [organizationId, JSON.stringify({ publicLeadCapture: true })]
+      [organizationId, JSON.stringify({ publicLeadCapture: false })]
     );
     await writeAuditLog(client, {
       organizationId,

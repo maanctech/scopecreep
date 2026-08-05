@@ -5,16 +5,19 @@ import { auditLog, systemDiagnostics } from "@/lib/operations/diagnostics";
 import { listBackups } from "@/lib/backups/service";
 import { BackupPanel } from "@/components/operations/BackupPanel";
 import { hasPermission } from "@/lib/auth/authorization";
+import { PublicIntakeSettingsForm } from "@/components/operations/PublicIntakeSettingsForm";
+import { getPublicIntakeSetting } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 
 export default async function SystemSettingsPage() {
   const auth = await requirePagePermission("settings:read");
   const canReadBackups = hasPermission(auth.role, "backups:read");
-  const [diagnostics, events, backups] = await Promise.all([
+  const [diagnostics, events, backups, publicIntakeEnabled] = await Promise.all([
     systemDiagnostics(),
     auditLog(100),
-    canReadBackups ? listBackups() : Promise.resolve([])
+    canReadBackups ? listBackups() : Promise.resolve([]),
+    getPublicIntakeSetting(),
   ]);
   const failedJobs = [...diagnostics.analysisJobs, ...diagnostics.ingestionJobs].filter(
     (row) => row.status === "Failed"
@@ -43,6 +46,10 @@ export default async function SystemSettingsPage() {
           <Download className="size-4" aria-hidden="true" /> Download redacted support bundle
         </Link>
       </section>
+
+      {hasPermission(auth.role, "settings:write") ? (
+        <PublicIntakeSettingsForm initialEnabled={publicIntakeEnabled} />
+      ) : null}
 
       <section className="
         grid gap-4

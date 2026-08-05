@@ -14,7 +14,7 @@ export default async function ImportPage() {
     currentAuthContext(),
   ]);
   const canImport = Boolean(
-    auth && hasPermission(auth.role, "integrations:write"),
+    auth && hasPermission(auth.role, "communications:write"),
   );
 
   return (

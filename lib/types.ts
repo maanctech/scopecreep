@@ -110,6 +110,19 @@ export type AuditRequest = {
   created_at: string;
 };
 
+export type AuditIntakeToken = {
+  id: string;
+  lead_id: string;
+  token_sha256: string;
+  expires_at: string;
+  consumed_at: string | null;
+  created_at: string;
+};
+
+export type BusinessSettings = {
+  publicLeadCapture: boolean;
+};
+
 export type Project = {
   id: string;
   company_id: string | null;
