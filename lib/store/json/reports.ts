@@ -78,13 +78,20 @@ export async function getReportHistory(projectId: string) {
 
   return store.reports
     .filter((item) => item.project_id === projectId)
-    .sort((a, b) => (b.version_number || 0) - (a.version_number || 0));
+    .sort((a, b) => (b.version_number || 0) - (a.version_number || 0))
+    .map((report) => ({ ...report, markdown: "", csv_content: "" }));
 }
 
 export async function getReportVersion(projectId: string, versionId: string) {
-  const versions = await getReportHistory(projectId);
+  const store = await readLocalStore();
 
-  return versions.find((version) => version.id === versionId) || null;
+  if (!store.projects.some((item) => item.id === projectId))
+    throw new NotFoundError("Project not found.");
+
+  return store.reports.find(
+    (version) =>
+      version.project_id === projectId && version.id === versionId,
+  ) || null;
 }
 
 export async function exportFindingsCsv(projectId: string) {

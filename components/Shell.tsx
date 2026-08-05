@@ -18,26 +18,47 @@ import {
   LockKeyhole,
   Workflow,
 } from "lucide-react";
+import { hasPermission } from "@/lib/auth/authorization";
+import type { AuthContext, OrganizationRole, Permission } from "@/lib/auth/types";
 
-export function Shell({ children }: { children: React.ReactNode }) {
+const internalNav: Array<{
+  href: string;
+  label: string;
+  icon: typeof Activity;
+  permission?: Permission;
+}> = [
+  { href: "/request-audit", label: "Request Audit", icon: ClipboardList },
+  { href: "/calculator", label: "Calculator", icon: Calculator },
+  { href: "/app", label: "Audit Console", icon: BarChart3, permission: "projects:read" },
+  { href: "/app/findings", label: "Findings", icon: ListChecks, permission: "findings:read" },
+  { href: "/app/import", label: "Import", icon: Import, permission: "communications:write" },
+  { href: "/app/integrations", label: "Integrations", icon: Plug, permission: "integrations:read" },
+  { href: "/app/billing", label: "Billing", icon: Receipt, permission: "billing:read" },
+  { href: "/admin", label: "Admin", icon: ShieldCheck, permission: "leads:read" },
+  { href: "/sales-assets", label: "Sales Assets", icon: FileText, permission: "reports:read" },
+  { href: "/account", label: "Account", icon: UserRound },
+  { href: "/app/settings/ai", label: "AI Status", icon: Activity, permission: "settings:read" },
+  { href: "/app/settings/system", label: "System", icon: Settings, permission: "settings:read" },
+];
+
+export function internalNavigationFor(role: OrganizationRole | null) {
+  return internalNav.filter(
+    (item) =>
+      !item.permission || Boolean(role && hasPermission(role, item.permission)),
+  );
+}
+
+export function Shell({
+  children,
+  auth,
+}: {
+  children: React.ReactNode;
+  auth: Pick<AuthContext, "role" | "isSystemAdmin"> | null;
+}) {
   const pathname = usePathname();
   const internal = ["/app", "/admin", "/sales-assets", "/account"].some(
     (path) => pathname === path || pathname.startsWith(`${path}/`)
   );
-  const internalNav = [
-    { href: "/request-audit", label: "Request Audit", icon: ClipboardList },
-    { href: "/calculator", label: "Calculator", icon: Calculator },
-    { href: "/app", label: "Audit Console", icon: BarChart3 },
-    { href: "/app/findings", label: "Findings", icon: ListChecks },
-    { href: "/app/import", label: "Import", icon: Import },
-    { href: "/app/integrations", label: "Integrations", icon: Plug },
-    { href: "/app/billing", label: "Billing", icon: Receipt },
-    { href: "/admin", label: "Admin", icon: ShieldCheck },
-    { href: "/sales-assets", label: "Sales Assets", icon: FileText },
-    { href: "/account", label: "Account", icon: UserRound },
-    { href: "/app/settings/ai", label: "AI Status", icon: Activity },
-    { href: "/app/settings/system", label: "System", icon: Settings },
-  ];
   const publicNav = [
     { href: "/#workflow", label: "Workflow", icon: Workflow },
     { href: "/#connections", label: "Connections", icon: Plug },
@@ -46,7 +67,9 @@ export function Shell({ children }: { children: React.ReactNode }) {
     { href: "/request-audit", label: "Request Audit", icon: ClipboardList },
     { href: "/login", label: "Professional Sign In", icon: LockKeyhole },
   ];
-  const navItems = internal ? internalNav : publicNav;
+  const navItems = internal
+    ? internalNavigationFor(auth?.role || null)
+    : publicNav;
 
   return (
     <div className="min-h-screen bg-paper text-ink">

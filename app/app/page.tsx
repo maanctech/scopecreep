@@ -78,6 +78,33 @@ export default async function ProductDashboardPage({ searchParams }: { searchPar
 
       <Disclaimer />
 
+      {!dashboard.projects.length ? (
+        <section className="border-y border-audit-border py-6">
+          <h2 className="text-xl font-semibold">Start the first revenue audit</h2>
+          <ol className="
+            mt-4 grid gap-4 text-sm
+            sm:grid-cols-3
+          ">
+            <li><span className="font-semibold">1. Add the engagement.</span><p className="
+              mt-1 text-zinc-700
+            ">Create a project and paste the signed SOW.</p></li>
+            <li><span className="font-semibold">2. Approve scope boundaries.</span><p className="
+              mt-1 text-zinc-700
+            ">Review the SOW map before any communication can be analyzed.</p></li>
+            <li><span className="font-semibold">3. Import and review.</span><p className="
+              mt-1 text-zinc-700
+            ">Import client requests, run selected analyses, then make each billing decision.</p></li>
+          </ol>
+          {canCreateProject ? (
+            <Link className="
+              mt-5 inline-block font-semibold underline underline-offset-4
+            " href="/app/projects/new">
+              Create the first project
+            </Link>
+          ) : null}
+        </section>
+      ) : null}
+
       {dashboard.hasRealFindings ? (
         <section className="space-y-4">
           <h2 className="text-xl font-semibold">Your live totals</h2>

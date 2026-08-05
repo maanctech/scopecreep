@@ -1,13 +1,13 @@
 # Autonomous Work State
 
-Last updated: 2026-08-05 during Integrity Release Milestone 3.
+Last updated: 2026-08-05 during Integrity Release Milestone 4.
 
 ## Repository State
 
 - Branch: `codex/integrity-release`
-- Current commit: `04db8af` (`Make SOW approval and billing transitions authoritative`)
-- Milestone 3 changes passed focused and full gates and are awaiting the milestone commit.
-- Exact next objective: commit Milestone 3, then correct report deletion/version loading, role navigation, and first-run/error states.
+- Current commit: `b4c9c98` (`Recover stalled jobs and enforce strict AI output`)
+- Milestone 4 changes passed focused and full gates and are awaiting the milestone commit.
+- Exact next objective: commit Milestone 4, run fresh/repeated migrations and all final automated gates, then complete the manual browser workflow and production build.
 
 ## Completed Work
 
@@ -31,6 +31,9 @@ Last updated: 2026-08-05 during Integrity Release Milestone 3.
 - Concurrent IMAP sync starts for one organization connection are serialized.
 - Required AI fields are strict, every client-message provider request carries the JSON Schema, and invalid responses create no finding.
 - Prompt capacity is checked before provider access using a conservative estimate; SOW evidence is never silently truncated. Ollama defaults to a validated 32,768-token context.
+- Soft-deleted communications and their findings/events are excluded from active snapshots, regenerated reports/exports, and financial summaries.
+- Normal projections load only each report's current version. Report history lists metadata without Markdown/CSV bodies, and one authorized historical body is fetched by exact organization/project/version.
+- Internal navigation is permission-filtered, stale local-file recovery advice is removed, and an empty workspace presents the SOW-to-import-to-analysis checklist.
 
 ## Tests and Evidence
 
@@ -43,6 +46,8 @@ Last updated: 2026-08-05 during Integrity Release Milestone 3.
 - Milestone 2 full gates: typecheck and lint passed; 179 tests passed with one Docker-only skip.
 - Milestone 3 focused tests: 35 passed with one Docker-only skip across analysis lifecycle, strict AI parsing, context limits, IMAP recovery, and runtime validation.
 - Milestone 3 full gates: typecheck and lint passed; 185 tests passed with one Docker-only skip.
+- Milestone 4 focused tests: 50 existing report/store/security tests plus 15 deletion, history isolation, and role-navigation tests passed.
+- Milestone 4 full gates: typecheck and lint passed; 189 tests passed with one Docker-only skip.
 
 ## Milestone 1 Skeptical Review
 
@@ -76,3 +81,12 @@ Last updated: 2026-08-05 during Integrity Release Milestone 3.
 - Integration truthfulness: stale IMAP recovery changes connection state only when no other Running sync exists.
 - AI integrity: missing required fields, ungrounded evidence, and oversized prompts fail the job without creating a finding or truncating agreement text.
 - Auditability: analysis restart and recovery append organization-scoped audit events; restart is limited to one reset after the original attempt budget is exhausted.
+
+## Milestone 4 Skeptical Review
+
+- Financial correctness: deleting a source communication removes its finding from active potential/approved/invoiced/paid calculations; a PostgreSQL regression proves a removed $4,000 estimate becomes zero.
+- Report privacy: regenerated Markdown and CSV inputs contain only non-deleted messages; history indexes contain no report body, while exact body lookup requires matching organization, project, and version.
+- Report continuity: prior generated versions remain immutable and explicitly retrievable rather than being silently rewritten after source deletion.
+- Authorization: navigation reflects server-resolved role permissions, but route/API permission checks remain authoritative; cross-organization historical report access returns no body.
+- Data loading: current-version joins use both version ID and organization, preventing duplicate historical rows in dashboard/project snapshots.
+- UX truthfulness: first-run guidance follows the actual enforced SOW approval, import, selection, and professional review sequence.

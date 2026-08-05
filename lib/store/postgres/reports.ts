@@ -118,10 +118,10 @@ export async function getReportHistory(projectId: string) {
   if (!project.rows[0]) throw new NotFoundError("Project not found.");
 
   const versions = await query<DbRow>(
-    `SELECT r.project_id,r.title,p.client_name,rv.id AS version_id,rv.version_number,rv.report_type,rv.markdown,
+    `SELECT r.project_id,r.title,p.client_name,rv.id AS version_id,rv.version_number,rv.report_type,''::text AS markdown,
             rv.total_revenue_leakage_cents,rv.analyzed_messages_count,rv.out_of_scope_count,
             rv.sow_version_id,rv.source_finding_ids,rv.analysis_references,rv.content_sha256,
-            rv.csv_content,rv.csv_sha256,
+            ''::text AS csv_content,rv.csv_sha256,
             rv.created_at AS version_created_at
      FROM reports r JOIN projects p ON p.id=r.project_id AND p.organization_id=r.organization_id
      JOIN report_versions rv ON rv.report_id=r.id AND rv.organization_id=r.organization_id
@@ -133,9 +133,20 @@ export async function getReportHistory(projectId: string) {
 }
 
 export async function getReportVersion(projectId: string, versionId: string) {
-  const versions = await getReportHistory(projectId);
+  const context = await requireContext();
+  const version = await query<DbRow>(
+    `SELECT r.project_id,r.title,p.client_name,rv.id AS version_id,rv.version_number,rv.report_type,rv.markdown,
+            rv.total_revenue_leakage_cents,rv.analyzed_messages_count,rv.out_of_scope_count,
+            rv.sow_version_id,rv.source_finding_ids,rv.analysis_references,rv.content_sha256,
+            rv.csv_content,rv.csv_sha256,rv.created_at AS version_created_at
+     FROM reports r
+     JOIN projects p ON p.id=r.project_id AND p.organization_id=r.organization_id
+     JOIN report_versions rv ON rv.report_id=r.id AND rv.organization_id=r.organization_id
+     WHERE r.organization_id=$1 AND r.project_id=$2 AND rv.id=$3`,
+    [context.organizationId, projectId, versionId]
+  );
 
-  return versions.find((version) => version.id === versionId) || null;
+  return version.rows[0] ? mapReport(version.rows[0]) : null;
 }
 
 export async function exportFindingsCsv(projectId: string) {

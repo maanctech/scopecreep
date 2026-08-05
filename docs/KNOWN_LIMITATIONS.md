@@ -10,6 +10,7 @@
 - Local JSON compatibility mode records atomic finding state and billing events but does not maintain the PostgreSQL `scope_finding_history` table.
 - Analysis restart is intentionally available only once after an exhausted attempt budget. Further failure requires correcting provider/input conditions rather than repeatedly resetting the same job.
 - Stale recovery uses installation-configured time thresholds, not a distributed worker heartbeat. Operators should size thresholds above expected model and mailbox execution time.
+- Historical report versions are immutable and can retain text from a communication later soft-deleted at the source. Authorized professionals must treat historical exports as retained audit records; newly generated reports exclude that communication.
 
 Last updated: 2026-07-22 after Milestone 10 commit `bd5ec5f`. Branch: `commercial-beta-local-first`.
 

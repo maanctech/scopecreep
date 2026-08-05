@@ -24,10 +24,13 @@ import {
   createAuditRequest,
   createLead,
   createProject,
+  generateAuditReport,
   getAppDashboard,
   getBillingEvents,
   getProjectDetail,
   getPublicIntakeAvailability,
+  getReportHistory,
+  getReportVersion,
   performFindingAction,
   saveMessageWithFinding,
   setPublicIntakeSetting,
@@ -447,5 +450,72 @@ describe("PostgreSQL store", () => {
 
     await expect(setPublicIntakeSetting(true)).rejects.toThrow(/another organization/i);
     await expect(getPublicIntakeAvailability()).resolves.toEqual({ enabled: true });
+  });
+
+  it("excludes soft-deleted messages from regenerated reports and financial summaries", async () => {
+    actingAs(AUTH_CONTEXT_A);
+    const project = await createProject({
+      client_name: "Deletion Test Client",
+      project_name: "Report deletion test",
+      hourly_rate: 200,
+      sow_text: "The work excludes a client billing portal.",
+    });
+    const saved = await saveMessageWithFinding({
+      project_id: project.id,
+      source: "Email",
+      sender: "client@example.test",
+      message_text: "CONFIDENTIAL-DELETED-REQUEST: build the billing portal.",
+      analysis: {
+        classification: "Out of Scope",
+        confidence_score: 0.95,
+        reasoning: "The portal is excluded.",
+        relevant_sow_sections: ["The work excludes a client billing portal."],
+        request_type: "Engineering",
+        estimated_hours: 20,
+        estimated_revenue: 4000,
+        suggested_change_order: "We can scope this separately.",
+        internal_note: "Human review required.",
+      },
+    });
+    const before = await generateAuditReport(project.id);
+
+    expect(before.report.markdown).toContain("CONFIDENTIAL-DELETED-REQUEST");
+    await query(
+      "UPDATE client_messages SET deleted_at=now() WHERE id=$1 AND organization_id=$2",
+      [saved.message.id, ORGANIZATION_A],
+    );
+    const regenerated = await generateAuditReport(project.id);
+    const dashboard = await getAppDashboard();
+    const summary = dashboard.projects.find((item) => item.id === project.id);
+
+    expect(regenerated.report.markdown).not.toContain(
+      "CONFIDENTIAL-DELETED-REQUEST",
+    );
+    expect(regenerated.report.analyzed_messages_count).toBe(0);
+    expect(regenerated.report.total_revenue_leakage).toBe(0);
+    expect(summary?.messages_analyzed).toBe(0);
+    expect(summary?.potential_recovered_revenue).toBe(0);
+  });
+
+  it("lists report history without bodies and fetches one selected body", async () => {
+    actingAs(AUTH_CONTEXT_A);
+    const history = await getReportHistory(projectAId);
+
+    if (!history.length) await generateAuditReport(projectAId);
+
+    const currentHistory = await getReportHistory(projectAId);
+    const selected = currentHistory[0];
+
+    expect(selected.markdown).toBe("");
+    expect(selected.csv_content).toBe("");
+    const body = await getReportVersion(projectAId, selected.id);
+
+    expect(body?.markdown.length).toBeGreaterThan(0);
+
+    actingAs(AUTH_CONTEXT_B);
+    await expect(getReportHistory(projectAId)).rejects.toThrow(
+      "Project not found.",
+    );
+    await expect(getReportVersion(projectAId, selected.id)).resolves.toBeNull();
   });
 });

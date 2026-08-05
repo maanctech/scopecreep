@@ -21,6 +21,11 @@
 | IMAP stale recovery | Pass in automated tests | Fresh jobs remain untouched; stale jobs fail atomically and connection state avoids newer-job clobbering |
 | AI required output and context capacity | Pass | Missing required fields fail; schema is supplied; oversized prompts make no provider call and create no finding |
 | Milestone 3 full gates | Pass | Typecheck, lint, 185 tests passed; one Docker-only test skipped |
+| Deleted-message exclusion | Pass in PostgreSQL test | Regenerated report omits marked content and its $4,000 estimate; active project totals become zero |
+| Report version loading | Pass | Current-only snapshot join; metadata-only history; one organization/project-scoped historical body query |
+| Role-aware navigation | Pass | Reviewer sees manual import but not Admin; Read Only sees findings but no import/Admin |
+| First-run and error states | Pass in implementation review | Enforced three-step audit checklist; obsolete local JSON recovery instructions removed |
+| Milestone 4 full gates | Pass | Typecheck, lint, 189 tests passed; one Docker-only test skipped |
 
 Last updated: 2026-07-22 after Milestone 10 commit `bd5ec5f`. Branch: `commercial-beta-local-first`.
 

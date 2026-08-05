@@ -19,6 +19,10 @@
 - Required client-message AI output fields have no parser defaults. Provider failure, invalid JSON, missing fields, weak evidence, and context overflow create no finding.
 - Prompt capacity uses three characters per estimated token plus output and safety reserves. Evidence is rejected intact rather than truncated.
 - Ollama's context defaults to `OLLAMA_NUM_CTX=32768`; OpenAI client-message analysis receives the same strict JSON Schema contract.
+- Soft-deleted communications are absent from active snapshots and all calculations generated from them. Their linked findings and billing events do not contribute to current financial views.
+- Saved report versions are immutable audit artifacts. Deletion affects all newly generated reports, while prior versions remain available only through an explicit authorized historical-version request.
+- Report history is metadata-only; Markdown and CSV bodies are selected one version at a time. Normal projections join only `reports.current_version_id`.
+- Navigation visibility mirrors role permissions for usability, while server route and API authorization remain the security boundary.
 
 Last updated: 2026-07-22 after Milestone 10 commit `bd5ec5f`. Branch: `commercial-beta-local-first`.
 

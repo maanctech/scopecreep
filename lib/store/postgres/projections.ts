@@ -50,16 +50,21 @@ export async function snapshot(organizationId: string): Promise<Snapshot> {
            LEFT JOIN sow_documents sd ON sd.project_id = p.id AND sd.organization_id = p.organization_id AND sd.status = 'Active'
            LEFT JOIN sow_versions sv ON sv.id = sd.current_version_id AND sv.organization_id = sd.organization_id
            WHERE p.organization_id = $1 AND p.archived_at IS NULL ORDER BY p.created_at DESC`, [organizationId]),
-    query("SELECT * FROM client_messages WHERE organization_id = $1 ORDER BY created_at DESC", [organizationId]),
-    query("SELECT * FROM scope_findings WHERE organization_id = $1 ORDER BY created_at DESC", [organizationId]),
-    query("SELECT * FROM billing_events WHERE organization_id = $1 ORDER BY created_at DESC, id DESC", [organizationId]),
+    query("SELECT * FROM client_messages WHERE organization_id = $1 AND deleted_at IS NULL ORDER BY created_at DESC", [organizationId]),
+    query(`SELECT f.* FROM scope_findings f
+           JOIN client_messages m ON m.id=f.client_message_id AND m.organization_id=f.organization_id
+           WHERE f.organization_id = $1 AND m.deleted_at IS NULL ORDER BY f.created_at DESC`, [organizationId]),
+    query(`SELECT e.* FROM billing_events e
+           JOIN scope_findings f ON f.id=e.scope_finding_id AND f.organization_id=e.organization_id
+           JOIN client_messages m ON m.id=f.client_message_id AND m.organization_id=f.organization_id
+           WHERE e.organization_id = $1 AND m.deleted_at IS NULL ORDER BY e.created_at DESC, e.id DESC`, [organizationId]),
     query(`SELECT r.*, p.client_name, rv.id AS version_id, rv.version_number, rv.report_type, rv.markdown,
                   rv.total_revenue_leakage_cents, rv.analyzed_messages_count, rv.out_of_scope_count,
                   rv.sow_version_id, rv.source_finding_ids, rv.analysis_references, rv.content_sha256,
                   rv.csv_content,rv.csv_sha256,
                   rv.created_at AS version_created_at
            FROM reports r JOIN projects p ON p.id=r.project_id AND p.organization_id=r.organization_id
-           JOIN report_versions rv ON rv.report_id = r.id
+           JOIN report_versions rv ON rv.id = r.current_version_id AND rv.organization_id=r.organization_id
            WHERE r.organization_id = $1 ORDER BY rv.created_at DESC`, [organizationId]),
     query("SELECT * FROM sales_templates WHERE organization_id = $1 ORDER BY created_at", [organizationId])
   ]);

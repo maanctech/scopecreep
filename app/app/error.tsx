@@ -15,9 +15,9 @@ export default function AppError({
           "The workspace could not be loaded. Your data was not changed by this error."}
       </p>
       <p className="mt-2 max-w-2xl text-sm/6 text-red-800">
-        If this mentions a corrupt data file, your original file was backed up in the data folder
-        and was not replaced. You can restore it manually or run <code>npm run seed</code> to start
-        over with demo data.
+        Try again once. If the problem continues, ask the installation administrator to review
+        System diagnostics and server logs. Do not re-enter or regenerate client data until the
+        storage connection is confirmed healthy.
       </p>
       <button
         type="button"
