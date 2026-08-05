@@ -1,5 +1,13 @@
 # Known Limitations
 
+## Private Beta Monitoring Milestone 1 (2026-08-05)
+
+- The integrity branch is pushed, but its private GitHub PR, CI result, and merge cannot be inspected from this host because GitHub CLI and an authenticated GitHub browser session are unavailable.
+- The monitoring branch is based on the exact pushed integrity commit, not a merged target-branch commit.
+- Docker/Compose, real `pg_dump`/`pg_restore`, protected PostgreSQL browser validation, and live connector credentials remain external release blockers.
+- Automated monitoring, the worker, review inbox, and SMTP digest are not implemented yet.
+- Exact next objective: implement migration 010 and durable worker behavior with duplicate, lease, authorization, and financial-integrity tests.
+
 ## Integrity Release Notes (2026-08-05)
 
 - Public intake rate limits remain process-local. With `TRUSTED_PROXY_HOPS=0`, all public callers intentionally share one conservative bucket.

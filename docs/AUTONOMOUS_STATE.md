@@ -1,13 +1,31 @@
 # Autonomous Work State
 
-Last updated: 2026-08-05 during Integrity Release final validation.
+Last updated: 2026-08-05 during Private Beta Monitoring Milestone 1.
 
 ## Repository State
 
-- Branch: `codex/integrity-release`
-- Current commit: `920d5d8` (`Correct report projections and role-aware workspace states`)
-- Final validation updates are awaiting the release-gate commit.
-- Exact next objective: commit final validation, then rerun the protected browser workflow on a host with PostgreSQL and customer-grade AI configuration.
+- Branch: `codex/private-beta-monitoring`
+- Base commit: `202d7ce` (`Complete integrity release validation gates`)
+- `codex/integrity-release` is pushed to GitHub at the same commit. PR/CI merge verification is unavailable because this host has no GitHub CLI or authenticated browser session.
+- Exact next objective: implement migration 010 and the durable PostgreSQL monitoring worker while keeping Docker, backup/restore, and credentialed connector checks visibly blocked.
+
+## Private Beta Monitoring Milestone 1
+
+- Pushed the complete integrity release to `origin/codex/integrity-release`.
+- Created `codex/private-beta-monitoring` from the exact verified integrity release commit.
+- Re-ran typecheck, lint, all tests, and the production build before beginning monitoring work.
+- Confirmed this host has no Docker/Podman runtime, `pg_dump`, `pg_restore`, or GitHub CLI; no unavailable gate is represented as passing.
+- Selected one founder-managed, single-tenant Docker installation per agency as the supported private-beta deployment model.
+- Selected Slack, Google, Microsoft, and IMAP as credential-gated beta connectors, with manual import as the operational fallback.
+- Selected an in-app review inbox plus one professional-only SMTP digest; client communication remains manual.
+
+### Milestone 1 Skeptical Review
+
+- Release provenance: the implementation branch is based on the pushed, locally verified integrity commit, not an older remote baseline.
+- Data safety: no migration, runtime data, customer data, credential, or application behavior changed in this milestone.
+- Evidence integrity: Docker, restore, protected PostgreSQL browser flow, PR merge, and live connectors remain explicit external blockers.
+- Financial integrity: the existing integer-cent approval and exclusive revenue buckets passed unchanged.
+- Exact next objective: add checksum migration 010, worker leases, project automation settings, and organization-scoped internal execution services.
 
 ## Completed Work
 

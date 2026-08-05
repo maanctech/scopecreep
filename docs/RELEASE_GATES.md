@@ -1,5 +1,19 @@
 # Release Gates and Evidence
 
+## Private Beta Monitoring Milestone 1 (2026-08-05)
+
+| Gate | State | Evidence or blocker |
+| --- | --- | --- |
+| Integrity branch published | Pass | `origin/codex/integrity-release` points to `202d7ce` |
+| Monitoring branch provenance | Pass | `codex/private-beta-monitoring` created from `202d7ce` |
+| Local baseline | Pass | Typecheck, lint, 190 tests passed with one Docker-only skip, and production build passed |
+| GitHub PR/CI merge | External blocker | GitHub CLI and authenticated browser state are unavailable on this host; no merge is claimed |
+| Docker image and Compose | External blocker | Docker, Podman, and Colima are unavailable |
+| Real PostgreSQL backup/restore | External blocker | `pg_dump` and `pg_restore` are unavailable |
+| Live connector smoke tests | External blocker | No authorized Slack, Google, Microsoft, or IMAP test credentials are available |
+
+Current private-beta monitoring classification: **implementation in progress**. The product remains Internal Alpha until the deployment and restore blockers pass.
+
 ## Integrity Release Milestone 1 (2026-08-05)
 
 | Gate | State | Evidence or blocker |

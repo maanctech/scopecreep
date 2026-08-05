@@ -1,5 +1,16 @@
 # Product and Architecture Decisions
 
+## Private Beta Monitoring Decisions (2026-08-05)
+
+- Build the monitoring release from integrity commit `202d7ce`; do not wait on an unverifiable GitHub merge to begin local implementation.
+- Support one founder-managed, single-tenant Docker installation per agency for the private beta.
+- Treat Slack, Google, Microsoft, and IMAP as credential-gated beta connectors. Manual import remains the fallback and does not become autonomous.
+- Run scheduled ingestion and analysis in a separate PostgreSQL-backed worker, never in a public worker endpoint or only in a Next.js request callback.
+- Project automation is Owner/Admin controlled and requires a current approved SOW boundary before any automatic analysis is queued.
+- Automated jobs may prepare internal findings only. They never approve scope, set approved amounts, contact clients, create invoices, or record payment.
+- Notifications are professional-only: an in-app inbox plus one opt-in daily SMTP digest. Digests exclude SOW and communication bodies.
+- Continue using the existing professional-approved integer-cent workflow and correct commercial exports instead of creating new financial states.
+
 ## Integrity Release Decisions (2026-08-05)
 
 - Public audit intake is opt-in and disabled for newly created organizations.
