@@ -150,6 +150,15 @@ export async function configureEmailConnection(raw: unknown) {
 
 async function connectionForUser(connectionId: string) {
   const user = await auth();
+  const loaded = await connectionForActor(user, connectionId);
+
+  return { user, ...loaded };
+}
+
+async function connectionForActor(
+  user: { organizationId: string; userId: string },
+  connectionId: string,
+) {
   const result = await query<Row>(
     `SELECT c.*,s.ciphertext,s.initialization_vector,s.auth_tag FROM communication_connections c JOIN encrypted_secrets s ON s.connection_id=c.id AND s.organization_id=c.organization_id AND s.name='imap-password' WHERE c.id=$1 AND c.organization_id=$2 AND c.provider='IMAP'`,
     [connectionId, user.organizationId],
@@ -173,7 +182,7 @@ async function connectionForUser(connectionId: string) {
 
   await assertSafeIntegrationHost(config.host);
 
-  return { user, row, config, password };
+  return { row, config, password };
 }
 
 function imapClient(
@@ -234,9 +243,21 @@ export async function testEmailConnection(connectionId: string) {
 }
 
 export async function syncEmailConnection(connectionId: string) {
-  const loaded = await connectionForUser(connectionId);
-  const { user, config } = loaded;
+  const user = await auth();
+
+  return syncEmailConnectionForActor(user, connectionId);
+}
+
+export async function syncEmailConnectionForActor(
+  user: { organizationId: string; userId: string },
+  connectionId: string,
+) {
+  const loaded = await connectionForActor(user, connectionId);
+  const { config } = loaded;
   const jobId = randomUUID();
+
+  if (String(loaded.row.status) !== "Connected")
+    throw new Error("Test this connection successfully before syncing.");
 
   await recoverStaleEmailJobs(user.organizationId);
   await transaction(async (client) => {
@@ -355,6 +376,7 @@ export async function syncEmailConnection(connectionId: string) {
         );
 
       let inserted = 0;
+      const insertedMessageIds: string[] = [];
 
       for (const { uid, parsed } of messages) {
         const sender = addressValues(parsed.from)[0];
@@ -419,6 +441,7 @@ export async function syncEmailConnection(connectionId: string) {
 
         if (result.rows[0]) {
           inserted += 1;
+          insertedMessageIds.push(result.rows[0].id);
 
           if (threadId)
             await db.query(
@@ -463,6 +486,7 @@ export async function syncEmailConnection(connectionId: string) {
         duplicates: messages.length - inserted,
         highestUid: highestSeenUid,
         oversizedSkipped: oversized,
+        insertedMessageIds,
       };
 
       await db.query(

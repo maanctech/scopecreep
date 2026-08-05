@@ -10,6 +10,9 @@
 - Automated jobs may prepare internal findings only. They never approve scope, set approved amounts, contact clients, create invoices, or record payment.
 - Notifications are professional-only: an in-app inbox plus one opt-in daily SMTP digest. Digests exclude SOW and communication bodies.
 - Continue using the existing professional-approved integer-cent workflow and correct commercial exports instead of creating new financial states.
+- Worker leases default to 30 minutes and are renewed between connector and analysis operations. Expired runs fail visibly and retry only while the project remains Active.
+- Automatic ingestion queues only connector-returned inserted IDs. Existing edited evidence is marked stale for professional review rather than silently creating a replacement finding.
+- If the enabling user is no longer an Owner/Admin, monitoring moves to Needs Attention and does not continue under stale authority.
 
 ## Integrity Release Decisions (2026-08-05)
 

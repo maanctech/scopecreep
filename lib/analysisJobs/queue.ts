@@ -10,6 +10,15 @@ export async function queueAnalysisJobs(input: {
   messageIds: string[];
 }) {
   const auth = await reviewer();
+
+  return queueAnalysisJobsForActor(auth, input, "Manual");
+}
+
+export async function queueAnalysisJobsForActor(
+  actor: { organizationId: string; userId: string },
+  input: { projectId: string; messageIds: string[] },
+  triggerSource: "Manual" | "Automation",
+) {
   const uniqueMessageIds = [...new Set(input.messageIds)];
 
   if (!uniqueMessageIds.length)
@@ -24,7 +33,7 @@ export async function queueAnalysisJobs(input: {
 
   return transaction(async (client) => {
     const context = await approvedContext(
-      auth.organizationId,
+      actor.organizationId,
       input.projectId,
       client,
     );
@@ -38,7 +47,7 @@ export async function queueAnalysisJobs(input: {
            SELECT 1 FROM analysis_jobs existing
            WHERE existing.organization_id=m.organization_id AND existing.client_message_id=m.id
          )`,
-      [auth.organizationId, input.projectId, uniqueMessageIds],
+      [actor.organizationId, input.projectId, uniqueMessageIds],
     );
     let queued = 0;
     const jobIds: string[] = [];
@@ -61,18 +70,18 @@ export async function queueAnalysisJobs(input: {
       const inserted = await client.query(
         `INSERT INTO analysis_jobs
          (id,organization_id,project_id,client_message_id,sow_version_id,boundary_map_id,batch_id,requested_by,
-          provider,model,prompt_version,status,input_sha256,input_references,attempt_count,progress,max_attempts)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'Queued',$12,$13::jsonb,0,0,$14)
+          provider,model,prompt_version,status,input_sha256,input_references,attempt_count,progress,max_attempts,trigger_source)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'Queued',$12,$13::jsonb,0,0,$14,$15)
          ON CONFLICT DO NOTHING RETURNING id`,
         [
           jobId,
-          auth.organizationId,
+          actor.organizationId,
           input.projectId,
           message.id,
           context.sowVersionId,
           context.boundaryMapId,
           batchId,
-          auth.userId,
+          actor.userId,
           provider,
           model,
           AI_PROMPT_VERSION,
@@ -83,6 +92,7 @@ export async function queueAnalysisJobs(input: {
             boundaryMapId: context.boundaryMapId,
           }),
           jobMaxAttempts(),
+          triggerSource,
         ],
       );
 
@@ -96,8 +106,8 @@ export async function queueAnalysisJobs(input: {
       "INSERT INTO audit_logs (id,organization_id,actor_user_id,action,resource_type,resource_id,metadata) VALUES ($1,$2,$3,'analysis.batch.queued','analysis_batch',$4,$5::jsonb)",
       [
         randomUUID(),
-        auth.organizationId,
-        auth.userId,
+        actor.organizationId,
+        actor.userId,
         batchId,
         JSON.stringify({
           projectId: input.projectId,
@@ -106,12 +116,13 @@ export async function queueAnalysisJobs(input: {
           queued,
           sowVersionId: context.sowVersionId,
           boundaryMapId: context.boundaryMapId,
+          triggerSource,
         }),
       ],
     );
 
     return {
-      organizationId: auth.organizationId,
+      organizationId: actor.organizationId,
       batchId,
       jobIds,
       selected: uniqueMessageIds.length,

@@ -48,16 +48,16 @@ describe("ordered PostgreSQL migrations", () => {
     await db.close();
   });
 
-  it("applies migrations 001-009 on a fresh database and reruns idempotently", async () => {
+  it("applies migrations 001-010 on a fresh database and reruns idempotently", async () => {
     const first = await runMigrations();
     const second = await runMigrations();
     const applied = await db.query<{ version: string; filename: string }>(
       "SELECT version,filename FROM schema_migrations ORDER BY version",
     );
 
-    expect(first).toHaveLength(9);
+    expect(first).toHaveLength(10);
     expect(first[0]).toBe("001_commercial_foundation.sql");
-    expect(first.at(-1)).toBe("009_integrity_release.sql");
+    expect(first.at(-1)).toBe("010_private_beta_monitoring.sql");
     expect(second).toEqual([]);
     expect(applied.rows.map((row) => row.version)).toEqual([
       "001",
@@ -69,6 +69,7 @@ describe("ordered PostgreSQL migrations", () => {
       "007",
       "008",
       "009",
+      "010",
     ]);
   });
 });

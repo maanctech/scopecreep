@@ -65,6 +65,8 @@ export function validateProductionConfiguration(env: RuntimeEnvironment = proces
   positiveInteger(env, "ANALYSIS_JOB_MAX_ATTEMPTS", errors);
   positiveInteger(env, "ANALYSIS_STALE_MINUTES", errors);
   positiveInteger(env, "INGESTION_STALE_MINUTES", errors);
+  positiveInteger(env, "AUTOMATION_POLL_SECONDS", errors);
+  positiveInteger(env, "AUTOMATION_LEASE_MINUTES", errors);
   nonNegativeInteger(env, "TRUSTED_PROXY_HOPS", errors);
 
   if (

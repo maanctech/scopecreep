@@ -49,9 +49,14 @@ services:
       AI_PROVIDER: ${AI_PROVIDER:-ollama}
       OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
       OLLAMA_MODEL: ${OLLAMA_MODEL:-gemma3:12b-it-qat}
+      OLLAMA_NUM_CTX: ${OLLAMA_NUM_CTX:-32768}
       AI_TIMEOUT_MS: ${AI_TIMEOUT_MS:-90000}
       AI_MAX_ATTEMPTS: ${AI_MAX_ATTEMPTS:-2}
       ANALYSIS_JOB_MAX_ATTEMPTS: ${ANALYSIS_JOB_MAX_ATTEMPTS:-3}
+      ANALYSIS_STALE_MINUTES: ${ANALYSIS_STALE_MINUTES:-30}
+      INGESTION_STALE_MINUTES: ${INGESTION_STALE_MINUTES:-30}
+      AUTOMATION_POLL_SECONDS: ${AUTOMATION_POLL_SECONDS:-15}
+      AUTOMATION_LEASE_MINUTES: ${AUTOMATION_LEASE_MINUTES:-30}
       AI_FALLBACK_PROVIDER: ${AI_FALLBACK_PROVIDER:-}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4.1-mini}
@@ -59,6 +64,60 @@ services:
       ALLOW_INSECURE_IMAP: ${ALLOW_INSECURE_IMAP:-false}
     ports:
       - "${SCOPELEDGER_BIND_ADDRESS:-127.0.0.1}:${APP_PORT:-3000}:3000"
+    volumes:
+      - scopeledger_app_data:/app/data
+      - scopeledger_backups:/app/backups
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    networks:
+      - private
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    command: ["npm", "run", "worker"]
+    healthcheck:
+      disable: true
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL:-}
+      SCOPELEDGER_DB_HOST: postgres
+      SCOPELEDGER_DB_PORT: "5432"
+      SCOPELEDGER_DB_NAME: scopeledger
+      SCOPELEDGER_DB_USER: scopeledger
+      SCOPELEDGER_DB_PASSWORD: ${POSTGRES_PASSWORD}
+      DATABASE_POOL_SIZE: ${DATABASE_POOL_SIZE:-10}
+      DATABASE_SSL: disable
+      DATABASE_STARTUP_TIMEOUT_MS: ${DATABASE_STARTUP_TIMEOUT_MS:-90000}
+      APP_URL: ${APP_URL:-http://127.0.0.1:3000}
+      SCOPELEDGER_DOCUMENT_DIR: /app/data/documents
+      SCOPELEDGER_BACKUP_DIR: /app/backups
+      SCOPELEDGER_MASTER_KEY: ${SCOPELEDGER_MASTER_KEY:?Set SCOPELEDGER_MASTER_KEY in .env}
+      AI_PROVIDER: ${AI_PROVIDER:-ollama}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-gemma3:12b-it-qat}
+      OLLAMA_NUM_CTX: ${OLLAMA_NUM_CTX:-32768}
+      AI_TIMEOUT_MS: ${AI_TIMEOUT_MS:-90000}
+      AI_MAX_ATTEMPTS: ${AI_MAX_ATTEMPTS:-2}
+      ANALYSIS_JOB_MAX_ATTEMPTS: ${ANALYSIS_JOB_MAX_ATTEMPTS:-3}
+      ANALYSIS_STALE_MINUTES: ${ANALYSIS_STALE_MINUTES:-30}
+      INGESTION_STALE_MINUTES: ${INGESTION_STALE_MINUTES:-30}
+      AUTOMATION_POLL_SECONDS: ${AUTOMATION_POLL_SECONDS:-15}
+      AUTOMATION_LEASE_MINUTES: ${AUTOMATION_LEASE_MINUTES:-30}
+      AI_FALLBACK_PROVIDER: ${AI_FALLBACK_PROVIDER:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4.1-mini}
+      ALLOW_PRIVATE_INTEGRATION_HOSTS: ${ALLOW_PRIVATE_INTEGRATION_HOSTS:-false}
+      ALLOW_INSECURE_IMAP: ${ALLOW_INSECURE_IMAP:-false}
     volumes:
       - scopeledger_app_data:/app/data
       - scopeledger_backups:/app/backups

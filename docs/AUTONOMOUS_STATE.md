@@ -1,13 +1,34 @@
 # Autonomous Work State
 
-Last updated: 2026-08-05 during Private Beta Monitoring Milestone 1.
+Last updated: 2026-08-05 during Private Beta Monitoring Milestone 2.
 
 ## Repository State
 
 - Branch: `codex/private-beta-monitoring`
-- Base commit: `202d7ce` (`Complete integrity release validation gates`)
+- Current committed baseline: `3d0df74` (`Record private beta release baseline`)
 - `codex/integrity-release` is pushed to GitHub at the same commit. PR/CI merge verification is unavailable because this host has no GitHub CLI or authenticated browser session.
-- Exact next objective: implement migration 010 and the durable PostgreSQL monitoring worker while keeping Docker, backup/restore, and credentialed connector checks visibly blocked.
+- Exact next objective: complete connector evidence-change notifications and review-inbox/digest behavior on top of the durable worker.
+
+## Private Beta Monitoring Milestone 2
+
+- Added checksum migration 010 with project automation settings, leased automation runs, professional notifications, notification preferences/deliveries, analysis trigger provenance, and source-evidence staleness fields.
+- Added an organization-scoped analysis queue used by both authenticated manual requests and the internal worker. Automated jobs record `trigger_source=Automation` and pin the approved SOW and boundary at queue time.
+- Added a standalone PostgreSQL-backed worker with atomic due-project claims, bounded leases, expired-run recovery, lease renewal during long work, and deterministic batches of at most 100 messages.
+- Added Owner/Admin-only project automation API controls. Enabling requires a tested connector and current approved boundary; role downgrade pauses future execution.
+- Refactored platform and IMAP synchronization for explicit internal organization/actor execution without a browser session.
+- Connector persistence now returns inserted IDs, records provider edits against analyzed evidence, and never queues unchanged records.
+- Added the worker service to Docker Compose and disabled the inherited HTTP health check for the non-HTTP process.
+
+### Milestone 2 Tests and Skeptical Review
+
+- Targeted migration, connector, ingestion, analysis, and worker tests pass.
+- Full gates pass: typecheck, lint, and 196 tests with one Docker-only skip. The focused worker/migration/connector suite passes 23 tests.
+- Authorization: only a current Owner/Admin can enable or remain the actor for monitoring; organization/project composite foreign keys constrain all new records.
+- Duplicate safety: connection syncs are serialized; external IDs/content hashes remain authoritative; inserted IDs are deduplicated and split into controlled batches; analysis keeps one job per message.
+- Stale workers: expired automation leases fail the abandoned run and make the active project immediately retryable; fresh leases are untouched.
+- Financial safety: automated execution creates internal findings only and never sets approved hours/cents, transitions billing, sends client material, or records invoices/payments.
+- Data-loss review: checkpoints and persisted messages remain transactional; a lost automation lease cannot be finalized by the displaced worker.
+- Remaining gap: review notifications and SMTP delivery are represented in schema only and must not be presented as active until Milestone 4.
 
 ## Private Beta Monitoring Milestone 1
 

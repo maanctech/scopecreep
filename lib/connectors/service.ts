@@ -152,6 +152,15 @@ export async function configurePlatformConnection(raw: unknown) {
 
 async function connectionForUser(connectionId: string) {
   const context = await auth();
+  const connection = await connectionForActor(context, connectionId);
+
+  return { context, connection };
+}
+
+async function connectionForActor(
+  context: { organizationId: string },
+  connectionId: string,
+) {
   const result = await query<{
     id: string;
     provider: ConnectorProvider;
@@ -169,7 +178,7 @@ async function connectionForUser(connectionId: string) {
       "This connection is disabled. Create a new configuration to reconnect.",
     );
 
-  return { context, connection: result.rows[0] };
+  return result.rows[0];
 }
 
 async function usableSecrets(
@@ -234,7 +243,16 @@ export async function testPlatformConnection(connectionId: string) {
 }
 
 export async function syncPlatformConnection(connectionId: string) {
-  const { context, connection } = await connectionForUser(connectionId);
+  const context = await auth();
+
+  return syncPlatformConnectionForActor(context, connectionId);
+}
+
+export async function syncPlatformConnectionForActor(
+  context: { organizationId: string; userId: string },
+  connectionId: string,
+) {
+  const connection = await connectionForActor(context, connectionId);
 
   if (connection.status !== "Connected")
     throw new Error("Test this connection successfully before syncing.");
@@ -242,6 +260,18 @@ export async function syncPlatformConnection(connectionId: string) {
   const jobId = randomUUID();
 
   await transaction(async (client) => {
+    await client.query(
+      "SELECT pg_advisory_xact_lock(hashtext($1),hashtext($2))",
+      [context.organizationId, connectionId],
+    );
+    const active = await client.query(
+      "SELECT 1 FROM ingestion_jobs WHERE organization_id=$1 AND connection_id=$2 AND status IN ('Queued','Running')",
+      [context.organizationId, connectionId],
+    );
+
+    if (active.rows[0])
+      throw new Error("A synchronization is already running for this connection.");
+
     await client.query(
       "INSERT INTO ingestion_jobs (id,organization_id,connection_id,project_id,job_type,status,input,attempt_count,progress,max_attempts,started_at) VALUES ($1,$2,$3,$4,$5,'Running','{}'::jsonb,1,5,3,now())",
       [
@@ -306,11 +336,11 @@ export async function syncPlatformConnection(connectionId: string) {
       const result = { ...persisted, warnings: providerResult.warnings };
 
       await client.query(
-        "UPDATE ingestion_jobs SET status='Succeeded',progress=100,result=$1::jsonb,completed_at=now(),updated_at=now() WHERE id=$2 AND organization_id=$3",
+        "UPDATE ingestion_jobs SET status='Succeeded',progress=100,result=$1::jsonb,completed_at=now(),updated_at=now() WHERE id=$2 AND organization_id=$3 AND status='Running'",
         [JSON.stringify(result), jobId, context.organizationId],
       );
       await client.query(
-        "UPDATE communication_connections SET status='Connected',last_synced_at=now(),last_error=NULL,updated_at=now() WHERE id=$1 AND organization_id=$2",
+        "UPDATE communication_connections SET status='Connected',last_synced_at=now(),last_error=NULL,updated_at=now() WHERE id=$1 AND organization_id=$2 AND status='Syncing'",
         [connectionId, context.organizationId],
       );
 
@@ -321,7 +351,7 @@ export async function syncPlatformConnection(connectionId: string) {
 
     await transaction(async (client) => {
       await client.query(
-        "UPDATE ingestion_jobs SET status='Failed',error_message=$1,completed_at=now(),updated_at=now() WHERE id=$2 AND organization_id=$3",
+        "UPDATE ingestion_jobs SET status='Failed',progress=100,error_message=$1,completed_at=now(),updated_at=now() WHERE id=$2 AND organization_id=$3 AND status='Running'",
         [message, jobId, context.organizationId],
       );
       await client.query(

@@ -47,6 +47,8 @@ export async function persistConnectorSync(input: {
 
   let inserted = 0;
   let updated = 0;
+  const insertedMessageIds: string[] = [];
+  const changedMessageIds: string[] = [];
 
   for (const message of input.messages) {
     let threadId: string | null = null;
@@ -85,7 +87,8 @@ export async function persistConnectorSync(input: {
       threadId = selected.rows[0]?.id || threadId;
     }
 
-    const result = await client.query<{ inserted: boolean }>(
+    const messageId = randomUUID();
+    const result = await client.query<{ id: string; inserted: boolean }>(
       `INSERT INTO client_messages
        (id,organization_id,project_id,source_id,thread_id,external_id,source,sender,sender_email,recipients,subject,message_text,message_date,edited_at,deleted_at,content_sha256,raw_metadata,ingested_at)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb,$11,$12,$13,$14,$15,$16,$17::jsonb,now())
@@ -96,9 +99,9 @@ export async function persistConnectorSync(input: {
        WHERE client_messages.content_sha256 IS DISTINCT FROM EXCLUDED.content_sha256
           OR client_messages.edited_at IS DISTINCT FROM EXCLUDED.edited_at
           OR client_messages.deleted_at IS DISTINCT FROM EXCLUDED.deleted_at
-       RETURNING (xmax=0) AS inserted`,
+       RETURNING id,(xmax=0) AS inserted`,
       [
-        randomUUID(),
+        messageId,
         input.organizationId,
         input.projectId,
         sourceId,
@@ -118,8 +121,24 @@ export async function persistConnectorSync(input: {
       ],
     );
 
-    if (result.rows[0]?.inserted) inserted += 1;
-    else if (result.rows[0]) updated += 1;
+    if (result.rows[0]?.inserted) {
+      inserted += 1;
+      insertedMessageIds.push(result.rows[0].id);
+    } else if (result.rows[0]) {
+      updated += 1;
+      changedMessageIds.push(result.rows[0].id);
+      await client.query(
+        `UPDATE client_messages SET evidence_changed_at=now()
+         WHERE id=$1 AND organization_id=$2
+           AND EXISTS (SELECT 1 FROM scope_findings f WHERE f.organization_id=$2 AND f.client_message_id=$1)`,
+        [result.rows[0].id, input.organizationId],
+      );
+      await client.query(
+        `UPDATE scope_findings SET source_evidence_stale_at=now(),updated_at=now()
+         WHERE organization_id=$1 AND client_message_id=$2`,
+        [input.organizationId, result.rows[0].id],
+      );
+    }
 
     if (threadId && result.rows[0])
       await client.query(
@@ -133,5 +152,7 @@ export async function persistConnectorSync(input: {
     inserted,
     updated,
     unchanged: input.messages.length - inserted - updated,
+    insertedMessageIds,
+    changedMessageIds,
   };
 }

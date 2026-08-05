@@ -5,8 +5,10 @@
 - The integrity branch is pushed, but its private GitHub PR, CI result, and merge cannot be inspected from this host because GitHub CLI and an authenticated GitHub browser session are unavailable.
 - The monitoring branch is based on the exact pushed integrity commit, not a merged target-branch commit.
 - Docker/Compose, real `pg_dump`/`pg_restore`, protected PostgreSQL browser validation, and live connector credentials remain external release blockers.
-- Automated monitoring, the worker, review inbox, and SMTP digest are not implemented yet.
-- Exact next objective: implement migration 010 and durable worker behavior with duplicate, lease, authorization, and financial-integrity tests.
+- The durable worker is implemented and covered by PostgreSQL-compatible tests, but cannot be started in Compose on this host because no container runtime is available.
+- Review-inbox notification creation and SMTP digest delivery are not implemented yet; their migration tables alone do not constitute a working notification feature.
+- Live provider behavior remains credential-gated. Mocked adapters and worker tests cannot prove provider tenant permissions, OAuth approval, mailbox policy, or API quotas.
+- Exact next objective: finish evidence-change/connector-failure notifications, review inbox APIs/UI, and professional-only SMTP digest delivery.
 
 ## Integrity Release Notes (2026-08-05)
 

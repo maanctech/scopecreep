@@ -1,5 +1,18 @@
 # Release Gates and Evidence
 
+## Private Beta Monitoring Milestone 2 (2026-08-05)
+
+| Gate | State | Evidence or blocker |
+| --- | --- | --- |
+| Fresh/repeated migrations 001-010 | Pass | Checksum runner applies ten files and no work on rerun |
+| Durable worker lease | Pass in PostgreSQL-compatible tests | One due project is claimed; fresh work is exclusive; expired work fails and becomes retryable |
+| Paused and invalid projects | Pass | Paused projects are ignored; missing boundary or downgraded enabler moves to Needs Attention |
+| Approved evidence pinning | Pass | Automated job records approved SOW/boundary IDs and `trigger_source=Automation` |
+| Duplicate queue protection | Pass | Connector IDs are deduplicated and analysis retains one job per message |
+| Controlled batch size | Pass in implementation review | Worker splits newly inserted IDs into groups of at most 100 |
+| Worker Compose service | Implemented, runtime blocked | Non-HTTP worker uses the same private database/network and has no inherited app health check |
+| No autonomous billing/client action | Pass in code review | Worker calls ingestion, queue, and private analysis only; no finding review, billing, report send, or client API path |
+
 ## Private Beta Monitoring Milestone 1 (2026-08-05)
 
 | Gate | State | Evidence or blocker |
