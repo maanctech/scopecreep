@@ -13,6 +13,9 @@
 - Worker leases default to 30 minutes and are renewed between connector and analysis operations. Expired runs fail visibly and retry only while the project remains Active.
 - Automatic ingestion queues only connector-returned inserted IDs. Existing edited evidence is marked stale for professional review rather than silently creating a replacement finding.
 - If the enabling user is no longer an Owner/Admin, monitoring moves to Needs Attention and does not continue under stale authority.
+- Connector stale recovery must run before status validation. A prior worker may leave `Syncing`; requiring `Connected` first would make recovery unreachable.
+- Provider checkpoints advance only in the same transaction that proves the ingestion job is still Running and persists the corresponding source changes.
+- Connection state describes provider credential/sync health; project automation state separately describes scheduled monitoring health.
 
 ## Integrity Release Decisions (2026-08-05)
 

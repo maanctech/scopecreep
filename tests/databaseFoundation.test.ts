@@ -294,6 +294,16 @@ describe("commercial PostgreSQL foundation", () => {
         messages: [message],
       }),
     );
+
+    await db.query(
+      `INSERT INTO scope_findings
+       (id,organization_id,project_id,client_message_id,classification,confidence_score,reasoning,
+        relevant_sow_sections,request_type,estimated_hours,estimated_revenue_cents,suggested_change_order,
+        billing_decision,workflow_status,client_facing_explanation)
+       VALUES ('20000000-0000-4000-8000-000000000021',$1,$2,$3,'Out of Scope',0.9,
+         'Portal excluded','["No portal"]','Engineering',8,140000,'Draft','Undecided','Needs Review','Draft')`,
+      [ORGANIZATION_ID, project.rows[0].id, first.insertedMessageIds[0]],
+    );
     const second = await db.transaction((client) =>
       persistConnectorSync({
         client: client as never,
@@ -312,9 +322,23 @@ describe("commercial PostgreSQL foundation", () => {
     );
 
     expect(first).toMatchObject({ inserted: 1, updated: 0 });
-    expect(second).toMatchObject({ inserted: 0, updated: 1 });
-    const stored = await db.query<{ count: number; message_text: string }>(
-      "SELECT count(*)::int AS count,max(message_text) AS message_text FROM client_messages WHERE organization_id=$1 AND source='Slack' AND external_id='slack-1'",
+    expect(second).toMatchObject({
+      inserted: 0,
+      updated: 1,
+      changedMessageIds: [first.insertedMessageIds[0]],
+    });
+    const stored = await db.query<{
+      count: number;
+      message_text: string;
+      evidence_changed_at: string | null;
+      source_evidence_stale_at: string | null;
+    }>(
+      `SELECT count(*)::int AS count,max(m.message_text) AS message_text,
+              max(m.evidence_changed_at)::text AS evidence_changed_at,
+              max(f.source_evidence_stale_at)::text AS source_evidence_stale_at
+       FROM client_messages m
+       LEFT JOIN scope_findings f ON f.organization_id=m.organization_id AND f.client_message_id=m.id
+       WHERE m.organization_id=$1 AND m.source='Slack' AND m.external_id='slack-1'`,
       [ORGANIZATION_ID],
     );
 
@@ -322,5 +346,7 @@ describe("commercial PostgreSQL foundation", () => {
       count: 1,
       message_text: "Please add a portal and SSO",
     });
+    expect(stored.rows[0].evidence_changed_at).not.toBeNull();
+    expect(stored.rows[0].source_evidence_stale_at).not.toBeNull();
   });
 });

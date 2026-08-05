@@ -1,13 +1,32 @@
 # Autonomous Work State
 
-Last updated: 2026-08-05 during Private Beta Monitoring Milestone 2.
+Last updated: 2026-08-05 during Private Beta Monitoring Milestone 3.
 
 ## Repository State
 
 - Branch: `codex/private-beta-monitoring`
-- Current committed baseline: `3d0df74` (`Record private beta release baseline`)
+- Current committed baseline: `1af665c` (`Add durable private beta monitoring worker`)
 - `codex/integrity-release` is pushed to GitHub at the same commit. PR/CI merge verification is unavailable because this host has no GitHub CLI or authenticated browser session.
-- Exact next objective: complete connector evidence-change notifications and review-inbox/digest behavior on top of the durable worker.
+- Exact next objective: create professional notifications from worker outcomes and deliver the in-app inbox plus opt-in SMTP digest.
+
+## Private Beta Monitoring Milestone 3
+
+- Platform connector synchronization now uses the same organization/connection advisory serialization as IMAP.
+- Slack, Google, and Microsoft jobs older than the configured ingestion threshold are conditionally failed and move only genuinely stale connections to Needs Attention.
+- Recovery runs before connection-status validation and before each scheduled project run, eliminating the prior permanent `Syncing` state.
+- A recovered platform worker must reacquire its Running ingestion-job row before writing messages or advancing the provider checkpoint.
+- Platform and IMAP results return newly inserted IDs for automatic analysis; edited platform evidence marks the original finding stale without creating another finding.
+- Integration cards display connector state separately from project monitoring state, including next run and monitoring errors.
+
+### Milestone 3 Tests and Skeptical Review
+
+- Full gates pass: typecheck, lint, and 198 tests with one Docker-only skip.
+- Authorization/isolation: worker execution remains organization-scoped; connection credentials remain Owner/Admin-only; no automation endpoint exposes internal execution.
+- Duplicate/concurrency: advisory locks serialize starts, external IDs/content hashes preserve idempotency, and a recovered worker cannot persist or advance checkpoints.
+- Stuck jobs: fresh platform and IMAP jobs remain untouched; stale jobs fail conditionally before state validation and cannot leave a permanent Syncing label.
+- Evidence integrity: provider edits retain the original finding and set explicit staleness timestamps; soft-deleted messages remain excluded from active reports and financial totals.
+- Financial integrity: no connector path writes approved cents or billing events.
+- External blocker: live Slack, Google, Microsoft, and IMAP behavior remains unverified without authorized test tenants and credentials.
 
 ## Private Beta Monitoring Milestone 2
 

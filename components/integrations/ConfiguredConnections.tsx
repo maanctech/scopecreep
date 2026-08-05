@@ -85,6 +85,16 @@ export function ConfiguredConnections({
                       : "Never"}
                   </dd>
                 </div>
+                <div>
+                  <dt className="text-zinc-600">Monitoring</dt>
+                  <dd className="mt-1 font-medium">
+                    {connection.automation_status || "Not enabled"}
+                    {connection.automation_next_run_at &&
+                    connection.automation_status === "Active"
+                      ? ` · next ${new Date(connection.automation_next_run_at).toLocaleString()}`
+                      : ""}
+                  </dd>
+                </div>
                 <div className="sm:col-span-2">
                   <dt className="text-zinc-600">Data permissions</dt>
                   <dd className="mt-1 font-medium">
@@ -100,6 +110,15 @@ export function ConfiguredConnections({
                   text-red-900
                 ">
                   {String(connection.last_error)}
+                </p>
+              ) : null}
+              {connection.automation_last_error &&
+              connection.automation_last_error !== connection.last_error ? (
+                <p className="
+                  mt-3 rounded-sm border border-amber-200 bg-amber-50 p-3
+                  text-sm text-amber-950
+                ">
+                  Monitoring: {connection.automation_last_error}
                 </p>
               ) : null}
               {canManage && connection.status !== "Disabled" ? (

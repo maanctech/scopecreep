@@ -36,7 +36,13 @@ export type IntegrationConnection = {
   data_permissions: unknown[];
   created_at: string;
   failed_jobs: number;
+  automation_status: string | null;
+  automation_next_run_at: string | null;
+  automation_last_error: string | null;
 };
+
+class RecoveredPlatformSyncError extends Error {}
+
 const configurationSchema = z.discriminatedUnion("provider", [
   slackConfigurationSchema.extend({ provider: z.literal("Slack") }),
   googleConfigurationSchema.extend({ provider: z.literal("Google") }),
@@ -63,8 +69,13 @@ export async function listIntegrations() {
   const context = await auth();
   const result = await query<IntegrationConnection>(
     `SELECT c.id,c.provider,c.name,c.status,c.configuration,c.last_error,c.last_synced_at,c.last_tested_at,c.connection_verified_at,c.sync_scope,c.data_permissions,c.created_at,
+            automation.status AS automation_status,automation.next_run_at AS automation_next_run_at,automation.last_error AS automation_last_error,
             (SELECT count(*)::int FROM ingestion_jobs j WHERE j.organization_id=c.organization_id AND j.connection_id=c.id AND j.status='Failed') AS failed_jobs
-     FROM communication_connections c WHERE c.organization_id=$1 ORDER BY c.provider,c.created_at`,
+     FROM communication_connections c
+     LEFT JOIN project_automation_settings automation
+       ON automation.organization_id=c.organization_id
+      AND automation.project_id::text=c.configuration->>'projectId'
+     WHERE c.organization_id=$1 ORDER BY c.provider,c.created_at`,
     [context.organizationId],
   );
 
@@ -248,10 +259,51 @@ export async function syncPlatformConnection(connectionId: string) {
   return syncPlatformConnectionForActor(context, connectionId);
 }
 
+export async function recoverStalePlatformJobs(organizationId: string) {
+  const staleMinutes = Number(process.env.INGESTION_STALE_MINUTES || 30);
+  const threshold = Number.isSafeInteger(staleMinutes) && staleMinutes > 0
+    ? staleMinutes
+    : 30;
+
+  return transaction(async (client) => {
+    const recovered = await client.query<{ connection_id: string }>(
+      `UPDATE ingestion_jobs job SET status='Failed',progress=100,
+         error_message='Provider sync worker stopped before completion. Test the connection before retrying.',
+         completed_at=now(),updated_at=now()
+       FROM communication_connections connection
+       WHERE job.organization_id=$1 AND job.organization_id=connection.organization_id
+         AND job.connection_id=connection.id
+         AND connection.provider IN ('Slack','Google','Microsoft')
+         AND job.status='Running'
+         AND job.started_at < now()-make_interval(mins => $2::int)
+       RETURNING job.connection_id`,
+      [organizationId, threshold],
+    );
+    const connectionIds = recovered.rows.map((row) => row.connection_id);
+
+    if (connectionIds.length)
+      await client.query(
+        `UPDATE communication_connections connection SET status='Needs Attention',
+           last_error='A provider sync stopped before completion. Test the connection before syncing again.',updated_at=now()
+         WHERE connection.organization_id=$1 AND connection.id=ANY($2::uuid[])
+           AND connection.status='Syncing'
+           AND NOT EXISTS (
+             SELECT 1 FROM ingestion_jobs active
+             WHERE active.organization_id=connection.organization_id
+               AND active.connection_id=connection.id AND active.status='Running'
+           )`,
+        [organizationId, connectionIds],
+      );
+
+    return recovered.rowCount || 0;
+  });
+}
+
 export async function syncPlatformConnectionForActor(
   context: { organizationId: string; userId: string },
   connectionId: string,
 ) {
+  await recoverStalePlatformJobs(context.organizationId);
   const connection = await connectionForActor(context, connectionId);
 
   if (connection.status !== "Connected")
@@ -313,6 +365,16 @@ export async function syncPlatformConnectionForActor(
       );
 
     return transaction(async (client) => {
+      const lease = await client.query(
+        "SELECT 1 FROM ingestion_jobs WHERE id=$1 AND organization_id=$2 AND status='Running' FOR UPDATE",
+        [jobId, context.organizationId],
+      );
+
+      if (!lease.rows[0])
+        throw new RecoveredPlatformSyncError(
+          "This provider sync was recovered after its worker became stale.",
+        );
+
       const persisted = await persistConnectorSync({
         client,
         organizationId: context.organizationId,
@@ -346,7 +408,12 @@ export async function syncPlatformConnectionForActor(
 
       return result;
     });
-  } catch {
+  } catch (error) {
+    if (error instanceof RecoveredPlatformSyncError)
+      throw new Error(
+        "Provider sync stopped because its stale worker was recovered. Test the connection before starting another sync.",
+      );
+
     const message = `${connection.provider} sync failed. Review the provider permissions, filters, and job diagnostics.`;
 
     await transaction(async (client) => {

@@ -252,6 +252,7 @@ export async function syncEmailConnectionForActor(
   user: { organizationId: string; userId: string },
   connectionId: string,
 ) {
+  await recoverStaleEmailJobs(user.organizationId);
   const loaded = await connectionForActor(user, connectionId);
   const { config } = loaded;
   const jobId = randomUUID();
@@ -259,7 +260,6 @@ export async function syncEmailConnectionForActor(
   if (String(loaded.row.status) !== "Connected")
     throw new Error("Test this connection successfully before syncing.");
 
-  await recoverStaleEmailJobs(user.organizationId);
   await transaction(async (client) => {
     await client.query(
       "SELECT pg_advisory_xact_lock(hashtext($1),hashtext($2))",

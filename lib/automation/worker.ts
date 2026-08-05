@@ -5,9 +5,15 @@ import type {
   ClaimedAutomationRun,
   ConnectorSyncSummary,
 } from "@/lib/automation/types";
-import { syncPlatformConnectionForActor } from "@/lib/connectors/service";
+import {
+  recoverStalePlatformJobs,
+  syncPlatformConnectionForActor,
+} from "@/lib/connectors/service";
 import { query, transaction } from "@/lib/db/client";
-import { syncEmailConnectionForActor } from "@/lib/ingestion/email";
+import {
+  recoverStaleEmailJobs,
+  syncEmailConnectionForActor,
+} from "@/lib/ingestion/email";
 
 type Row = Record<string, unknown>;
 
@@ -226,6 +232,8 @@ export async function executeAutomationRun(
   let findings = 0;
 
   try {
+    await recoverStalePlatformJobs(run.organizationId);
+    await recoverStaleEmailJobs(run.organizationId);
     const connections = await query<{ id: string; provider: string }>(
       `SELECT id,provider FROM communication_connections
        WHERE organization_id=$1 AND configuration->>'projectId'=$2

@@ -7,6 +7,7 @@ vi.mock("@/lib/db/client", () => ({
   transaction: mocks.transaction,
 }));
 
+import { recoverStalePlatformJobs } from "@/lib/connectors/service";
 import { recoverStaleEmailJobs } from "@/lib/ingestion/email";
 
 const organizationId = "10000000-0000-4000-8000-000000000001";
@@ -46,6 +47,31 @@ describe("IMAP job recovery", () => {
     mocks.query.mockResolvedValueOnce({ rows: [], rowCount: 0 });
 
     await expect(recoverStaleEmailJobs(organizationId)).resolves.toBe(0);
+    expect(mocks.query).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("platform job recovery", () => {
+  it("fails only stale platform jobs and avoids clobbering newer sync state", async () => {
+    mocks.query
+      .mockResolvedValueOnce({
+        rows: [{ connection_id: connectionId }],
+        rowCount: 1,
+      })
+      .mockResolvedValueOnce({ rows: [], rowCount: 1 });
+
+    await expect(recoverStalePlatformJobs(organizationId)).resolves.toBe(1);
+    expect(mocks.query.mock.calls[0]?.[0]).toContain(
+      "connection.provider IN ('Slack','Google','Microsoft')",
+    );
+    expect(mocks.query.mock.calls[0]?.[0]).toContain("job.status='Running'");
+    expect(mocks.query.mock.calls[1]?.[0]).toContain("NOT EXISTS");
+  });
+
+  it("leaves fresh platform jobs untouched", async () => {
+    mocks.query.mockResolvedValueOnce({ rows: [], rowCount: 0 });
+
+    await expect(recoverStalePlatformJobs(organizationId)).resolves.toBe(0);
     expect(mocks.query).toHaveBeenCalledTimes(1);
   });
 });

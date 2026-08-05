@@ -1,5 +1,19 @@
 # Release Gates and Evidence
 
+## Private Beta Monitoring Milestone 3 (2026-08-05)
+
+| Gate | State | Evidence or blocker |
+| --- | --- | --- |
+| Platform sync serialization | Pass in implementation/tests | Organization/connection advisory lock plus active-job guard |
+| Platform stale recovery | Pass | Stale Running jobs fail; fresh jobs remain; newer active work prevents connection-state clobbering |
+| Lost-worker write prevention | Pass in implementation review | Persistence/checkpoint transaction locks and requires the original Running job |
+| Inserted-ID queue contract | Pass | Platform and IMAP return inserted IDs; worker deduplicates before queueing |
+| Edited evidence handling | Pass in PostgreSQL-compatible test | Existing message/finding retained and marked stale; no duplicate finding created |
+| Deleted evidence exclusion | Pass from integrity gates | Provider tombstones set `deleted_at`; current reports and money projections exclude deleted sources |
+| Truthful integration state | Pass in UI/code review | Connection state and monitoring state are displayed independently |
+| Milestone 3 full gates | Pass | Typecheck, lint, 198 tests passed; one Docker-only skip |
+| Live provider smoke tests | External blocker | Authorized tenants and credentials are unavailable |
+
 ## Private Beta Monitoring Milestone 2 (2026-08-05)
 
 | Gate | State | Evidence or blocker |

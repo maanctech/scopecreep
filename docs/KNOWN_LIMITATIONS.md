@@ -9,6 +9,8 @@
 - Review-inbox notification creation and SMTP digest delivery are not implemented yet; their migration tables alone do not constitute a working notification feature.
 - Live provider behavior remains credential-gated. Mocked adapters and worker tests cannot prove provider tenant permissions, OAuth approval, mailbox policy, or API quotas.
 - Exact next objective: finish evidence-change/connector-failure notifications, review inbox APIs/UI, and professional-only SMTP digest delivery.
+- IMAP is append-oriented and does not discover arbitrary remote deletions or edits after a UID has passed its checkpoint. Slack, Gmail history, and Microsoft delta tombstones provide stronger change visibility where their APIs emit it.
+- A provider failure moves the project automation state to Needs Attention. The private beta requires a professional to test/fix the connection and deliberately re-enable monitoring.
 
 ## Integrity Release Notes (2026-08-05)
 
