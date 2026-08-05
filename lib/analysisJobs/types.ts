@@ -28,4 +28,7 @@ export type AnalysisJobRow = {
   result: { findingId?: string; classification?: string } | null;
   cancel_requested_at: Date | null;
   created_at: Date;
+  started_at: Date | null;
+  can_recover: boolean;
+  start_over_count: number;
 };

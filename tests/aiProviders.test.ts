@@ -7,6 +7,7 @@ const originalProvider = process.env.AI_PROVIDER;
 const originalModel = process.env.OLLAMA_MODEL;
 const originalAttempts = process.env.AI_MAX_ATTEMPTS;
 const originalOpenAiKey = process.env.OPENAI_API_KEY;
+const originalOllamaContext = process.env.OLLAMA_NUM_CTX;
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -22,6 +23,9 @@ afterEach(() => {
 
   if (originalOpenAiKey === undefined) delete process.env.OPENAI_API_KEY;
   else process.env.OPENAI_API_KEY = originalOpenAiKey;
+
+  if (originalOllamaContext === undefined) delete process.env.OLLAMA_NUM_CTX;
+  else process.env.OLLAMA_NUM_CTX = originalOllamaContext;
 });
 
 describe("Ollama provider", () => {
@@ -75,6 +79,39 @@ describe("Ollama provider", () => {
     expect(result.metadata.status).toBe("Succeeded");
     expect(result.metadata.attempts).toBe(2);
     expect(result.analysis.estimated_revenue).toBe(1750);
+    const chatRequest = (fetch as ReturnType<typeof vi.fn>).mock.calls.find(
+      ([input]) => String(input).endsWith("/api/chat"),
+    );
+    const body = JSON.parse(String(chatRequest?.[1]?.body));
+
+    expect(body.format.required).toContain("internal_note");
+    expect(body.options.num_ctx).toBe(32768);
+  });
+
+  it("rejects oversized prompts before sending them to the model", async () => {
+    process.env.AI_PROVIDER = "ollama";
+    process.env.AI_MAX_ATTEMPTS = "1";
+    process.env.OLLAMA_NUM_CTX = "4096";
+    const fetcher = vi.fn(async (input: string | URL | Request) => {
+      if (String(input).endsWith("/api/tags"))
+        return new Response(
+          JSON.stringify({ models: [{ name: "gemma3:12b-it-qat" }] }),
+          { status: 200 },
+        );
+
+      throw new Error("Chat endpoint must not be called.");
+    });
+
+    vi.stubGlobal("fetch", fetcher);
+    const result = await analyzeClientRequestDetailed({
+      sowText: `Included services:\n${"contract evidence ".repeat(700)}`,
+      messageText: "Can you add another deliverable?",
+      hourlyRate: 175,
+    });
+
+    expect(result.metadata.status).toBe("Failed");
+    expect(result.metadata.errorMessage).toMatch(/exceeds the configured/);
+    expect(fetcher).not.toHaveBeenCalled();
   });
 
   it("retries a definitive out-of-scope response with zero effort", async () => {

@@ -1,13 +1,13 @@
 # Autonomous Work State
 
-Last updated: 2026-08-05 during Integrity Release Milestone 2.
+Last updated: 2026-08-05 during Integrity Release Milestone 3.
 
 ## Repository State
 
 - Branch: `codex/integrity-release`
-- Current commit: `aff081e` (`Secure audit intake and restore import continuity`)
-- Milestone 2 changes passed focused tests and are awaiting final gates and the milestone commit.
-- Exact next objective: complete Milestone 2 gates and commit, then implement recoverable analysis and ingestion jobs.
+- Current commit: `04db8af` (`Make SOW approval and billing transitions authoritative`)
+- Milestone 3 changes passed focused and full gates and are awaiting the milestone commit.
+- Exact next objective: commit Milestone 3, then correct report deletion/version loading, role navigation, and first-run/error states.
 
 ## Completed Work
 
@@ -26,6 +26,11 @@ Last updated: 2026-08-05 during Integrity Release Milestone 2.
 - Finding review edits and billing actions now persist atomically with one version increment and billing event; invoicing requires an explicit amount.
 - Version conflicts return the current organization-scoped finding and the form adopts it before another action.
 - Analysis results deep-link to the exact finding instead of an incompatible filter.
+- Stale analysis jobs can be atomically recovered; retry preserves pinned evidence, while one exhausted-job restart repins the current approved SOW and boundary.
+- Stale IMAP jobs fail after a configurable threshold, set the connection to Needs Attention only when no newer sync is active, and cannot resume writing after recovery.
+- Concurrent IMAP sync starts for one organization connection are serialized.
+- Required AI fields are strict, every client-message provider request carries the JSON Schema, and invalid responses create no finding.
+- Prompt capacity is checked before provider access using a conservative estimate; SOW evidence is never silently truncated. Ollama defaults to a validated 32,768-token context.
 
 ## Tests and Evidence
 
@@ -36,6 +41,8 @@ Last updated: 2026-08-05 during Integrity Release Milestone 2.
 - The rollback test confirms a failed audit transaction creates no audit and does not consume the credential.
 - Milestone 2 focused tests: 60 passed across transitions, APIs, cents totals, PostgreSQL, and SOW behavior.
 - Milestone 2 full gates: typecheck and lint passed; 179 tests passed with one Docker-only skip.
+- Milestone 3 focused tests: 35 passed with one Docker-only skip across analysis lifecycle, strict AI parsing, context limits, IMAP recovery, and runtime validation.
+- Milestone 3 full gates: typecheck and lint passed; 185 tests passed with one Docker-only skip.
 
 ## Milestone 1 Skeptical Review
 
@@ -60,3 +67,12 @@ Last updated: 2026-08-05 during Integrity Release Milestone 2.
 - No known Milestone 1 failure remains.
 - Docker and live backup/restore evidence remain unavailable on this host.
 - Live third-party connector verification still requires customer credentials.
+
+## Milestone 3 Skeptical Review
+
+- Authorization/isolation: all recovery and restart mutations remain Reviewer-gated and organization-scoped; restart locks the project before resolving current approved evidence.
+- Duplicate prevention: the one-job-per-message index remains authoritative; restart reuses the existing row, and IMAP starts are serialized by an organization/connection advisory lock.
+- Stale workers: analysis recovery aborts an in-process local controller; recovered IMAP workers must reacquire a Running lease before any message persistence.
+- Integration truthfulness: stale IMAP recovery changes connection state only when no other Running sync exists.
+- AI integrity: missing required fields, ungrounded evidence, and oversized prompts fail the job without creating a finding or truncating agreement text.
+- Auditability: analysis restart and recovery append organization-scoped audit events; restart is limited to one reset after the original attempt budget is exhausted.

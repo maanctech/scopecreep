@@ -17,6 +17,10 @@
 | Boundary immutability | Pass | Approved map edit is rejected; approval is limited to the current SOW version |
 | Milestone 2 focused tests | Pass | 60 transition, API, revenue, PostgreSQL, and SOW tests passed |
 | Milestone 2 full gates | Pass | Typecheck, lint, 179 tests passed; one Docker-only test skipped |
+| Analysis retry/recovery/start over | Pass | Retry preserves pinned evidence; stale Running recovery is conditional; one exhausted restart repins current approved evidence |
+| IMAP stale recovery | Pass in automated tests | Fresh jobs remain untouched; stale jobs fail atomically and connection state avoids newer-job clobbering |
+| AI required output and context capacity | Pass | Missing required fields fail; schema is supplied; oversized prompts make no provider call and create no finding |
+| Milestone 3 full gates | Pass | Typecheck, lint, 185 tests passed; one Docker-only test skipped |
 
 Last updated: 2026-07-22 after Milestone 10 commit `bd5ec5f`. Branch: `commercial-beta-local-first`.
 

@@ -13,7 +13,10 @@ export function AnalysisJobsTable({
   jobs: AnalysisJobRow[];
   busy: boolean;
   projectId: string;
-  onJobAction: (jobId: string, action: "cancel" | "retry") => void;
+  onJobAction: (
+    jobId: string,
+    action: "cancel" | "retry" | "start-over" | "recover",
+  ) => void;
 }) {
   return (
     <section>
@@ -61,7 +64,19 @@ export function AnalysisJobsTable({
                         : "Waiting")}
                   </td>
                   <td className="p-3">
-                    {["Queued", "Running"].includes(job.status) ? (
+                    {job.status === "Running" && job.can_recover ? (
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => onJobAction(job.id, "recover")}
+                        className="
+                          min-h-10 font-semibold text-red-800 underline
+                          disabled:opacity-50
+                        "
+                      >
+                        Recover
+                      </button>
+                    ) : ["Queued", "Running"].includes(job.status) ? (
                       <button
                         type="button"
                         disabled={busy}
@@ -86,10 +101,22 @@ export function AnalysisJobsTable({
                       >
                         Retry
                       </button>
+                    ) : ["Failed", "Cancelled"].includes(job.status) &&
+                      job.attempt_count >= job.max_attempts &&
+                      job.start_over_count < 1 ? (
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => onJobAction(job.id, "start-over")}
+                        className="
+                          min-h-10 font-semibold underline
+                          disabled:opacity-50
+                        "
+                      >
+                        Start over
+                      </button>
                     ) : ["Failed", "Cancelled"].includes(job.status) ? (
-                      <span className="text-zinc-600">
-                        Retry limit reached
-                      </span>
+                      <span className="text-zinc-600">No actions available</span>
                     ) : job.result?.findingId ? (
                       <Link
                         href={`/app/projects/${projectId}?finding=${job.result.findingId}#finding-${job.result.findingId}`}

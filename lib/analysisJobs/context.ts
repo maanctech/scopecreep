@@ -41,6 +41,12 @@ export function jobMaxAttempts() {
     : 2;
 }
 
+export function analysisStaleMinutes() {
+  const value = Number(process.env.ANALYSIS_STALE_MINUTES || 30);
+
+  return Number.isSafeInteger(value) && value > 0 ? value : 30;
+}
+
 export function boundaryText(items: Row[]) {
   return items
     .map(
@@ -140,10 +146,12 @@ export async function analysisWorkspace(projectId: string) {
     ),
     query<AnalysisJobRow>(
       `SELECT id,batch_id,client_message_id,status,provider,model,prompt_version,progress,attempt_count,max_attempts,
-              error_message,result,cancel_requested_at,created_at,started_at,completed_at
+              error_message,result,cancel_requested_at,created_at,started_at,completed_at,
+              (status='Running' AND started_at < now() - make_interval(mins => $3::int)) AS can_recover,
+              COALESCE((input_references->>'startOverCount')::int,0) AS start_over_count
        FROM analysis_jobs WHERE organization_id=$1 AND project_id=$2
        ORDER BY created_at DESC LIMIT 100`,
-      [auth.organizationId, projectId],
+      [auth.organizationId, projectId, analysisStaleMinutes()],
     ),
   ]);
 

@@ -4,10 +4,14 @@ import { authErrorResponse, requireApiPermission } from "@/lib/auth/api";
 import {
   cancelAnalysisJob,
   processAnalysisBatch,
+  recoverAnalysisJob,
   retryAnalysisJob,
+  startOverAnalysisJob,
 } from "@/lib/analysisJobs/service";
 
-const schema = z.object({ action: z.enum(["cancel", "retry"]) }).strict();
+const schema = z
+  .object({ action: z.enum(["cancel", "retry", "start-over", "recover"]) })
+  .strict();
 
 export async function POST(
   request: Request,
@@ -21,7 +25,13 @@ export async function POST(
     if (action === "cancel")
       return NextResponse.json({ result: await cancelAnalysisJob(id) });
 
-    const retried = await retryAnalysisJob(id);
+    if (action === "recover")
+      return NextResponse.json({ result: await recoverAnalysisJob(id) });
+
+    const retried =
+      action === "start-over"
+        ? await startOverAnalysisJob(id)
+        : await retryAnalysisJob(id);
 
     after(async () => {
       await processAnalysisBatch(retried.organizationId, retried.batchId);
@@ -39,7 +49,7 @@ export async function POST(
           error instanceof z.ZodError
             ? error.issues[0]?.message
             : error instanceof Error &&
-                /cannot be retried|can be cancelled|not found/.test(
+                /cannot be retried|cannot be started over|can be cancelled|can be recovered|already exists|not found/.test(
                   error.message,
                 )
               ? error.message

@@ -2,12 +2,32 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { validateProductionConfiguration } from "@/lib/config/runtime";
 
 const root = process.cwd();
 const read = (filename: string) => readFileSync(path.join(root, filename), "utf8");
 const dockerAvailable = spawnSync("docker", ["compose", "version"], { stdio: "ignore" }).status === 0;
 
 describe("self-hosted installation assets", () => {
+  it("rejects invalid analysis context and stale-job settings", () => {
+    const errors = validateProductionConfiguration({
+      NODE_ENV: "production",
+      DATABASE_URL: "postgresql://user:password@localhost/scopeledger",
+      APP_URL: "http://127.0.0.1:3000",
+      SCOPELEDGER_MASTER_KEY: Buffer.alloc(32).toString("base64"),
+      AI_PROVIDER: "ollama",
+      OLLAMA_NUM_CTX: "2048",
+      ANALYSIS_STALE_MINUTES: "0",
+      INGESTION_STALE_MINUTES: "later",
+    });
+
+    expect(errors).toContain(
+      "OLLAMA_NUM_CTX must be an integer of at least 4096.",
+    );
+    expect(errors).toContain("ANALYSIS_STALE_MINUTES must be a positive integer.");
+    expect(errors).toContain("INGESTION_STALE_MINUTES must be a positive integer.");
+  });
+
   it("builds a non-root runtime with matching PostgreSQL backup tools and health checks", () => {
     const dockerfile = read("Dockerfile");
 

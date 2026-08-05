@@ -52,7 +52,7 @@ describe("parseAnalysisJson", () => {
   "classification": "Out of Scope",
   "confidence_score": 85,
   "reasoning": "The SOW excludes user accounts.",
-  "relevant_sow_sections": "Does not include user accounts.",
+  "relevant_sow_sections": ["Does not include user accounts."],
   "request_type": "Engineering",
   "estimated_hours": 10,
   "estimated_revenue": 0,
@@ -68,23 +68,21 @@ Thanks.`,
     expect(result.estimated_revenue).toBe(2000);
   });
 
-  it("defaults non-critical missing AI fields instead of failing valid decisions", () => {
-    const result = parseAnalysisJson(
-      JSON.stringify({
+  it("rejects missing or invalid required AI fields", () => {
+    expect(() =>
+      parseAnalysisJson(
+        JSON.stringify({
         classification: "Needs Human Review",
         confidence_score: 0.4,
         reasoning: "The SOW is ambiguous.",
         relevant_sow_sections: [],
+        request_type: "Unknown",
         estimated_hours: 1,
         estimated_revenue: 999
-      }),
-      150
-    );
-
-    expect(result.request_type).toBe("Other");
-    expect(result.suggested_change_order).toMatch(/Review this request/);
-    expect(result.internal_note).toMatch(/Review this result/);
-    expect(result.estimated_revenue).toBe(150);
+        }),
+        150,
+      ),
+    ).toThrow();
   });
 
   it("forces in-scope work to zero estimated revenue", () => {

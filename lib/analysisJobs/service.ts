@@ -2,4 +2,9 @@ export type { AnalysisMessageRow, AnalysisJobRow } from "@/lib/analysisJobs/type
 export { approvedAnalysisContext, analysisWorkspace } from "@/lib/analysisJobs/context";
 export { queueAnalysisJobs } from "@/lib/analysisJobs/queue";
 export { processAnalysisJob, processAnalysisBatch } from "@/lib/analysisJobs/processing";
-export { cancelAnalysisJob, retryAnalysisJob } from "@/lib/analysisJobs/lifecycle";
+export {
+  cancelAnalysisJob,
+  recoverAnalysisJob,
+  retryAnalysisJob,
+  startOverAnalysisJob,
+} from "@/lib/analysisJobs/lifecycle";

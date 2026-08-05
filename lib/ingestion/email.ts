@@ -11,6 +11,9 @@ import {
 } from "@/lib/security/network";
 
 type Row = Record<string, unknown>;
+
+class RecoveredSyncError extends Error {}
+
 export const emailConfigSchema = z
   .object({
     projectId: z.uuid(),
@@ -45,6 +48,45 @@ async function auth() {
 
 const secretContext = (organizationId: string, connectionId: string) =>
   `${organizationId}:${connectionId}:imap-password`;
+
+export function ingestionStaleMinutes() {
+  const value = Number(process.env.INGESTION_STALE_MINUTES || 30);
+
+  return Number.isSafeInteger(value) && value > 0 ? value : 30;
+}
+
+export async function recoverStaleEmailJobs(organizationId: string) {
+  return transaction(async (client) => {
+    const recovered = await client.query<{ connection_id: string }>(
+      `UPDATE ingestion_jobs j SET status='Failed',progress=100,
+         error_message='IMAP worker stopped before completion. Verify the connection, then start a new sync.',
+         completed_at=now(),updated_at=now()
+       WHERE j.organization_id=$1 AND j.job_type='IMAP Sync' AND j.status='Running'
+         AND j.started_at < now() - make_interval(mins => $2::int)
+       RETURNING connection_id`,
+      [organizationId, ingestionStaleMinutes()],
+    );
+    const connectionIds = recovered.rows
+      .map((row) => row.connection_id)
+      .filter(Boolean);
+
+    if (connectionIds.length)
+      await client.query(
+        `UPDATE communication_connections SET status='Needs Attention',
+           last_error='A previous IMAP sync stopped before completion. Test the connection before syncing again.',updated_at=now()
+         WHERE organization_id=$1 AND id=ANY($2::uuid[]) AND status='Syncing'
+           AND NOT EXISTS (
+             SELECT 1 FROM ingestion_jobs active
+             WHERE active.organization_id=communication_connections.organization_id
+               AND active.connection_id=communication_connections.id
+               AND active.status='Running'
+           )`,
+        [organizationId, connectionIds],
+      );
+
+    return recovered.rowCount || 0;
+  });
+}
 
 export async function configureEmailConnection(raw: unknown) {
   const config = emailConfigSchema.parse(raw);
@@ -196,20 +238,35 @@ export async function syncEmailConnection(connectionId: string) {
   const { user, config } = loaded;
   const jobId = randomUUID();
 
-  await query(
-    "INSERT INTO ingestion_jobs (id,organization_id,connection_id,project_id,job_type,status,input,attempt_count,progress,max_attempts,started_at) VALUES ($1,$2,$3,$4,'IMAP Sync','Running',$5::jsonb,1,5,3,now())",
-    [
-      jobId,
-      user.organizationId,
-      connectionId,
-      config.projectId,
-      JSON.stringify({ folder: config.folder }),
-    ],
-  );
-  await query(
-    "UPDATE communication_connections SET status='Syncing',last_error=NULL,updated_at=now() WHERE id=$1 AND organization_id=$2",
-    [connectionId, user.organizationId],
-  );
+  await recoverStaleEmailJobs(user.organizationId);
+  await transaction(async (client) => {
+    await client.query(
+      "SELECT pg_advisory_xact_lock(hashtext($1),hashtext($2))",
+      [user.organizationId, connectionId],
+    );
+    const active = await client.query(
+      "SELECT 1 FROM ingestion_jobs WHERE organization_id=$1 AND connection_id=$2 AND job_type='IMAP Sync' AND status IN ('Queued','Running')",
+      [user.organizationId, connectionId],
+    );
+
+    if (active.rows[0])
+      throw new Error("An IMAP sync is already running for this connection.");
+
+    await client.query(
+      "INSERT INTO ingestion_jobs (id,organization_id,connection_id,project_id,job_type,status,input,attempt_count,progress,max_attempts,started_at) VALUES ($1,$2,$3,$4,'IMAP Sync','Running',$5::jsonb,1,5,3,now())",
+      [
+        jobId,
+        user.organizationId,
+        connectionId,
+        config.projectId,
+        JSON.stringify({ folder: config.folder }),
+      ],
+    );
+    await client.query(
+      "UPDATE communication_connections SET status='Syncing',last_error=NULL,updated_at=now() WHERE id=$1 AND organization_id=$2",
+      [connectionId, user.organizationId],
+    );
+  });
   const client = imapClient(config, loaded.password);
 
   try {
@@ -268,6 +325,16 @@ export async function syncEmailConnection(connectionId: string) {
     }
 
     return await transaction(async (db) => {
+      const lease = await db.query(
+        "SELECT 1 FROM ingestion_jobs WHERE id=$1 AND organization_id=$2 AND status='Running' FOR UPDATE",
+        [jobId, user.organizationId],
+      );
+
+      if (!lease.rows[0])
+        throw new RecoveredSyncError(
+          "This IMAP sync was recovered after its worker became stale.",
+        );
+
       const source = await db.query<{ id: string }>(
         "SELECT id FROM communication_sources WHERE organization_id=$1 AND connection_id=$2 AND external_id=$3",
         [user.organizationId, connectionId, config.folder],
@@ -399,28 +466,34 @@ export async function syncEmailConnection(connectionId: string) {
       };
 
       await db.query(
-        "UPDATE ingestion_jobs SET status='Succeeded',progress=100,result=$1::jsonb,completed_at=now(),updated_at=now() WHERE id=$2",
-        [JSON.stringify(result), jobId],
+        "UPDATE ingestion_jobs SET status='Succeeded',progress=100,result=$1::jsonb,completed_at=now(),updated_at=now() WHERE id=$2 AND organization_id=$3 AND status='Running'",
+        [JSON.stringify(result), jobId, user.organizationId],
       );
       await db.query(
-        "UPDATE communication_connections SET status='Connected',last_synced_at=now(),last_error=NULL,updated_at=now() WHERE id=$1",
-        [connectionId],
+        "UPDATE communication_connections SET status='Connected',last_synced_at=now(),last_error=NULL,updated_at=now() WHERE id=$1 AND organization_id=$2",
+        [connectionId, user.organizationId],
       );
 
       return result;
     });
-  } catch {
+  } catch (error) {
     await client.logout().catch(() => undefined);
+
+    if (error instanceof RecoveredSyncError)
+      throw new Error(
+        "Email sync stopped because its stale worker was recovered. Start a new sync after testing the connection.",
+      );
+
     const message =
       "IMAP sync failed. Verify connection settings, TLS, mailbox permissions, and sender filters.";
 
     await query(
-      "UPDATE ingestion_jobs SET status='Failed',error_message=$1,completed_at=now(),updated_at=now() WHERE id=$2",
-      [message, jobId],
+      "UPDATE ingestion_jobs SET status='Failed',progress=100,error_message=$1,completed_at=now(),updated_at=now() WHERE id=$2 AND organization_id=$3 AND status='Running'",
+      [message, jobId, user.organizationId],
     );
     await query(
-      "UPDATE communication_connections SET status='Needs Attention',last_error=$1,updated_at=now() WHERE id=$2",
-      [message, connectionId],
+      "UPDATE communication_connections SET status='Needs Attention',last_error=$1,updated_at=now() WHERE id=$2 AND organization_id=$3",
+      [message, connectionId, user.organizationId],
     );
     throw new Error(
       "Email sync failed. Review the connection settings and job diagnostics.",

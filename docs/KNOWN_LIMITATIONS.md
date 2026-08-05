@@ -8,6 +8,8 @@
 - Historical IMAP messages skipped by sender filters are not recovered if those filters are widened later. Filter changes apply to future syncs in this release.
 - Installation backups remain installation-wide and are restricted to system administrators; organization-scoped export is deferred.
 - Local JSON compatibility mode records atomic finding state and billing events but does not maintain the PostgreSQL `scope_finding_history` table.
+- Analysis restart is intentionally available only once after an exhausted attempt budget. Further failure requires correcting provider/input conditions rather than repeatedly resetting the same job.
+- Stale recovery uses installation-configured time thresholds, not a distributed worker heartbeat. Operators should size thresholds above expected model and mailbox execution time.
 
 Last updated: 2026-07-22 after Milestone 10 commit `bd5ec5f`. Branch: `commercial-beta-local-first`.
 

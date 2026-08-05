@@ -1,36 +1,25 @@
 import { createHash } from "node:crypto";
 import { z } from "zod";
 import { AI_PROMPT_VERSION, AI_SYSTEM_PROMPT, buildAnalysisPrompt } from "@/lib/aiPrompt";
+import { analysisJsonSchema } from "@/lib/ai/schema";
+import {
+  ANALYSIS_MAX_OUTPUT_TOKENS,
+  assertPromptFitsContext,
+} from "@/lib/ai/contextBudget";
 import { configuredFallbackProviderName, configuredProviderName, providerFor } from "@/lib/ai/providers";
 import type { AiProviderName, DetailedAnalysis } from "@/lib/ai/types";
 import { CLASSIFICATIONS, REQUEST_TYPES, type AnalysisInput } from "@/lib/types";
 
 const analysisSchema = z.object({
   classification: z.enum(CLASSIFICATIONS),
-  confidence_score: z.coerce.number().finite().nonnegative(),
+  confidence_score: z.number().finite().nonnegative(),
   reasoning: z.string().trim().min(1),
-  relevant_sow_sections: z
-    .preprocess((value) => {
-      if (Array.isArray(value)) return value;
-
-      if (typeof value === "string" && value.trim()) return [value];
-
-      return [];
-    }, z.array(z.string().trim().min(1)).default([]))
-    .default([]),
-  request_type: z.enum(REQUEST_TYPES).catch("Other"),
-  estimated_hours: z.coerce.number().finite().min(0).max(1000),
-  estimated_revenue: z.coerce.number().finite().min(0),
-  suggested_change_order: z
-    .string()
-    .trim()
-    .min(1)
-    .catch("Review this request with the project manager before responding to the client."),
-  internal_note: z
-    .string()
-    .trim()
-    .min(1)
-    .catch("Review this result before using it for client communication.")
+  relevant_sow_sections: z.array(z.string().trim().min(1)),
+  request_type: z.enum(REQUEST_TYPES),
+  estimated_hours: z.number().finite().min(0).max(1000),
+  estimated_revenue: z.number().finite().min(0),
+  suggested_change_order: z.string().trim().min(1),
+  internal_note: z.string().trim().min(1)
 }).strict();
 
 function roundCurrency(value: number) {
@@ -344,10 +333,20 @@ export async function analyzeClientRequestDetailed(input: {
         const correction = providerAttempt > 1
           ? "\n\nYour previous response was invalid. Return one complete JSON object matching the required shape, with SOW evidence for any definitive In Scope or Out of Scope decision."
           : "";
+        const requestPrompt = `${userPrompt}${correction}`;
+
+        assertPromptFitsContext({
+          provider: providerName,
+          systemPrompt: AI_SYSTEM_PROMPT,
+          userPrompt: requestPrompt,
+          maxOutputTokens: ANALYSIS_MAX_OUTPUT_TOKENS,
+        });
         const response = await provider.generate({
           systemPrompt: AI_SYSTEM_PROMPT,
-          userPrompt: `${userPrompt}${correction}`,
+          userPrompt: requestPrompt,
           timeoutMs,
+          jsonSchema: analysisJsonSchema,
+          maxOutputTokens: ANALYSIS_MAX_OUTPUT_TOKENS,
           signal: input.signal
         });
 

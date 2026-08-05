@@ -24,7 +24,9 @@ import {
   cancelAnalysisJob,
   processAnalysisJob,
   queueAnalysisJobs,
+  recoverAnalysisJob,
   retryAnalysisJob,
+  startOverAnalysisJob,
 } from "@/lib/analysisJobs/service";
 
 const organizationId = "10000000-0000-4000-8000-000000000001";
@@ -270,6 +272,75 @@ describe("controlled analysis jobs", () => {
     expect(mocks.databaseQuery.mock.calls[0]?.[0]).toContain(
       "attempt_count < j.max_attempts",
     );
+  });
+
+  it("recovers only a running job older than the configured threshold", async () => {
+    mocks.databaseQuery.mockResolvedValueOnce(
+      result([{ id: jobId, status: "Failed" }]),
+    );
+
+    await expect(recoverAnalysisJob(jobId)).resolves.toEqual({
+      status: "Failed",
+    });
+    expect(mocks.databaseQuery.mock.calls[0]?.[0]).toContain(
+      "j.status='Running'",
+    );
+    expect(mocks.databaseQuery.mock.calls[0]?.[0]).toContain(
+      "j.started_at < now()",
+    );
+
+    mocks.databaseQuery.mockResolvedValueOnce(result([]));
+    await expect(recoverAnalysisJob(jobId)).rejects.toThrow(
+      "Only a stale running analysis job can be recovered.",
+    );
+  });
+
+  it("starts an exhausted job over once with current approved evidence", async () => {
+    mocks.databaseQuery.mockImplementation(async (sql: string) => {
+      if (sql.includes("FROM analysis_jobs j") && sql.includes("FOR UPDATE"))
+        return result([
+          {
+            id: jobId,
+            organization_id: organizationId,
+            project_id: projectId,
+            client_message_id: messageId,
+            sow_version_id: "old-sow",
+            boundary_map_id: "old-map",
+            status: "Failed",
+            attempt_count: 3,
+            max_attempts: 3,
+            input_references: {},
+            message_text: "Can you add a portal?",
+            content_sha256: "message-hash",
+          },
+        ]);
+
+      if (sql.includes("FROM scope_findings")) return result([]);
+
+      if (sql.includes("FROM projects p")) return result([approvedProject()]);
+
+      if (sql.includes("FROM scope_boundary_items"))
+        return result([boundaryItem()]);
+
+      if (sql.startsWith("UPDATE analysis_jobs SET status='Queued'"))
+        return result([{ id: jobId, batch_id: "new-batch" }]);
+
+      return result([], 1);
+    });
+
+    await expect(startOverAnalysisJob(jobId)).resolves.toMatchObject({
+      jobId,
+      batchId: "new-batch",
+    });
+    const update = mocks.databaseQuery.mock.calls.find(([sql]) =>
+      String(sql).startsWith("UPDATE analysis_jobs SET status='Queued'"),
+    );
+
+    expect(update?.[0]).toContain("attempt_count=0");
+    expect(update?.[1]).toEqual(
+      expect.arrayContaining([sowVersionId, boundaryMapId]),
+    );
+    expect(String(update?.[1]?.[7])).toContain('"startOverCount":1');
   });
 
   it("finalizes a running cancellation even if the worker disappears", async () => {

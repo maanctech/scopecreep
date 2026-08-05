@@ -26,6 +26,24 @@ async function failJob(organizationId: string, jobId: string, message: string) {
   );
 }
 
+function actionableAnalysisError(message: string | null) {
+  if (!message)
+    return "AI analysis did not return a valid evidence-based result. Verify provider settings and retry.";
+
+  if (message.startsWith("AI prompt exceeds the configured")) return message;
+
+  if (/OpenAI analysis returned \d+/.test(message))
+    return `${message} Verify the OpenAI key, model access, and account status before retrying.`;
+
+  if (/Ollama analysis returned \d+|Ollama is running but no local models|Configured Ollama model/.test(message))
+    return `${message} Verify the local model and Ollama configuration before retrying.`;
+
+  if (/JSON|Zod|expected|invalid|evidence|confidence_score/i.test(message))
+    return "The AI provider returned invalid or ungrounded required JSON fields. Review provider diagnostics and retry; no finding was saved.";
+
+  return "AI analysis failed before a valid result was produced. Verify provider availability and retry; no finding was saved.";
+}
+
 async function persistFinding(
   client: PoolClient,
   input: {
@@ -174,7 +192,7 @@ export async function processAnalysisJob(
        JOIN client_messages m ON m.id=j.client_message_id AND m.organization_id=j.organization_id
        JOIN projects p ON p.id=j.project_id AND p.organization_id=j.organization_id
        JOIN sow_versions v ON v.id=j.sow_version_id AND v.organization_id=j.organization_id
-       WHERE j.id=$1 AND j.organization_id=$2`,
+       WHERE j.id=$1 AND j.organization_id=$2 AND m.deleted_at IS NULL`,
       [jobId, organizationId],
     );
     const row = input.rows[0];
@@ -217,7 +235,7 @@ export async function processAnalysisJob(
       await failJob(
         organizationId,
         jobId,
-        "AI analysis did not return a valid evidence-based result. Check AI diagnostics and retry.",
+        actionableAnalysisError(analyzed.metadata.errorMessage),
       );
 
       return { processed: false };
@@ -264,9 +282,14 @@ export async function processAnalysisJob(
       await failJob(
         organizationId,
         jobId,
-        error instanceof Error && /Pinned analysis inputs/.test(error.message)
+        error instanceof Error &&
+          /Pinned analysis inputs|AI prompt exceeds the configured/.test(
+            error.message,
+          )
           ? error.message
-          : "Analysis failed. Check AI diagnostics and retry.",
+          : actionableAnalysisError(
+              error instanceof Error ? error.message : null,
+            ),
       );
 
     return { processed: false, cancelled };

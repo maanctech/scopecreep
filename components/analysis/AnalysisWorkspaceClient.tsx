@@ -130,17 +130,26 @@ export function AnalysisWorkspaceClient({
     }
   }
 
-  async function jobAction(jobId: string, action: "cancel" | "retry") {
+  async function jobAction(
+    jobId: string,
+    action: "cancel" | "retry" | "start-over" | "recover",
+  ) {
     setBusy(true);
     setNotice({});
 
     try {
       await request(`/api/analysis/jobs/${jobId}`, { action });
       setNotice({
-        success:
-          action === "cancel"
-            ? "Cancellation recorded. A running model response will be discarded."
-            : "Analysis queued for retry using the same pinned SOW and boundary map.",
+        success: {
+          cancel:
+            "Cancellation recorded. A running model response will be discarded.",
+          retry:
+            "Analysis queued for retry using the same pinned SOW and boundary map.",
+          "start-over":
+            "Analysis restarted with the current approved SOW and boundary map.",
+          recover:
+            "The stale job was marked failed. Review its error, then retry it.",
+        }[action],
       });
       router.refresh();
     } catch (error) {

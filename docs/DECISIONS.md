@@ -13,6 +13,12 @@
 - Consequential finding actions accept review edits in the same optimistic-concurrency transaction; no client-side save-then-action sequence is authoritative.
 - An approved SOW boundary remains active while a regenerated draft is reviewed. Approval atomically archives the prior active map.
 - A boundary draft belongs permanently to one SOW version and cannot reactivate superseded agreement text.
+- An analysis job remains the unique lifecycle record for one communication. Retry preserves its pinned evidence; one exhausted-job start-over resets the attempt budget and explicitly repins current approved evidence.
+- Running analysis and IMAP jobs are recoverable only after configurable 30-minute stale thresholds and conditional database updates.
+- A recovered IMAP worker must prove its job is still Running inside the message-persistence transaction; otherwise it writes nothing.
+- Required client-message AI output fields have no parser defaults. Provider failure, invalid JSON, missing fields, weak evidence, and context overflow create no finding.
+- Prompt capacity uses three characters per estimated token plus output and safety reserves. Evidence is rejected intact rather than truncated.
+- Ollama's context defaults to `OLLAMA_NUM_CTX=32768`; OpenAI client-message analysis receives the same strict JSON Schema contract.
 
 Last updated: 2026-07-22 after Milestone 10 commit `bd5ec5f`. Branch: `commercial-beta-local-first`.
 

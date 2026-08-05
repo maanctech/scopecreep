@@ -63,7 +63,17 @@ export function validateProductionConfiguration(env: RuntimeEnvironment = proces
   positiveInteger(env, "AI_TIMEOUT_MS", errors);
   positiveInteger(env, "AI_MAX_ATTEMPTS", errors);
   positiveInteger(env, "ANALYSIS_JOB_MAX_ATTEMPTS", errors);
+  positiveInteger(env, "ANALYSIS_STALE_MINUTES", errors);
+  positiveInteger(env, "INGESTION_STALE_MINUTES", errors);
   nonNegativeInteger(env, "TRUSTED_PROXY_HOPS", errors);
+
+  if (
+    env.OLLAMA_NUM_CTX &&
+    (!/^\d+$/.test(env.OLLAMA_NUM_CTX) ||
+      !Number.isSafeInteger(Number(env.OLLAMA_NUM_CTX)) ||
+      Number(env.OLLAMA_NUM_CTX) < 4096)
+  )
+    errors.push("OLLAMA_NUM_CTX must be an integer of at least 4096.");
 
   if (env.SCOPELEDGER_STORAGE === "json") {
     errors.push("SCOPELEDGER_STORAGE=json is not supported for a commercial production start.");

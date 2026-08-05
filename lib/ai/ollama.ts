@@ -1,4 +1,5 @@
 import { analysisJsonSchema } from "@/lib/ai/schema";
+import { ollamaContextTokens } from "@/lib/ai/contextBudget";
 import type { AiProvider, AiProviderHealth, AiRawResponse, AiRequest } from "@/lib/ai/types";
 
 const RECOMMENDED_MODEL = "gemma3:12b-it-qat";
@@ -65,7 +66,11 @@ export class OllamaProvider implements AiProvider {
           model,
           stream: false,
           format: request.jsonSchema || analysisJsonSchema,
-          options: { temperature: 0, num_ctx: 8192, num_predict: request.maxOutputTokens || 1200 },
+          options: {
+            temperature: 0,
+            num_ctx: ollamaContextTokens(),
+            num_predict: request.maxOutputTokens || 1200,
+          },
           messages: [
             { role: "system", content: request.systemPrompt },
             { role: "user", content: request.userPrompt }

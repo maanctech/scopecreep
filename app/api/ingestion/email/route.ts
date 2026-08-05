@@ -43,7 +43,7 @@ export async function POST(request: Request) {
       error instanceof z.ZodError
         ? error.issues[0]?.message
         : error instanceof Error &&
-            /Email connection test failed|Email sync failed|Private or local integration hosts|valid mail server/.test(
+            /Email connection test failed|Email sync failed|Email sync stopped|already running|Private or local integration hosts|valid mail server/.test(
               error.message,
             )
           ? error.message

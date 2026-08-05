@@ -2,6 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import type { PoolClient } from "pg";
 import { currentAuthContext } from "@/lib/auth/current";
 import { query, transaction } from "@/lib/db/client";
+import { recoverStaleEmailJobs } from "@/lib/ingestion/email";
 import type {
   ImportPreview,
   NormalizedCommunication,
@@ -219,6 +220,8 @@ export async function importManualMessages(input: {
 
 export async function listIngestionJobs() {
   const auth = await context();
+
+  await recoverStaleEmailJobs(auth.organizationId);
   const result = await query<Row>(
     "SELECT id,project_id,job_type,status,result,error_message,attempt_count,progress,created_at,started_at,completed_at FROM ingestion_jobs WHERE organization_id=$1 ORDER BY created_at DESC LIMIT 100",
     [auth.organizationId],
