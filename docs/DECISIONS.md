@@ -21,6 +21,12 @@
 - SMTP recipients are derived only from opted-in active user accounts. Digest APIs accept no destination address, and message/SOW bodies are never emailed.
 - One digest is created per organization member and local calendar date. Failed delivery retries at most three times and never stores raw provider errors.
 - Nodemailer is the only dependency added for this release and is confined to server-side worker delivery.
+- Client-facing change-order and invoice-support values come only from professional-approved hours and integer cents. AI estimates remain internal potential values.
+- A finding under discussion may appear in a change-order working document only in a separate `UNAPPROVED` section with no authorized price or effort.
+- Weekly monitoring reports use a seven-day activity window and current exclusive financial buckets; potential AI value is displayed separately and is not summed with approved cents.
+- Weekly monitoring output is intentionally limited to in-app copy and Markdown download. No report is automatically delivered externally.
+- Migration 012 extends the report-version type constraint without altering immutable historical report content.
+- Pilot operations follow one founder-managed installation per agency, explicit backup ownership, one credentialed source, professional calibration, and measured support time. Repository tests cannot substitute for live pilot evidence.
 
 ## Integrity Release Decisions (2026-08-05)
 

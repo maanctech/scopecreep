@@ -1,14 +1,17 @@
 # Known Limitations
 
-## Private Beta Monitoring Milestone 1 (2026-08-05)
+## Private Beta Monitoring Release (2026-08-05)
 
 - The integrity branch is pushed, but its private GitHub PR, CI result, and merge cannot be inspected from this host because GitHub CLI and an authenticated GitHub browser session are unavailable.
 - The monitoring branch is based on the exact pushed integrity commit, not a merged target-branch commit.
 - Docker/Compose, real `pg_dump`/`pg_restore`, protected PostgreSQL browser validation, and live connector credentials remain external release blockers.
 - The durable worker is implemented and covered by PostgreSQL-compatible tests, but cannot be started in Compose on this host because no container runtime is available.
-- Review-inbox notification creation and SMTP digest delivery are not implemented yet; their migration tables alone do not constitute a working notification feature.
 - Live provider behavior remains credential-gated. Mocked adapters and worker tests cannot prove provider tenant permissions, OAuth approval, mailbox policy, or API quotas.
-- Exact next objective: finish evidence-change/connector-failure notifications, review inbox APIs/UI, and professional-only SMTP digest delivery.
+- The review inbox and SMTP digest are implemented, but live SMTP delivery remains unverified without authorized credentials.
+- Weekly activity uses local message creation time as the ingestion timestamp exposed by the current application model. Provider message dates do not determine whether a newly ingested record is counted this week.
+- Weekly summaries are internal snapshots, not accounting statements. They do not reconcile invoice identifiers or payments with an external billing system.
+- Pilot recruitment, customer credential approval, classification calibration, and value validation are operational work outside the repository and remain incomplete.
+- Exact next objective: run final automated/build gates, publish the monitoring branch, then execute Docker/restore and live-provider drills on a disposable release host.
 - IMAP is append-oriented and does not discover arbitrary remote deletions or edits after a UID has passed its checkpoint. Slack, Gmail history, and Microsoft delta tombstones provide stronger change visibility where their APIs emit it.
 - A provider failure moves the project automation state to Needs Attention. The private beta requires a professional to test/fix the connection and deliberately re-enable monitoring.
 - SMTP delivery is implemented and tested with a mocked transport but has not been verified against a live server. Operators must confirm SPF/DKIM/sender policy and delivery before enabling a paid pilot.
@@ -39,14 +42,14 @@ Last updated: 2026-07-22 after Milestone 10 commit `bd5ec5f`. Branch: `commercia
 - Organization switching and browser member management are not implemented.
 - There is no client login, approval link, notification, automatic email, automatic change order, invoice integration, payment collection, or accounting integration.
 - There is no independent penetration test, formal legal/privacy approval, production monitoring service, public support SLA, or trademark clearance.
-- The repository has no lint script or automated accessibility/browser runner. Type checking, semantic production-browser inspection, and the full manual browser workflow pass, but automated a11y regression coverage remains limited.
+- The repository has a lint script but no automated accessibility/browser runner. Automated a11y regression coverage remains limited.
 - Long real-model calls are asynchronous but hardware-dependent. The verified communication fixture took about 26 seconds; the SOW review took about 90 seconds on this host.
 - AI estimates can be wrong. Every scope and billing decision requires professional evidence review.
 
 ## Current Test Evidence
 
-- 144 automated tests pass; one Docker-only Compose validation test is skipped.
-- Type checking, production build, dependency audit, fresh/repeated migrations, real Ollama health, real structured analysis, and the full production-browser workflow pass.
+- Milestone 5 full gates pass: typecheck, lint, 207 tests with one Docker-only skip, and the production build.
+- Fresh/repeated migrations apply through 012 in the PostgreSQL-compatible migration runner.
 - Mocked connector tests do not prove live third-party behavior.
 
 ## Exact Next Objective

@@ -3,7 +3,7 @@ import { query, transaction } from "@/lib/db/client";
 import { cents, requireContext, type DbRow } from "@/lib/store/postgres/client";
 import { projectSummary, rowsForProject, snapshot } from "@/lib/store/postgres/projections";
 import { mapReport } from "@/lib/store/postgres/mappers";
-import { generateFindingsCsv, generateReportDocument } from "@/lib/reports/generator";
+import { generateFindingsCsv, generateReportDocument, type MonitoringHealth } from "@/lib/reports/generator";
 import { NotFoundError } from "@/lib/storeErrors";
 import type { BusinessDashboard, Report, ReportType } from "@/lib/types";
 
@@ -28,8 +28,54 @@ export async function generateAuditReport(projectId: string, reportType: ReportT
   const analyzed = rows.filter((row) => row.finding);
   const total = analyzed.reduce((sum, row) => sum + (row.finding && row.finding.classification !== "In Scope" ? row.finding.estimated_revenue : 0), 0);
   const out = analyzed.filter((row) => row.finding?.classification === "Out of Scope").length;
-  const markdown = generateReportDocument({ project, rows, reportType });
   const createdAt = new Date().toISOString();
+  let monitoring: MonitoringHealth | null = null;
+
+  if (reportType === "Weekly Monitoring Summary") {
+    const [automationResult, connectorResult] = await Promise.all([
+      query<{
+        status: string;
+        last_succeeded_at: Date | string | null;
+        next_run_at: Date | string | null;
+        last_error: string | null;
+      }>(
+        `SELECT status,last_succeeded_at,next_run_at,last_error
+         FROM project_automation_settings
+         WHERE organization_id=$1 AND project_id=$2`,
+        [context.organizationId, projectId]
+      ),
+      query<{
+        provider: string;
+        status: string;
+        last_synced_at: Date | string | null;
+        last_error: string | null;
+      }>(
+        `SELECT provider,status,last_synced_at,last_error
+         FROM communication_connections
+         WHERE organization_id=$1 AND configuration->>'projectId'=$2
+         ORDER BY provider,id`,
+        [context.organizationId, projectId]
+      )
+    ]);
+    const automation = automationResult.rows[0];
+
+    monitoring = {
+      automation: automation ? {
+        status: automation.status,
+        lastSucceededAt: automation.last_succeeded_at ? new Date(automation.last_succeeded_at).toISOString() : null,
+        nextRunAt: automation.next_run_at ? new Date(automation.next_run_at).toISOString() : null,
+        lastError: automation.last_error
+      } : null,
+      connectors: connectorResult.rows.map((connector) => ({
+        provider: connector.provider,
+        status: connector.status,
+        lastSyncedAt: connector.last_synced_at ? new Date(connector.last_synced_at).toISOString() : null,
+        lastError: connector.last_error
+      }))
+    };
+  }
+
+  const markdown = generateReportDocument({ project, rows, reportType, generatedAt: new Date(createdAt), monitoring });
   const sourceFindingIds = analyzed.flatMap((row) => row.finding ? [row.finding.id] : []);
   const provenance = await query<{
     finding_id: string;

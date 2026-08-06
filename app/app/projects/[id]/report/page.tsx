@@ -8,6 +8,7 @@ import { formatDollars } from "@/lib/domain/money";
 import { getReportHistory, readAuditReport } from "@/lib/store";
 import { currentAuthContext } from "@/lib/auth/current";
 import { hasPermission } from "@/lib/auth/authorization";
+import { reportSupportsCsv } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -121,17 +122,21 @@ export default async function ReportPage({ params }: ReportPageProps) {
                 >
                   Download Markdown
                 </Link>
-                <Link
-                  href={`/api/projects/${result.project.id}/report?format=csv`}
-                  className="
-                    inline-flex h-11 items-center rounded-md border
-                    border-audit-border px-4 text-sm font-semibold
-                    hover:bg-audit-soft
-                  "
-                >
-                  Download CSV
-                </Link>
-                <PrintReportButton />
+                {reportSupportsCsv(result.report.report_type) ? (
+                  <>
+                    <Link
+                      href={`/api/projects/${result.project.id}/report?format=csv`}
+                      className="
+                        inline-flex h-11 items-center rounded-md border
+                        border-audit-border px-4 text-sm font-semibold
+                        hover:bg-audit-soft
+                      "
+                    >
+                      Download CSV
+                    </Link>
+                    <PrintReportButton />
+                  </>
+                ) : null}
                 {canGenerate ? (
                   <GenerateReportButton
                     projectId={result.project.id}
@@ -199,7 +204,9 @@ export default async function ReportPage({ params }: ReportPageProps) {
                       <td className="p-3">
                         <div className="flex gap-3">
                           <Link className="font-semibold underline" href={`/api/projects/${id}/report/versions/${version.id}?format=markdown`}>Markdown</Link>
-                          <Link className="font-semibold underline" href={`/api/projects/${id}/report/versions/${version.id}?format=csv`}>CSV</Link>
+                          {reportSupportsCsv(version.report_type) ? (
+                            <Link className="font-semibold underline" href={`/api/projects/${id}/report/versions/${version.id}?format=csv`}>CSV</Link>
+                          ) : null}
                         </div>
                       </td>
                     </tr>

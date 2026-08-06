@@ -40,6 +40,7 @@ One line per document in `docs/`, grouped by topic.
 - [Private-Beta Release Checklist](release-checklist.md) - the dated, evidenced checklist completed before private beta.
 - [Change Log](changelog.md) - milestone-by-milestone change history.
 - [Private-Beta Sales Guide](private-beta-sales-guide.md) - positioning and sales guidance for the private beta.
+- [Private-Beta Pilot Runbook](private-beta-pilot-runbook.md) - founder onboarding, weekly operation, evidence, and exit criteria for three agency pilots.
 
 ---
 

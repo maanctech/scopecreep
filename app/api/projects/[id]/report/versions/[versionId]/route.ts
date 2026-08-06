@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { authErrorResponse, requireApiPermission } from "@/lib/auth/api";
 import { getReportVersion, NotFoundError } from "@/lib/store";
+import { reportSupportsCsv } from "@/lib/types";
 
 function filename(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 80) || "scopeledger-report";
@@ -18,6 +19,13 @@ export async function GET(
     if (!report) return NextResponse.json({ error: "Report version not found." }, { status: 404 });
 
     const format = new URL(request.url).searchParams.get("format");
+
+    if (format === "csv" && !reportSupportsCsv(report.report_type)) {
+      return NextResponse.json(
+        { error: "Weekly monitoring summaries support Markdown export only." },
+        { status: 400 }
+      );
+    }
 
     if (format === "markdown" || format === "csv") {
       const isCsv = format === "csv";

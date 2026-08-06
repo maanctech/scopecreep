@@ -1,5 +1,23 @@
 # Release Gates and Evidence
 
+## Private Beta Monitoring Milestone 5 (2026-08-05)
+
+| Gate | State | Evidence or blocker |
+| --- | --- | --- |
+| AI/approved value separation | Pass | Change-order tests inject extreme AI estimates and verify only professional-approved hours/cents appear |
+| Unapproved discussion handling | Pass | Discussion items are separately labeled `UNAPPROVED` with no authorized amount or effort |
+| Invoice-support approval gate | Pass | Null approved amounts are excluded and never rendered as `$0.00` |
+| Weekly activity and financial buckets | Pass | Deterministic report test covers seven-day counts and exclusive approved/invoiced/paid totals |
+| Monitoring health isolation | Pass in implementation review | Settings and connections are selected by authenticated organization and validated project ID |
+| Weekly export contract | Pass | Current/historical CSV routes reject weekly summaries; UI offers copy and Markdown only |
+| Fresh/repeated migrations 001-012 | Pass | Checksum runner applies twelve files and no work on rerun |
+| Focused Milestone 5 gates | Pass | 40 tests, typecheck, lint, and diff validation pass |
+| Milestone 5 full gates | Pass | Typecheck, lint, and 207 tests passed; one Docker-only skip |
+| Production build | Pass | `npm run build` compiled all application and API routes with Next.js webpack |
+| Three live agency pilots | External work | Recruitment, credentialed onboarding, and measured value require founder/customer participation |
+
+Current private-beta monitoring classification remains **Internal Alpha** until the deployment, backup/restore, and live-provider gates pass.
+
 ## Private Beta Monitoring Milestone 4 (2026-08-05)
 
 | Gate | State | Evidence or blocker |

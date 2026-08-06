@@ -1,13 +1,34 @@
 # Autonomous Work State
 
-Last updated: 2026-08-05 during Private Beta Monitoring Milestone 4.
+Last updated: 2026-08-05 during Private Beta Monitoring Milestone 5.
 
 ## Repository State
 
 - Branch: `codex/private-beta-monitoring`
-- Current committed baseline: `df1c48b` (`Harden connector recovery and evidence continuity`)
+- Current implementation: the Milestone 5 commit containing this file on `codex/private-beta-monitoring`; use `git rev-parse HEAD` as the authoritative hash.
 - `codex/integrity-release` is pushed to GitHub at the same commit. PR/CI merge verification is unavailable because this host has no GitHub CLI or authenticated browser session.
-- Exact next objective: correct client-facing commercial documents to use professional-approved values and add a weekly monitoring report.
+- Exact next objective: execute Docker startup, real PostgreSQL backup/restore, protected browser, live provider/SMTP, and three-agency pilot gates on authorized infrastructure.
+
+## Private Beta Monitoring Milestone 5
+
+- Change-order drafts now include amounts and effort only when a professional chose `Bill Separately` and entered an approved integer-cent amount. AI estimates never appear as client-facing commercial values.
+- Findings under discussion remain available in a separate, explicit `UNAPPROVED` section with no authorized price or effort.
+- Invoice-support summaries exclude findings without a professional-approved amount instead of rendering missing approval as `$0.00`.
+- Added a versioned Weekly Monitoring Summary with seven-day message/finding activity, AI potential clearly separated from mutually exclusive approved/invoiced/paid/retainer buckets, and current project automation/connector health.
+- Weekly summaries support in-app copy and Markdown download only. Current and historical CSV routes reject that report type and the UI does not present CSV or print controls.
+- Added migration 012 to extend the immutable report-version type constraint and expanded the fresh/idempotent migration test through 012.
+- Added a founder-operated pilot runbook for three agencies, including onboarding, backup ownership, calibration, success metrics, incident handling, and evidence requirements.
+
+### Milestone 5 Tests and Skeptical Review
+
+- Focused commercial-report, API, revenue-total, and migration suite passes 40 tests.
+- Full gates pass: typecheck, lint, and 207 tests with one Docker-only skip.
+- Production build passes and compiles all application/API routes with Next.js webpack.
+- Financial correctness: approved/invoiced/paid output uses only integer cents in exclusive workflow buckets; potential AI dollars remain separately labeled and are never substituted.
+- Authorization/isolation: weekly monitoring health is queried only after organization-scoped project lookup and every settings/connection query includes the authenticated organization and project.
+- Export integrity: weekly CSV is rejected in both current and historical APIs, preventing the generic report surface from claiming unsupported output.
+- Data continuity: migration 012 only replaces the report-type check; it does not rewrite reports, findings, approved amounts, or historical bodies.
+- External blockers: Docker/restore, live connector credentials, live SMTP delivery, and actual agency recruitment cannot be completed from this development host.
 
 ## Private Beta Monitoring Milestone 4
 

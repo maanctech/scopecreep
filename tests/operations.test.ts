@@ -45,7 +45,7 @@ afterEach(async () => {
 });
 
 function demoRows() {
-  const store = buildDemoStore();
+  const store = structuredClone(buildDemoStore());
   const project = store.projects[0];
   const findings = new Map(store.scopeFindings.map((finding) => [finding.client_message_id, finding]));
 
@@ -93,6 +93,82 @@ describe("versioned report generation", () => {
     expect(report).not.toContain("\n# Injected heading");
     expect(report).toContain("&lt;script&gt;");
     expect(report).toContain("\\# Injected heading");
+  });
+
+  it("uses only professional-approved values in client-facing commercial reports", () => {
+    const { project, rows } = demoRows();
+    const approved = rows.find((row) => row.finding?.billing_decision === "Bill Separately");
+
+    expect(approved?.finding).toBeTruthy();
+    approved!.finding!.estimated_hours = 999;
+    approved!.finding!.estimated_revenue = 999999;
+    approved!.finding!.approved_hours = 3.5;
+    approved!.finding!.approved_amount_cents = 12345;
+    approved!.finding!.client_facing_explanation = "AI draft asks for $999,999 and 999 hours.";
+
+    const changeOrder = generateReportDocument({ project, rows, reportType: "Change Order Draft" });
+    const invoiceSupport = generateReportDocument({ project, rows, reportType: "Invoice Support Summary" });
+
+    expect(changeOrder).toContain("Professional-approved effort: 3.5 hours");
+    expect(changeOrder).toContain("Professional-approved amount: $123.45");
+    expect(changeOrder).not.toContain("Estimated additional effort: 999 hours");
+    expect(changeOrder).not.toContain("Estimated amount:");
+    expect(changeOrder).not.toContain("AI draft asks for $999,999");
+    expect(invoiceSupport).toContain("Approved amount: $123.45");
+    expect(invoiceSupport).not.toContain("999999");
+  });
+
+  it("labels discussion drafts unapproved and excludes missing amounts from invoice support", () => {
+    const { project, rows } = demoRows();
+    const discussion = rows.find((row) => row.finding?.billing_decision === "Discuss With Client");
+    const invoiceCandidate = rows.find((row) => row.finding?.billing_decision === "Bill Separately");
+
+    expect(discussion?.finding).toBeTruthy();
+    expect(invoiceCandidate?.finding).toBeTruthy();
+    invoiceCandidate!.finding!.approved_amount_cents = null;
+
+    const changeOrder = generateReportDocument({ project, rows, reportType: "Change Order Draft" });
+    const invoiceSupport = generateReportDocument({ project, rows, reportType: "Invoice Support Summary" });
+
+    expect(changeOrder).toContain("UNAPPROVED - No price or effort is authorized for client use.");
+    expect(changeOrder).not.toContain(`Professional-approved amount: $${invoiceCandidate!.finding!.estimated_revenue}`);
+    expect(invoiceSupport).not.toContain(invoiceCandidate!.message.message_text);
+    expect(invoiceSupport).not.toContain("Approved amount: $0.00");
+  });
+
+  it("generates a weekly summary with exclusive approved buckets and monitoring health", () => {
+    const { project, rows } = demoRows();
+
+    rows[0].message.created_at = "2026-05-01T12:00:00.000Z";
+    const report = generateReportDocument({
+      project,
+      rows,
+      reportType: "Weekly Monitoring Summary",
+      generatedAt: new Date("2026-06-06T12:00:00.000Z"),
+      monitoring: {
+        automation: {
+          status: "Active",
+          lastSucceededAt: "2026-06-06T10:00:00.000Z",
+          nextRunAt: "2026-06-06T12:15:00.000Z",
+          lastError: null
+        },
+        connectors: [{
+          provider: "Slack",
+          status: "Connected",
+          lastSyncedAt: "2026-06-06T10:00:00.000Z",
+          lastError: null
+        }]
+      }
+    });
+
+    expect(report).toContain("New messages: 11");
+    expect(report).toContain("New findings: 12");
+    expect(report).toContain("Approved for billing, not invoiced: $1,750.00");
+    expect(report).toContain("Invoiced, not paid: $4,900.00");
+    expect(report).toContain("Paid: $2,100.00");
+    expect(report).toContain("Automation: Active");
+    expect(report).toContain("Slack: Connected");
+    expect(report).toContain("mutually exclusive");
   });
 });
 

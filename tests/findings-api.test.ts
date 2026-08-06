@@ -359,6 +359,28 @@ describe("report routes", () => {
     expect(read.status).toBe(200);
   });
 
+  it("limits weekly monitoring summaries to Markdown export", async () => {
+    const generated = await postReportRoute(
+      jsonRequest("POST", { reportType: "Weekly Monitoring Summary" }),
+      params(DEMO_PROJECT_ID)
+    );
+
+    expect(generated.status).toBe(201);
+
+    const markdown = await getReportRoute(
+      new Request(`http://localhost/api/projects/${DEMO_PROJECT_ID}/report?format=markdown`),
+      params(DEMO_PROJECT_ID)
+    );
+    const csv = await getReportRoute(
+      new Request(`http://localhost/api/projects/${DEMO_PROJECT_ID}/report?format=csv`),
+      params(DEMO_PROJECT_ID)
+    );
+
+    expect(markdown.status).toBe(200);
+    expect(markdown.headers.get("Content-Type")).toContain("text/markdown");
+    expect(csv.status).toBe(400);
+  });
+
   it("returns 404 for a missing project", async () => {
     const missing = await getReportRoute(jsonRequest("GET", ""), params("no-such-project"));
 

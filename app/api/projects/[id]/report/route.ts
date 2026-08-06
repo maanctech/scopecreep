@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { generateAuditReport, NotFoundError, readAuditReport } from "@/lib/store";
 import { authErrorResponse, requireApiPermission } from "@/lib/auth/api";
-import { REPORT_TYPES } from "@/lib/types";
+import { REPORT_TYPES, reportSupportsCsv } from "@/lib/types";
 
 export const runtime = "nodejs";
 
@@ -32,6 +32,13 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
     }
 
     const format = new URL(request.url).searchParams.get("format");
+
+    if (format === "csv" && !reportSupportsCsv(result.report.report_type)) {
+      return NextResponse.json(
+        { error: "Weekly monitoring summaries support Markdown export only." },
+        { status: 400 }
+      );
+    }
 
     if (format === "markdown" || format === "csv") {
       const isCsv = format === "csv";

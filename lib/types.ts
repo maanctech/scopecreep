@@ -311,10 +311,15 @@ export const REPORT_TYPES = [
   "Revenue Leakage Report",
   "Client Discussion Brief",
   "Change Order Draft",
-  "Invoice Support Summary"
+  "Invoice Support Summary",
+  "Weekly Monitoring Summary"
 ] as const;
 
 export type ReportType = (typeof REPORT_TYPES)[number];
+
+export function reportSupportsCsv(reportType: ReportType | undefined) {
+  return reportType !== "Weekly Monitoring Summary";
+}
 
 export type SalesTemplate = {
   id: string;
