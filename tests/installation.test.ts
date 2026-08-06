@@ -19,6 +19,11 @@ describe("self-hosted installation assets", () => {
       OLLAMA_NUM_CTX: "2048",
       ANALYSIS_STALE_MINUTES: "0",
       INGESTION_STALE_MINUTES: "later",
+      SMTP_USER: "smtp-user",
+      SMTP_PASSWORD: "",
+      SMTP_PORT: "70000",
+      DAILY_DIGEST_HOUR: "24",
+      APP_TIMEZONE: "Not/A_Real_Zone",
     });
 
     expect(errors).toContain(
@@ -26,6 +31,14 @@ describe("self-hosted installation assets", () => {
     );
     expect(errors).toContain("ANALYSIS_STALE_MINUTES must be a positive integer.");
     expect(errors).toContain("INGESTION_STALE_MINUTES must be a positive integer.");
+    expect(errors).toContain("SMTP_PORT must be an integer between 1 and 65535.");
+    expect(errors).toContain("DAILY_DIGEST_HOUR must be an integer between 0 and 23.");
+    expect(errors).toContain("APP_TIMEZONE must be a valid IANA time zone.");
+    expect(errors).toContain("SMTP_HOST is required when SMTP is configured.");
+    expect(errors).toContain("SMTP_FROM is required when SMTP is configured.");
+    expect(errors).toContain(
+      "SMTP_USER and SMTP_PASSWORD must either both be set or both be blank.",
+    );
   });
 
   it("builds a non-root runtime with matching PostgreSQL backup tools and health checks", () => {
@@ -56,6 +69,10 @@ describe("self-hosted installation assets", () => {
 
     expect(compose).toContain("http://host.docker.internal:11434");
     expect(compose).toContain("no-new-privileges:true");
+    expect(compose).toContain('command: ["npm", "run", "worker"]');
+    expect(compose).toContain("AUTOMATION_LEASE_MINUTES");
+    expect(compose).toContain("SMTP_PASSWORD: ${SMTP_PASSWORD:-}");
+    expect(compose).toContain("healthcheck:\n      disable: true");
   });
 
   it("validates configuration and database readiness before migration and startup", () => {

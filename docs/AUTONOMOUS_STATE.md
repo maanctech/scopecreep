@@ -1,13 +1,35 @@
 # Autonomous Work State
 
-Last updated: 2026-08-05 during Private Beta Monitoring Milestone 3.
+Last updated: 2026-08-05 during Private Beta Monitoring Milestone 4.
 
 ## Repository State
 
 - Branch: `codex/private-beta-monitoring`
-- Current committed baseline: `1af665c` (`Add durable private beta monitoring worker`)
+- Current committed baseline: `df1c48b` (`Harden connector recovery and evidence continuity`)
 - `codex/integrity-release` is pushed to GitHub at the same commit. PR/CI merge verification is unavailable because this host has no GitHub CLI or authenticated browser session.
-- Exact next objective: create professional notifications from worker outcomes and deliver the in-app inbox plus opt-in SMTP digest.
+- Exact next objective: correct client-facing commercial documents to use professional-approved values and add a weekly monitoring report.
+
+## Private Beta Monitoring Milestone 4
+
+- Added migration 011 for notification idempotency and an automation-enabler trigger that preserves organization membership validation without blocking later member removal.
+- Added user-scoped professional notifications for finding readiness, analysis failure, changed source evidence, connector failure, and paused automation.
+- Added a Reviewer-capable review inbox, unread navigation count, exact project/finding/job links, mark-one/read-all actions, and a clear empty state.
+- Added Owner/Admin project monitoring controls with tested-source and approved-boundary gates, explicit Active/Paused/Needs Attention states, and 15/30/60-minute intervals.
+- Added opt-in, professional-only daily SMTP digests using Nodemailer. Recipients come only from active organization user accounts; arbitrary client addresses are not accepted.
+- Digest bodies include counts, project names, exclusive revenue summaries, and a protected inbox link. They exclude SOW and communication bodies and reiterate human approval.
+- Digest delivery is unique per user/local date, catches up after the configured hour, recovers stale sends, retries failures at bounded intervals, and exposes the latest failure in-app.
+
+### Milestone 4 Tests and Skeptical Review
+
+- Focused notification/worker/migration/installation/navigation suite passes 18 tests with one Docker-only skip.
+- Full gates pass: typecheck, lint, and 203 tests with one Docker-only skip.
+- Authorization: inbox APIs require `findings:review`; every mutation matches organization and user; Read Only users see neither inbox navigation nor notification records.
+- Notification leakage: SMTP recipients are active opted-in members; tests prove client-message and SOW evidence bodies never enter email.
+- Duplicate delivery: notification dedupe keys and one delivery per member/date prevent repeat alerts and digests across worker retries.
+- Failure safety: inbox insertion is secondary and cannot roll back a persisted finding; SMTP failures are redacted, bounded, stored, and visible without exposing provider diagnostics.
+- Financial correctness: digest potential uses AI cents while approved/invoiced/paid use mutually exclusive professional-approved cents; deleted source messages are excluded.
+- UX integrity: review navigation waits for mark-read success, bulk read refreshes the shell count, and no action implies a client was contacted.
+- External blocker: SMTP has no live credentialed delivery evidence on this host.
 
 ## Private Beta Monitoring Milestone 3
 

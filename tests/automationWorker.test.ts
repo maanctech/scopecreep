@@ -148,6 +148,31 @@ describe("durable automation worker", () => {
     expect(await claimDueAutomation("worker-a")).toBeNull();
   });
 
+  it("rejects a cross-organization automation actor at the database boundary", async () => {
+    const otherOrganization = "81000000-0000-4000-8000-000000000020";
+    const otherUser = "81000000-0000-4000-8000-000000000021";
+
+    await db.query(
+      "INSERT INTO organizations (id,name,slug) VALUES ($1,'Other','other')",
+      [otherOrganization],
+    );
+    await db.query(
+      "INSERT INTO users (id,email,normalized_email,password_hash,display_name) VALUES ($1,'other@example.test','other@example.test','unused','Other User')",
+      [otherUser],
+    );
+    await db.query(
+      "INSERT INTO organization_memberships (organization_id,user_id,role) VALUES ($1,$2,'Owner')",
+      [otherOrganization, otherUser],
+    );
+
+    await expect(
+      db.query(
+        "UPDATE project_automation_settings SET enabled_by_user_id=$1 WHERE id=$2",
+        [otherUser, ids.setting],
+      ),
+    ).rejects.toThrow(/project organization/);
+  });
+
   it("pauses monitoring when the enabling professional loses management authority", async () => {
     await db.query(
       "UPDATE organization_memberships SET role='Reviewer' WHERE organization_id=$1 AND user_id=$2",

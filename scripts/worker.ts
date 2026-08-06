@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 import { runAutomationCycle } from "../lib/automation/worker";
 import { assertProductionConfiguration } from "../lib/config/runtime";
 import { closePool } from "../lib/db/client";
+import { deliverDueDigests } from "../lib/notifications/digest";
 
 function pollMilliseconds() {
   const value = Number(process.env.AUTOMATION_POLL_SECONDS || 15);
@@ -28,6 +29,8 @@ async function main() {
 
   while (!stopping) {
     const result = await runAutomationCycle(owner);
+
+    await deliverDueDigests();
 
     if (!result)
       await new Promise((resolve) => setTimeout(resolve, pollMilliseconds()));

@@ -11,6 +11,9 @@
 - Exact next objective: finish evidence-change/connector-failure notifications, review inbox APIs/UI, and professional-only SMTP digest delivery.
 - IMAP is append-oriented and does not discover arbitrary remote deletions or edits after a UID has passed its checkpoint. Slack, Gmail history, and Microsoft delta tombstones provide stronger change visibility where their APIs emit it.
 - A provider failure moves the project automation state to Needs Attention. The private beta requires a professional to test/fix the connection and deliberately re-enable monitoring.
+- SMTP delivery is implemented and tested with a mocked transport but has not been verified against a live server. Operators must confirm SPF/DKIM/sender policy and delivery before enabling a paid pilot.
+- Email digests are text-only and intentionally contain summary data rather than complete findings. Professionals must sign in to inspect evidence.
+- Notification insertion is best-effort after the authoritative finding/job write. A database-level notification failure can leave a valid finding without an inbox alert; the finding remains visible in the project analysis workspace.
 
 ## Integrity Release Notes (2026-08-05)
 

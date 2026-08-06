@@ -16,6 +16,7 @@ import {
   Settings,
   UserRound,
   LockKeyhole,
+  Bell,
   Workflow,
 } from "lucide-react";
 import { hasPermission } from "@/lib/auth/authorization";
@@ -31,6 +32,7 @@ const internalNav: Array<{
   { href: "/calculator", label: "Calculator", icon: Calculator },
   { href: "/app", label: "Audit Console", icon: BarChart3, permission: "projects:read" },
   { href: "/app/findings", label: "Findings", icon: ListChecks, permission: "findings:read" },
+  { href: "/app/notifications", label: "Review Inbox", icon: Bell, permission: "findings:review" },
   { href: "/app/import", label: "Import", icon: Import, permission: "communications:write" },
   { href: "/app/integrations", label: "Integrations", icon: Plug, permission: "integrations:read" },
   { href: "/app/billing", label: "Billing", icon: Receipt, permission: "billing:read" },
@@ -51,9 +53,11 @@ export function internalNavigationFor(role: OrganizationRole | null) {
 export function Shell({
   children,
   auth,
+  unreadNotifications = 0,
 }: {
   children: React.ReactNode;
   auth: Pick<AuthContext, "role" | "isSystemAdmin"> | null;
+  unreadNotifications?: number;
 }) {
   const pathname = usePathname();
   const internal = ["/app", "/admin", "/sales-assets", "/account"].some(
@@ -108,6 +112,13 @@ export function Shell({
                 >
                   <Icon className="size-4" aria-hidden="true" />
                   {item.label}
+                  {item.href === "/app/notifications" && unreadNotifications > 0 ? (
+                    <span className="
+                      rounded-sm bg-ink px-1.5 py-0.5 text-xs text-white
+                    ">
+                      {unreadNotifications > 99 ? "99+" : unreadNotifications}
+                    </span>
+                  ) : null}
                 </Link>
               );
             })}

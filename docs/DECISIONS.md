@@ -16,6 +16,11 @@
 - Connector stale recovery must run before status validation. A prior worker may leave `Syncing`; requiring `Connected` first would make recovery unreachable.
 - Provider checkpoints advance only in the same transaction that proves the ingestion job is still Running and persists the corresponding source changes.
 - Connection state describes provider credential/sync health; project automation state separately describes scheduled monitoring health.
+- Review alerts are scoped to current Owner/Admin/Reviewer members. Read Only users do not receive or navigate to operational review alerts.
+- Notification writes are idempotent and secondary to the underlying finding/job state; an alert failure never rolls back a valid finding.
+- SMTP recipients are derived only from opted-in active user accounts. Digest APIs accept no destination address, and message/SOW bodies are never emailed.
+- One digest is created per organization member and local calendar date. Failed delivery retries at most three times and never stores raw provider errors.
+- Nodemailer is the only dependency added for this release and is confined to server-side worker delivery.
 
 ## Integrity Release Decisions (2026-08-05)
 

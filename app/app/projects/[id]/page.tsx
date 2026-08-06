@@ -11,6 +11,8 @@ import { getBillingEvents, getProjectDetail } from "@/lib/store";
 import type { ScopeFinding } from "@/lib/types";
 import { currentAuthContext } from "@/lib/auth/current";
 import { hasPermission } from "@/lib/auth/authorization";
+import { projectAutomationForOrganization } from "@/lib/automation/service";
+import { ProjectAutomationControl } from "@/components/automation/ProjectAutomationControl";
 
 export const dynamic = "force-dynamic";
 
@@ -49,9 +51,16 @@ export default async function ProjectPage({ params, searchParams }: ProjectPageP
   const query = await searchParams;
   const auth = await currentAuthContext();
   const canReview = Boolean(auth && hasPermission(auth.role, "findings:review"));
+  const canManageAutomation = Boolean(
+    auth && hasPermission(auth.role, "integrations:write"),
+  );
   const detail = await getProjectDetail(id);
 
   if (!detail) notFound();
+
+  const automation = canManageAutomation && auth
+    ? await projectAutomationForOrganization(auth.organizationId, id).catch(() => null)
+    : null;
 
   const allEvents = await getBillingEvents();
   const findings = detail.messages
@@ -124,6 +133,13 @@ export default async function ProjectPage({ params, searchParams }: ProjectPageP
       ) : null}
 
       <Disclaimer />
+
+      {canManageAutomation ? (
+        <ProjectAutomationControl
+          projectId={detail.project.id}
+          initialAutomation={automation}
+        />
+      ) : null}
 
       <section className="space-y-4">
         <h2 className="text-xl font-semibold">Where this project&apos;s money stands</h2>

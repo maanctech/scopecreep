@@ -69,6 +69,39 @@ export function validateProductionConfiguration(env: RuntimeEnvironment = proces
   positiveInteger(env, "AUTOMATION_LEASE_MINUTES", errors);
   nonNegativeInteger(env, "TRUSTED_PROXY_HOPS", errors);
 
+  if (env.SMTP_PORT && (!/^\d+$/.test(env.SMTP_PORT) || Number(env.SMTP_PORT) < 1 || Number(env.SMTP_PORT) > 65535))
+    errors.push("SMTP_PORT must be an integer between 1 and 65535.");
+
+  if (env.SMTP_SECURE && !["true", "false"].includes(env.SMTP_SECURE))
+    errors.push("SMTP_SECURE must be true or false.");
+
+  if (env.DAILY_DIGEST_HOUR && (!/^\d+$/.test(env.DAILY_DIGEST_HOUR) || Number(env.DAILY_DIGEST_HOUR) > 23))
+    errors.push("DAILY_DIGEST_HOUR must be an integer between 0 and 23.");
+
+  if (env.APP_TIMEZONE) {
+    try {
+      new Intl.DateTimeFormat("en", { timeZone: env.APP_TIMEZONE }).format();
+    } catch {
+      errors.push("APP_TIMEZONE must be a valid IANA time zone.");
+    }
+  }
+
+  const smtpConfigured = [
+    env.SMTP_HOST,
+    env.SMTP_USER,
+    env.SMTP_PASSWORD,
+    env.SMTP_FROM,
+  ].some((value) => Boolean(value?.trim()));
+
+  if (smtpConfigured) {
+    if (!env.SMTP_HOST?.trim()) errors.push("SMTP_HOST is required when SMTP is configured.");
+
+    if (!env.SMTP_FROM?.trim()) errors.push("SMTP_FROM is required when SMTP is configured.");
+
+    if (Boolean(env.SMTP_USER?.trim()) !== Boolean(env.SMTP_PASSWORD))
+      errors.push("SMTP_USER and SMTP_PASSWORD must either both be set or both be blank.");
+  }
+
   if (
     env.OLLAMA_NUM_CTX &&
     (!/^\d+$/.test(env.OLLAMA_NUM_CTX) ||

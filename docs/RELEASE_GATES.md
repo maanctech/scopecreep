@@ -1,5 +1,20 @@
 # Release Gates and Evidence
 
+## Private Beta Monitoring Milestone 4 (2026-08-05)
+
+| Gate | State | Evidence or blocker |
+| --- | --- | --- |
+| Notification organization/user isolation | Pass | Service and PostgreSQL-compatible tests reject another member's alert and constrain enablers |
+| Notification deduplication | Pass | Repeated finding key produces one alert |
+| Review inbox and unread state | Pass in implementation/navigation tests | Reviewer route, exact deep links, read-one/read-all, empty state, role-filtered navigation |
+| Professional-only recipients | Pass | Delivery query joins active users, memberships, roles, and explicit preference |
+| Digest privacy | Pass | Test fixture client/SOW secrets are absent from SMTP text |
+| Daily delivery idempotency | Pass | First same-day execution sends once; second has zero attempts |
+| SMTP failure behavior | Pass | Redacted stored failure, no immediate retry, maximum three attempts, visible state |
+| Revenue summary units | Pass in query/test | Potential and professional-approved cent buckets remain distinct and exclusive |
+| Milestone 4 full gates | Pass | Typecheck, lint, 203 tests passed; one Docker-only skip |
+| Live SMTP delivery | External blocker | No authorized SMTP server credentials are available |
+
 ## Private Beta Monitoring Milestone 3 (2026-08-05)
 
 | Gate | State | Evidence or blocker |

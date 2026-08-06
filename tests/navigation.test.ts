@@ -7,6 +7,7 @@ describe("role-aware navigation", () => {
 
     expect(paths).toContain("/app/import");
     expect(paths).toContain("/app/integrations");
+    expect(paths).toContain("/app/notifications");
     expect(paths).not.toContain("/admin");
   });
 
@@ -16,5 +17,6 @@ describe("role-aware navigation", () => {
     expect(paths).not.toContain("/app/import");
     expect(paths).not.toContain("/admin");
     expect(paths).toContain("/app/findings");
+    expect(paths).not.toContain("/app/notifications");
   });
 });

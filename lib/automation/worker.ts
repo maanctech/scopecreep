@@ -14,6 +14,7 @@ import {
   recoverStaleEmailJobs,
   syncEmailConnectionForActor,
 } from "@/lib/ingestion/email";
+import { createProfessionalNotification } from "@/lib/notifications/service";
 
 type Row = Record<string, unknown>;
 
@@ -32,6 +33,13 @@ function leaseMinutes() {
   return Number.isSafeInteger(value) && value >= 5 && value <= 240
     ? value
     : 30;
+}
+
+async function safeNotify(
+  client: Parameters<typeof createProfessionalNotification>[0],
+  input: Parameters<typeof createProfessionalNotification>[1],
+) {
+  return createProfessionalNotification(client, input).catch(() => false);
 }
 
 async function defaultSyncConnection(
@@ -74,7 +82,11 @@ export async function claimDueAutomation(
   leaseOwner: string,
 ): Promise<ClaimedAutomationRun | null> {
   return transaction(async (client) => {
-    await client.query(
+    const unauthorized = await client.query<{
+      organization_id: string;
+      project_id: string;
+      enabled_by_user_id: string | null;
+    }>(
       `UPDATE project_automation_settings s SET status='Needs Attention',
          last_error='Monitoring paused because the enabling professional is no longer an Owner or Admin.',updated_at=now()
        WHERE s.status='Active' AND s.next_run_at <= now()
@@ -83,8 +95,21 @@ export async function claimDueAutomation(
            WHERE membership.organization_id=s.organization_id
              AND membership.user_id=s.enabled_by_user_id
              AND membership.role IN ('Owner','Admin')
-         )`,
+         )
+       RETURNING organization_id,project_id,enabled_by_user_id`,
     );
+
+    for (const row of unauthorized.rows)
+      await safeNotify(client, {
+        organizationId: row.organization_id,
+        userId: row.enabled_by_user_id,
+        type: "Automation Paused",
+        title: "Monitoring authorization needs review",
+        detail: "Monitoring stopped because the enabling professional is no longer an Owner or Admin.",
+        dedupeKey: `automation-authorization:${row.project_id}`,
+        projectId: row.project_id,
+      });
+
     const due = await client.query<Row>(
       `SELECT s.id,s.organization_id,s.project_id,s.enabled_by_user_id,
               s.sync_interval_minutes,s.next_run_at
@@ -118,6 +143,15 @@ export async function claimDueAutomation(
          WHERE id=$1 AND organization_id=$2`,
         [setting.id, setting.organization_id],
       );
+      await safeNotify(client, {
+        organizationId: String(setting.organization_id),
+        userId: String(setting.enabled_by_user_id),
+        type: "Automation Paused",
+        title: "Monitoring paused for SOW approval",
+        detail: "Approve the current SOW boundary before monitoring can analyze new communications.",
+        dedupeKey: `automation-boundary:${String(setting.project_id)}:${String(setting.next_run_at)}`,
+        projectId: String(setting.project_id),
+      });
 
       return null;
     }
@@ -252,9 +286,52 @@ export async function executeAutomationRun(
     for (const connection of connections.rows) {
       await renewLease(run);
       connectionCount += 1;
-      const result = await syncConnection(actor, connection.id, connection.provider);
+      let result: ConnectorSyncSummary;
+
+      try {
+        result = await syncConnection(actor, connection.id, connection.provider);
+      } catch (error) {
+        await safeNotify(
+          { query },
+          {
+            organizationId: run.organizationId,
+            userId: run.actorUserId,
+            type: "Connector Failed",
+            title: `${connection.provider} synchronization needs attention`,
+            detail: "Test the connection and review its permissions before re-enabling monitoring.",
+            dedupeKey: `connector-failed:${connection.id}:${run.runId}`,
+            projectId: run.projectId,
+            connectionId: connection.id,
+          },
+        );
+        throw error;
+      }
 
       for (const messageId of result.insertedMessageIds) newMessageIds.add(messageId);
+
+      if (result.changedMessageIds?.length) {
+        const changed = await query<{ id: string }>(
+          `SELECT id FROM scope_findings
+           WHERE organization_id=$1 AND client_message_id=ANY($2::uuid[])`,
+          [run.organizationId, result.changedMessageIds],
+        );
+
+        for (const finding of changed.rows)
+          await safeNotify(
+            { query },
+            {
+              organizationId: run.organizationId,
+              userId: run.actorUserId,
+              type: "Evidence Changed",
+              title: "Source evidence changed after analysis",
+              detail: "Review the updated or deleted source communication before relying on the existing finding.",
+              dedupeKey: `evidence-changed:${finding.id}:${run.runId}`,
+              projectId: run.projectId,
+              findingId: finding.id,
+              connectionId: connection.id,
+            },
+          );
+      }
     }
 
     inserted = newMessageIds.size;
@@ -274,8 +351,45 @@ export async function executeAutomationRun(
         for (const jobId of batch.jobIds) {
           await renewLease(run);
           const result = await processJob(run.organizationId, jobId);
+          const findingId = "findingId" in result ? result.findingId : null;
 
-          if (result.processed) findings += 1;
+          if (result.processed && findingId) {
+            findings += 1;
+            await safeNotify(
+              { query },
+              {
+                organizationId: run.organizationId,
+                userId: run.actorUserId,
+                type: "Finding Ready",
+                title: "New scope finding ready for review",
+                detail: "ScopeLedger prepared an evidence-backed internal finding. Professional approval is required before client use.",
+                dedupeKey: `finding-ready:${findingId}`,
+                projectId: run.projectId,
+                findingId,
+                analysisJobId: jobId,
+              },
+            );
+          } else {
+            const failed = await query<{ error_message: string | null }>(
+              "SELECT error_message FROM analysis_jobs WHERE id=$1 AND organization_id=$2 AND status='Failed'",
+              [jobId, run.organizationId],
+            );
+
+            if (failed.rows[0])
+              await safeNotify(
+                { query },
+                {
+                  organizationId: run.organizationId,
+                  userId: run.actorUserId,
+                  type: "Analysis Failed",
+                  title: "A communication could not be analyzed",
+                  detail: failed.rows[0].error_message || "Review the analysis job before retrying.",
+                  dedupeKey: `analysis-failed:${jobId}`,
+                  projectId: run.projectId,
+                  analysisJobId: jobId,
+                },
+              );
+          }
         }
       }
     }
@@ -292,6 +406,18 @@ export async function executeAutomationRun(
     const message =
       error instanceof Error ? error.message : "Monitoring run failed.";
 
+    await safeNotify(
+      { query },
+      {
+        organizationId: run.organizationId,
+        userId: run.actorUserId,
+        type: "Automation Paused",
+        title: "Project monitoring needs attention",
+        detail: message.slice(0, 1000),
+        dedupeKey: `automation-run-failed:${run.runId}`,
+        projectId: run.projectId,
+      },
+    );
     await finishRun(run, {
       connections: connectionCount,
       inserted,
