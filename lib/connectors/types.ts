@@ -1,5 +1,14 @@
+import { CONNECTOR_PROVIDERS, CONNECTOR_STATUSES } from "@/constants/typescript/ingestion";
 import type { NormalizedCommunication } from "@/lib/ingestion/types";
 
+export { CONNECTOR_PROVIDERS, CONNECTOR_STATUSES };
+
+/** Every provider the database will accept, including the non-OAuth ones. */
+export type CommunicationProvider = (typeof CONNECTOR_PROVIDERS)[number];
+
+export type ConnectorStatus = (typeof CONNECTOR_STATUSES)[number];
+
+/** The subset that authorizes over OAuth and has a connector implementation. */
 export type ConnectorProvider = "Slack" | "Google" | "Microsoft";
 
 export type ConnectorTestResult = {

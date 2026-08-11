@@ -1,10 +1,11 @@
 "use client";
 
 import type { IntegrationConnection } from "@/lib/connectors/service";
+import type { ConnectorStatus } from "@/lib/connectors/types";
 
 type Connection = IntegrationConnection;
 
-function statusClass(status: string) {
+function statusClass(status: ConnectorStatus) {
   if (status === "Connected")
     return "border-emerald-300 bg-emerald-50 text-emerald-900";
 

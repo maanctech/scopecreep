@@ -20,13 +20,13 @@ import {
   createSlackConnector,
   slackConfigurationSchema,
 } from "@/lib/connectors/slack";
-import type { ConnectorProvider } from "@/lib/connectors/types";
+import type { CommunicationProvider, ConnectorProvider, ConnectorStatus } from "@/lib/connectors/types";
 
 export type IntegrationConnection = {
   id: string;
-  provider: string;
+  provider: CommunicationProvider;
   name: string;
-  status: string;
+  status: ConnectorStatus;
   configuration: Record<string, unknown>;
   last_error: string | null;
   last_synced_at: string | null;
