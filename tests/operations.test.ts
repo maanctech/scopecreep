@@ -97,6 +97,37 @@ describe("versioned report generation", () => {
 });
 
 describe("production configuration and log safety", () => {
+  const validInstallation = {
+    DATABASE_URL: "postgresql://localhost/scopeledger",
+    APP_URL: "http://127.0.0.1:3000",
+    SCOPELEDGER_MASTER_KEY: Buffer.alloc(32).toString("base64")
+  };
+
+  it("requires the API key of whichever cloud provider is selected", () => {
+    expect(validateProductionConfiguration({ ...validInstallation })).toContain(
+      "ANTHROPIC_API_KEY is required when Anthropic is the provider or fallback."
+    );
+    expect(validateProductionConfiguration({ ...validInstallation, AI_PROVIDER: "openai" })).toContain(
+      "OPENAI_API_KEY is required when OpenAI is the provider or fallback."
+    );
+  });
+
+  it("requires the API key of a cloud provider named only as the fallback", () => {
+    expect(
+      validateProductionConfiguration({ ...validInstallation, AI_PROVIDER: "ollama", AI_FALLBACK_PROVIDER: "anthropic" })
+    ).toContain("ANTHROPIC_API_KEY is required when Anthropic is the provider or fallback.");
+  });
+
+  it("accepts a local provider without any cloud credential", () => {
+    expect(validateProductionConfiguration({ ...validInstallation, AI_PROVIDER: "ollama" })).toEqual([]);
+  });
+
+  it("rejects a provider that is not in the catalog", () => {
+    expect(validateProductionConfiguration({ ...validInstallation, AI_PROVIDER: "gemini" })).toContain(
+      "AI_PROVIDER must be one of anthropic, ollama, openai."
+    );
+  });
+
   it("fails closed when production storage or origin configuration is missing", () => {
     expect(validateProductionConfiguration({})).toEqual(
       expect.arrayContaining(["DATABASE_URL is required.", "APP_URL is required for secure links and origin-aware operations."])
@@ -105,7 +136,8 @@ describe("production configuration and log safety", () => {
       validateProductionConfiguration({
         DATABASE_URL: "postgresql://localhost/scopeledger",
         APP_URL: "http://127.0.0.1:3000",
-        SCOPELEDGER_MASTER_KEY: Buffer.alloc(32).toString("base64")
+        SCOPELEDGER_MASTER_KEY: Buffer.alloc(32).toString("base64"),
+        ANTHROPIC_API_KEY: "test-only-key"
       })
     ).toEqual([]);
     expect(

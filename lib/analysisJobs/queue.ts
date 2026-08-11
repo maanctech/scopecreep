@@ -2,7 +2,8 @@ import { createHash, randomUUID } from "node:crypto";
 import { configuredProviderName } from "@/lib/ai/providers";
 import { AI_PROMPT_VERSION } from "@/lib/aiPrompt";
 import { transaction } from "@/lib/db/client";
-import { approvedContext, configuredModel, jobMaxAttempts, reviewer } from "@/lib/analysisJobs/context";
+import { displayModelFor } from "@/lib/ai/catalog";
+import { approvedContext, jobMaxAttempts, reviewer } from "@/lib/analysisJobs/context";
 import type { Row } from "@/lib/analysisJobs/types";
 
 export async function queueAnalysisJobs(input: {
@@ -19,7 +20,7 @@ export async function queueAnalysisJobs(input: {
     throw new Error("Analyze at most 100 communications in one batch.");
 
   const provider = configuredProviderName();
-  const model = configuredModel(provider);
+  const model = displayModelFor(provider);
   const batchId = randomUUID();
 
   return transaction(async (client) => {

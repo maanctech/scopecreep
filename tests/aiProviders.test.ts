@@ -1,12 +1,17 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { analyzeClientRequestDetailed } from "@/lib/analysis";
+import { AnthropicProvider } from "@/lib/ai/anthropic";
+import { CATALOG_PROVIDER_NAMES, configuredModelFor, displayModelFor, missingEnvironmentFor } from "@/lib/ai/catalog";
 import { OllamaProvider, listOllamaModels } from "@/lib/ai/ollama";
 import { configuredProviderName } from "@/lib/ai/providers";
+import { AI_PROVIDERS } from "@/lib/ai/types";
 
 const originalProvider = process.env.AI_PROVIDER;
 const originalModel = process.env.OLLAMA_MODEL;
 const originalAttempts = process.env.AI_MAX_ATTEMPTS;
 const originalOpenAiKey = process.env.OPENAI_API_KEY;
+const originalAnthropicKey = process.env.ANTHROPIC_API_KEY;
+const originalAnthropicModel = process.env.ANTHROPIC_MODEL;
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -22,6 +27,12 @@ afterEach(() => {
 
   if (originalOpenAiKey === undefined) delete process.env.OPENAI_API_KEY;
   else process.env.OPENAI_API_KEY = originalOpenAiKey;
+
+  if (originalAnthropicKey === undefined) delete process.env.ANTHROPIC_API_KEY;
+  else process.env.ANTHROPIC_API_KEY = originalAnthropicKey;
+
+  if (originalAnthropicModel === undefined) delete process.env.ANTHROPIC_MODEL;
+  else process.env.ANTHROPIC_MODEL = originalAnthropicModel;
 });
 
 describe("Ollama provider", () => {
@@ -145,10 +156,227 @@ describe("Ollama provider", () => {
   });
 });
 
+describe("Anthropic provider", () => {
+  const groundedAnalysis = {
+    classification: "Out of Scope",
+    confidence_score: 0.93,
+    reasoning: "The SOW explicitly excludes customer login portals.",
+    relevant_sow_sections: ["Excluded: customer login portals."],
+    request_type: "Engineering",
+    estimated_hours: 20,
+    estimated_revenue: 0,
+    suggested_change_order: "We can scope the portal as a change order.",
+    internal_note: "Explicit exclusion."
+  };
+
+  function stubAnthropic(handler: (url: string) => Response) {
+    vi.stubGlobal("fetch", vi.fn(async (input: string | URL | Request) => handler(String(input))));
+  }
+
+  function modelResponse(id: string) {
+    return new Response(JSON.stringify({
+      id, type: "model", display_name: id, created_at: "2026-01-01T00:00:00Z"
+    }), { status: 200, headers: { "content-type": "application/json" } });
+  }
+
+  function notFoundResponse() {
+    return new Response(JSON.stringify({
+      type: "error", error: { type: "not_found_error", message: "model not found" }
+    }), { status: 404, headers: { "content-type": "application/json" } });
+  }
+
+  function messageResponse(body: Record<string, unknown>) {
+    return new Response(JSON.stringify({
+      id: "msg_test",
+      type: "message",
+      role: "assistant",
+      model: "claude-haiku-4-5",
+      content: [{ type: "text", text: JSON.stringify(body) }],
+      stop_reason: "end_turn",
+      usage: { input_tokens: 100, output_tokens: 50 }
+    }), { status: 200, headers: { "content-type": "application/json" } });
+  }
+
+  it("reports ready when the API key can reach the configured model", async () => {
+    process.env.ANTHROPIC_API_KEY = "test-only-key";
+    delete process.env.ANTHROPIC_MODEL;
+    const requestedUrls: string[] = [];
+
+    stubAnthropic((url) => {
+      requestedUrls.push(url);
+
+      return modelResponse("claude-haiku-4-5");
+    });
+    const health = await new AnthropicProvider().health();
+
+    expect(health.available).toBe(true);
+    expect(health.selectedModel).toBe("claude-haiku-4-5");
+    expect(requestedUrls).toEqual([expect.stringContaining("/v1/models/claude-haiku-4-5")]);
+  });
+
+  it("reports unavailable when the API key cannot reach the configured model", async () => {
+    process.env.ANTHROPIC_API_KEY = "test-only-key";
+    process.env.ANTHROPIC_MODEL = "claude-not-a-real-model";
+    stubAnthropic(() => notFoundResponse());
+    const health = await new AnthropicProvider().health();
+
+    expect(health.available).toBe(false);
+    expect(health.selectedModel).toBeNull();
+    expect(health.message).toContain("claude-not-a-real-model");
+  });
+
+  it("reports a rejected key without echoing the key", async () => {
+    process.env.ANTHROPIC_API_KEY = "test-only-key";
+    delete process.env.ANTHROPIC_MODEL;
+    stubAnthropic(() => new Response(JSON.stringify({
+      type: "error", error: { type: "authentication_error", message: "invalid x-api-key" }
+    }), { status: 401, headers: { "content-type": "application/json" } }));
+    const health = await new AnthropicProvider().health();
+
+    expect(health.available).toBe(false);
+    expect(health.message).toBe("ANTHROPIC_API_KEY was rejected. Check the key and its workspace permissions.");
+    expect(health.message).not.toContain("test-only-key");
+  });
+
+  it("reports a missing key without contacting the network", async () => {
+    delete process.env.ANTHROPIC_API_KEY;
+    const fetcher = vi.fn();
+
+    vi.stubGlobal("fetch", fetcher);
+    const health = await new AnthropicProvider().health();
+
+    expect(fetcher).not.toHaveBeenCalled();
+    expect(health.available).toBe(false);
+    expect(health.message).toBe("ANTHROPIC_API_KEY is not configured.");
+  });
+
+  it("returns a validated analysis grounded in the supplied SOW", async () => {
+    process.env.AI_PROVIDER = "anthropic";
+    process.env.ANTHROPIC_API_KEY = "test-only-key";
+    process.env.AI_MAX_ATTEMPTS = "1";
+    stubAnthropic(() => messageResponse(groundedAnalysis));
+
+    const result = await analyzeClientRequestDetailed({
+      sowText: "Excluded: customer login portals.",
+      messageText: "Can you add a customer portal?",
+      hourlyRate: 175
+    });
+
+    expect(result.metadata.status).toBe("Succeeded");
+    expect(result.metadata.provider).toBe("anthropic");
+    expect(result.metadata.model).toBe("claude-haiku-4-5");
+    expect(result.analysis.classification).toBe("Out of Scope");
+    expect(result.analysis.estimated_revenue).toBe(3500);
+  });
+
+  it("constrains the request to the analysis schema", async () => {
+    process.env.AI_PROVIDER = "anthropic";
+    process.env.ANTHROPIC_API_KEY = "test-only-key";
+    process.env.AI_MAX_ATTEMPTS = "1";
+    let sentBody: Record<string, never> | undefined;
+
+    vi.stubGlobal("fetch", vi.fn(async (_input: string | URL | Request, init?: RequestInit) => {
+      sentBody = JSON.parse(String(init?.body));
+
+      return messageResponse(groundedAnalysis);
+    }));
+
+    await analyzeClientRequestDetailed({
+      sowText: "Excluded: customer login portals.",
+      messageText: "Can you add a customer portal?",
+      hourlyRate: 175
+    });
+
+    expect(sentBody).toMatchObject({
+      model: "claude-haiku-4-5",
+      output_config: { format: { type: "json_schema" } }
+    });
+  });
+
+  it("redacts a credential that a provider echoes back in an error", async () => {
+    process.env.AI_PROVIDER = "anthropic";
+    process.env.ANTHROPIC_API_KEY = "test-only-key";
+    process.env.AI_MAX_ATTEMPTS = "1";
+    stubAnthropic(() => new Response(JSON.stringify({
+      type: "error",
+      error: { type: "invalid_request_error", message: "bad key sk-ant-api03-AAAABBBBCCCCDDDDEEEE" }
+    }), { status: 400, headers: { "content-type": "application/json" } }));
+
+    const result = await analyzeClientRequestDetailed({
+      sowText: "Excluded: customer login portals.",
+      messageText: "Can you add a customer portal?",
+      hourlyRate: 175
+    });
+
+    expect(result.metadata.status).toBe("Failed");
+    expect(result.metadata.errorMessage).not.toContain("sk-ant-api03-AAAABBBBCCCCDDDDEEEE");
+    expect(result.metadata.errorMessage).toContain("[REDACTED]");
+  });
+
+  it("falls back to human review when the model declines", async () => {
+    process.env.AI_PROVIDER = "anthropic";
+    process.env.ANTHROPIC_API_KEY = "test-only-key";
+    process.env.AI_MAX_ATTEMPTS = "1";
+    stubAnthropic(() => new Response(JSON.stringify({
+      id: "msg_test",
+      type: "message",
+      role: "assistant",
+      model: "claude-haiku-4-5",
+      content: [{ type: "text", text: JSON.stringify(groundedAnalysis) }],
+      stop_reason: "refusal",
+      usage: { input_tokens: 100, output_tokens: 50 }
+    }), { status: 200, headers: { "content-type": "application/json" } }));
+
+    const result = await analyzeClientRequestDetailed({
+      sowText: "Excluded: customer login portals.",
+      messageText: "Can you add a customer portal?",
+      hourlyRate: 175
+    });
+
+    expect(result.metadata.status).toBe("Failed");
+    expect(result.analysis.classification).toBe("Needs Human Review");
+    expect(result.analysis.estimated_revenue).toBe(0);
+  });
+});
+
+describe("provider catalog", () => {
+  it("describes every provider the application can select", () => {
+    expect([...CATALOG_PROVIDER_NAMES].sort()).toEqual(
+      AI_PROVIDERS.filter((name) => name !== "demo").slice().sort()
+    );
+  });
+
+  it("prefers the environment model over the catalog default", () => {
+    delete process.env.ANTHROPIC_MODEL;
+    expect(configuredModelFor("anthropic")).toBe("claude-haiku-4-5");
+    process.env.ANTHROPIC_MODEL = "claude-opus-5";
+    expect(configuredModelFor("anthropic")).toBe("claude-opus-5");
+  });
+
+  it("leaves the Ollama model unset so installed models can be discovered", () => {
+    delete process.env.OLLAMA_MODEL;
+    expect(configuredModelFor("ollama")).toBeNull();
+    expect(displayModelFor("ollama")).toBe("Automatic model selection");
+  });
+
+  it("reports only the credentials a provider actually needs", () => {
+    expect(missingEnvironmentFor("anthropic", {})).toEqual(["ANTHROPIC_API_KEY"]);
+    expect(missingEnvironmentFor("anthropic", { ANTHROPIC_API_KEY: "set" })).toEqual([]);
+    expect(missingEnvironmentFor("ollama", {})).toEqual([]);
+  });
+});
+
 describe("provider configuration", () => {
   it("uses deterministic demo analysis by default in tests", () => {
     delete process.env.AI_PROVIDER;
     expect(configuredProviderName()).toBe("demo");
+  });
+
+  it("selects the Anthropic API outside tests when AI_PROVIDER is unset", () => {
+    delete process.env.AI_PROVIDER;
+    vi.stubEnv("NODE_ENV", "production");
+    expect(configuredProviderName()).toBe("anthropic");
+    vi.unstubAllEnvs();
   });
 });
 

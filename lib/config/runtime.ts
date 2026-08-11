@@ -1,4 +1,5 @@
 import path from "node:path";
+import { CATALOG_PROVIDER_NAMES, PROVIDER_CATALOG, isCatalogProvider, missingEnvironmentFor } from "@/lib/ai/catalog";
 
 type RuntimeEnvironment = Record<string, string | undefined>;
 
@@ -105,22 +106,27 @@ export function validateProductionConfiguration(env: RuntimeEnvironment = proces
     }
   }
 
-  const provider = env.AI_PROVIDER?.trim().toLowerCase() || "ollama";
+  const catalogList = [...CATALOG_PROVIDER_NAMES].sort().join(", ");
+  const provider = env.AI_PROVIDER?.trim().toLowerCase() || "anthropic";
 
   if (provider === "demo") {
     errors.push("AI_PROVIDER=demo is test-only and cannot be used for a commercial production start.");
-  } else if (!["ollama", "openai"].includes(provider)) {
-    errors.push("AI_PROVIDER must be ollama or openai.");
+  } else if (!isCatalogProvider(provider)) {
+    errors.push(`AI_PROVIDER must be one of ${catalogList}.`);
   }
 
   const fallback = env.AI_FALLBACK_PROVIDER?.trim().toLowerCase();
 
-  if (fallback && !["ollama", "openai"].includes(fallback)) {
-    errors.push("AI_FALLBACK_PROVIDER must be blank, ollama, or openai.");
+  if (fallback && !isCatalogProvider(fallback)) {
+    errors.push(`AI_FALLBACK_PROVIDER must be blank or one of ${catalogList}.`);
   }
 
-  if ((provider === "openai" || fallback === "openai") && !env.OPENAI_API_KEY?.trim()) {
-    errors.push("OPENAI_API_KEY is required when OpenAI is the provider or fallback.");
+  const selectedProviders = [provider, fallback].filter((name): name is string => Boolean(name)).filter(isCatalogProvider);
+
+  for (const name of new Set(selectedProviders)) {
+    for (const variable of missingEnvironmentFor(name, env)) {
+      errors.push(`${variable} is required when ${PROVIDER_CATALOG[name].displayName} is the provider or fallback.`);
+    }
   }
 
   if (env.OLLAMA_BASE_URL) {

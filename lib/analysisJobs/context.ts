@@ -24,15 +24,6 @@ export async function reviewer() {
   return auth;
 }
 
-export function configuredModel(provider: string) {
-  if (provider === "demo") return "deterministic";
-
-  if (provider === "openai")
-    return process.env.OPENAI_MODEL?.trim() || "gpt-4.1-mini";
-
-  return process.env.OLLAMA_MODEL?.trim() || "Automatic model selection";
-}
-
 export function jobMaxAttempts() {
   const value = Number(process.env.ANALYSIS_JOB_MAX_ATTEMPTS || 3);
 

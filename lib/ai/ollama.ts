@@ -1,4 +1,4 @@
-import { analysisJsonSchema } from "@/lib/ai/schema";
+import { configuredModelFor } from "@/lib/ai/catalog";
 import type { AiProvider, AiProviderHealth, AiRawResponse, AiRequest } from "@/lib/ai/types";
 
 const RECOMMENDED_MODEL = "gemma3:12b-it-qat";
@@ -24,6 +24,12 @@ async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: numbe
   }
 }
 
+function contextWindow() {
+  const value = Number(process.env.OLLAMA_NUM_CTX || 8192);
+
+  return Number.isFinite(value) ? Math.min(131_072, Math.max(2_048, Math.trunc(value))) : 8192;
+}
+
 export async function listOllamaModels(timeoutMs = 3_000) {
   const response = await fetchWithTimeout(`${baseUrl()}/api/tags`, {}, timeoutMs);
 
@@ -36,7 +42,7 @@ export async function listOllamaModels(timeoutMs = 3_000) {
 
 async function selectedModel() {
   const models = await listOllamaModels();
-  const configured = process.env.OLLAMA_MODEL?.trim();
+  const configured = configuredModelFor("ollama");
 
   if (configured) {
     if (!models.includes(configured)) throw new Error(`Configured Ollama model ${configured} is not installed.`);
@@ -64,8 +70,8 @@ export class OllamaProvider implements AiProvider {
         body: JSON.stringify({
           model,
           stream: false,
-          format: request.jsonSchema || analysisJsonSchema,
-          options: { temperature: 0, num_ctx: 8192, num_predict: request.maxOutputTokens || 1200 },
+          format: request.jsonSchema,
+          options: { temperature: 0, num_ctx: contextWindow(), num_predict: request.maxOutputTokens },
           messages: [
             { role: "system", content: request.systemPrompt },
             { role: "user", content: request.userPrompt }
@@ -86,7 +92,7 @@ export class OllamaProvider implements AiProvider {
   }
 
   async health(): Promise<AiProviderHealth> {
-    const configuredModel = process.env.OLLAMA_MODEL?.trim() || null;
+    const configuredModel = configuredModelFor("ollama");
 
     try {
       const { model, models } = await selectedModel();

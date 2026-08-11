@@ -1,22 +1,30 @@
 import { z } from "zod";
+import { AnthropicProvider } from "@/lib/ai/anthropic";
+import { CATALOG_PROVIDER_NAMES } from "@/lib/ai/catalog";
 import { OllamaProvider } from "@/lib/ai/ollama";
 import { OpenAiProvider } from "@/lib/ai/openai";
-import { AI_PROVIDERS, type AiProvider, type AiProviderName } from "@/lib/ai/types";
+import { AI_PROVIDERS, type AiProvider, type AiProviderName, type RemoteAiProviderName } from "@/lib/ai/types";
+
+const PROVIDER_FACTORIES: Record<RemoteAiProviderName, () => AiProvider> = {
+  anthropic: () => new AnthropicProvider(),
+  openai: () => new OpenAiProvider(),
+  ollama: () => new OllamaProvider()
+};
 
 export function configuredProviderName(): AiProviderName {
   if (process.env.NODE_ENV === "test" && !process.env.AI_PROVIDER) return "demo";
 
-  return z.enum(AI_PROVIDERS).parse(process.env.AI_PROVIDER?.trim().toLowerCase() || "ollama");
+  return z.enum(AI_PROVIDERS).parse(process.env.AI_PROVIDER?.trim().toLowerCase() || "anthropic");
 }
 
 export function configuredFallbackProviderName(): AiProviderName | null {
   const value = process.env.AI_FALLBACK_PROVIDER?.trim().toLowerCase();
 
-  return value ? z.enum(["ollama", "openai"]).parse(value) : null;
+  return value ? z.enum(CATALOG_PROVIDER_NAMES).parse(value) : null;
 }
 
-export function providerFor(name: Exclude<AiProviderName, "demo">): AiProvider {
-  return name === "ollama" ? new OllamaProvider() : new OpenAiProvider();
+export function providerFor(name: RemoteAiProviderName): AiProvider {
+  return PROVIDER_FACTORIES[name]();
 }
 
 export async function configuredProviderHealth() {

@@ -1,3 +1,4 @@
+import { requiredModelFor } from "@/lib/ai/catalog";
 import type { AiProvider, AiProviderHealth, AiRawResponse, AiRequest } from "@/lib/ai/types";
 
 export class OpenAiProvider implements AiProvider {
@@ -5,7 +6,7 @@ export class OpenAiProvider implements AiProvider {
 
   async generate(request: AiRequest): Promise<AiRawResponse> {
     const apiKey = process.env.OPENAI_API_KEY?.trim();
-    const model = process.env.OPENAI_MODEL?.trim() || "gpt-4.1-mini";
+    const model = requiredModelFor("openai");
 
     if (!apiKey) throw new Error("OPENAI_API_KEY is not configured.");
 
@@ -25,10 +26,8 @@ export class OpenAiProvider implements AiProvider {
         body: JSON.stringify({
           model,
           temperature: 0,
-          max_completion_tokens: request.maxOutputTokens || 1200,
-          response_format: request.jsonSchema
-            ? { type: "json_schema", json_schema: { name: "scopeledger_response", strict: true, schema: request.jsonSchema } }
-            : { type: "json_object" },
+          max_completion_tokens: request.maxOutputTokens,
+          response_format: { type: "json_schema", json_schema: { name: "scopeledger_response", strict: true, schema: request.jsonSchema } },
           messages: [
             { role: "system", content: request.systemPrompt },
             { role: "user", content: request.userPrompt }
@@ -51,16 +50,43 @@ export class OpenAiProvider implements AiProvider {
   }
 
   async health(): Promise<AiProviderHealth> {
-    const model = process.env.OPENAI_MODEL?.trim() || "gpt-4.1-mini";
-    const available = Boolean(process.env.OPENAI_API_KEY?.trim());
-
-    return {
+    let model = "";
+    const unavailable = (message: string): AiProviderHealth => ({
       provider: this.name,
-      available,
-      configuredModel: model,
-      selectedModel: available ? model : null,
-      models: available ? [model] : [],
-      message: available ? `OpenAI is configured with ${model}.` : "OPENAI_API_KEY is not configured."
-    };
+      available: false,
+      configuredModel: model || null,
+      selectedModel: null,
+      models: [],
+      message
+    });
+
+    try {
+      model = requiredModelFor("openai");
+      const apiKey = process.env.OPENAI_API_KEY?.trim();
+
+      if (!apiKey) return unavailable("OPENAI_API_KEY is not configured.");
+
+      const response = await fetch(`https://api.openai.com/v1/models/${encodeURIComponent(model)}`, {
+        headers: { Authorization: `Bearer ${apiKey}` },
+        signal: AbortSignal.timeout(10_000)
+      });
+
+      if (response.status === 401 || response.status === 403) return unavailable("OPENAI_API_KEY was rejected. Check the key and its project permissions.");
+
+      if (response.status === 404) return unavailable(`The configured model ${model} is not available to this API key.`);
+
+      if (!response.ok) return unavailable(`The OpenAI API returned ${response.status}.`);
+
+      return {
+        provider: this.name,
+        available: true,
+        configuredModel: model,
+        selectedModel: model,
+        models: [model],
+        message: `OpenAI is ready with ${model}.`
+      };
+    } catch {
+      return unavailable("The OpenAI API could not be reached. Check network egress and the local firewall.");
+    }
   }
 }

@@ -1,7 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { configuredProviderName } from "@/lib/ai/providers";
 import { query, transaction } from "@/lib/db/client";
-import { activeControllers, configuredModel, reviewer } from "@/lib/analysisJobs/context";
+import { displayModelFor } from "@/lib/ai/catalog";
+import { activeControllers, reviewer } from "@/lib/analysisJobs/context";
 import type { Row } from "@/lib/analysisJobs/types";
 
 export async function cancelAnalysisJob(jobId: string) {
@@ -50,7 +51,7 @@ export async function retryAnalysisJob(jobId: string) {
        AND j.attempt_count < j.max_attempts
        AND NOT EXISTS (SELECT 1 FROM scope_findings f WHERE f.organization_id=j.organization_id AND f.client_message_id=j.client_message_id)
      RETURNING id,batch_id`,
-    [randomUUID(), provider, configuredModel(provider), jobId, auth.organizationId],
+    [randomUUID(), provider, displayModelFor(provider), jobId, auth.organizationId],
   );
 
   if (!result.rows[0]) throw new Error("This analysis job cannot be retried.");

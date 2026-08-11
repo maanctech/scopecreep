@@ -1,6 +1,6 @@
 const REDACTED = "[REDACTED]";
 
-function redactText(value: string) {
+export function redactText(value: string) {
   return value
     .replace(/(postgres(?:ql)?:\/\/)[^@\s]+@/gi, `$1${REDACTED}@`)
     .replace(/\bBearer\s+[^\s,;]+/gi, `Bearer ${REDACTED}`)

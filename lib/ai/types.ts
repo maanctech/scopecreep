@@ -1,14 +1,15 @@
 import type { AnalysisInput } from "@/lib/types";
 
-export const AI_PROVIDERS = ["ollama", "openai", "demo"] as const;
+export const AI_PROVIDERS = ["anthropic", "ollama", "openai", "demo"] as const;
 export type AiProviderName = (typeof AI_PROVIDERS)[number];
+export type RemoteAiProviderName = Exclude<AiProviderName, "demo">;
 
 export type AiRequest = {
   systemPrompt: string;
   userPrompt: string;
   timeoutMs: number;
-  jsonSchema?: Record<string, unknown>;
-  maxOutputTokens?: number;
+  jsonSchema: Record<string, unknown>;
+  maxOutputTokens: number;
   signal?: AbortSignal;
 };
 
