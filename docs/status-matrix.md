@@ -17,6 +17,7 @@ Use these labels in product, setup, sales, and release discussions.
 | Versioned reports and exports | Available | Verified locally |
 | Anthropic analysis | Bring Your Own Credentials | Default provider; adapter contract-tested, live use requires an explicit customer key |
 | OpenAI analysis | Bring Your Own Credentials | Adapter tested; live use requires an explicit customer key |
+| Installation backup | Single-tenant only | Covers the whole database; must be replaced with tenant-scoped export before hosting. See Known Limitations |
 | Local-model analysis | Retired | The Ollama provider is preserved unwired in `legacy/ollama`; no configuration keeps analysis text in house |
 | IMAP | Bring Your Own Credentials | Implemented and contract-tested; live mailbox verification is credential-dependent |
 | Slack | Private Beta / BYOC | Mocked contract only; customer Slack app and workspace approval required |

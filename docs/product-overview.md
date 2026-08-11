@@ -12,7 +12,7 @@
 - Professional SOW workspace with immutable versions, paste/TXT/DOCX/text-PDF intake, safe local originals, extracted sections, AI-assisted risk review, and a human-approved Scope Boundary Map.
 - Preview-first text/CSV/JSON communication imports with normalized records, provider/content deduplication, visible ingestion jobs, and no automatic analysis.
 - Signed generic inbound webhooks with one-time secrets, encrypted storage, timestamp validation, replay protection, and truthful connection verification.
-- Credential-ready self-hosted IMAP ingestion with TLS, sender-domain routing, UID checkpoints, thread reconstruction, and attachment metadata.
+- Credential-ready IMAP ingestion from the customer's own mailbox, with TLS, sender-domain routing, UID checkpoints, thread reconstruction, and attachment metadata.
 - Reviewable Scope Findings: every AI analysis becomes a finding card with classification, confidence, SOW evidence, estimated hours, estimated potential revenue, an editable client-facing draft, an internal note, and full history.
 - Professional-only billing workflow: Mark as Billable, Include in Retainer, Discuss With Client, Mark as Courtesy, Reject Finding, Mark as Invoiced, Mark as Paid, and Reopen Finding, all validated by a central transition service.
 - Approved hours and approved amounts tracked in integer cents, separate from AI-estimated potential revenue.
@@ -30,7 +30,7 @@
 - `/calculator` - ROI calculator.
 - `/request-audit` - Free audit lead capture form.
 - `/onboarding` - Manual client onboarding flow for pasted audit materials.
-- `/privacy` - Public private-beta data handling and operator-responsibility overview.
+- `/privacy` - Public private-beta data handling and division-of-responsibility overview.
 - `/app` - Internal revenue workflow dashboard (totals, attention list, recent decisions and events, revenue by project and client).
 - `/app/findings` - All scope findings across projects, with filters.
 - `/app/billing` - Append-only billing event history, summary totals, filters, and CSV export.
@@ -47,7 +47,7 @@
 - `/account` - Current organization, role, sign-out, and password change.
 - `/app/settings/ai` - Current AI provider, selected model, installed model inventory, and health status.
 - `/app/settings/system` - Health, migrations, AI and job diagnostics, configuration checks, backups, and redacted audit activity.
-- `/reset-password` - One-time self-hosted password reset completion.
+- `/reset-password` - One-time password reset completion.
 
 ## API Routes
 
@@ -64,7 +64,7 @@
 - `GET /api/ingestion/jobs` - Read recent organization-scoped ingestion outcomes.
 - `POST /api/ingestion/webhook` - Create a signed webhook connection and return its secret once.
 - `POST /api/webhooks/[connectionId]` - Receive timestamped HMAC-verified webhook deliveries with replay protection.
-- `POST /api/ingestion/email` - Configure, test, or incrementally sync a self-hosted IMAP connection.
+- `POST /api/ingestion/email` - Configure, test, or incrementally sync a customer IMAP connection.
 - `GET /api/findings` - List all findings with client/project context.
 - `GET /api/findings/[id]` - Read one finding with its full history.
 - `PATCH /api/findings/[id]` - Update approved hours/amount (integer cents), client-facing explanation, or internal note. Requires `expected_version`; stale versions get 409.

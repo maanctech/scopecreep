@@ -11,6 +11,9 @@ One line per document in `docs/`, grouped by topic.
 
 ## Operating
 
+ScopeLedger is hosted, so everything in this section is an internal runbook for whoever
+operates the service. None of it is customer-facing. The customer installs nothing.
+
 - [Self-Hosted Installation](../legacy/docker/installation.md) - the retired Docker/PostgreSQL install path, kept and still tested.
 - [Administrator Guide](admin-guide.md) - first-run and ongoing administrative operations.
 - [Backup and Restore](backup-and-restore.md) - what an installation backup archive contains and how to restore one.

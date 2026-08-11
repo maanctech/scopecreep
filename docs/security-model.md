@@ -1,13 +1,13 @@
 # Security Model
 
-ScopeLedger is a self-hosted, professional-only revenue review system. It assumes the installation operator controls the host, database, encryption key, backups, and network boundary.
+ScopeLedger is a hosted, multi-tenant, professional-only revenue review system. ScopeLedger controls the host, database, encryption key, backups, and network boundary. Each customer firm is a tenant, and separation between tenants is a security boundary rather than a convenience.
 
 ## Trust Boundaries
 
 - Browser sessions authenticate a professional user into one organization and one role.
 - PostgreSQL is the durable commercial store. Organization-owned records are filtered by organization ID.
 - Uploaded SOW originals and future attachment files remain in the private local document directory.
-- Anthropic is the default AI provider and OpenAI is the alternative, so every installation sends analysis content off the host to a third party. No configuration keeps it local.
+- Anthropic is the default AI provider and OpenAI is the alternative, so all analysis content is sent off the host to a third party. No configuration keeps it local.
 - Integration credentials are encrypted with `SCOPELEDGER_MASTER_KEY` before database storage.
 - Client-facing drafts remain private until a professional deliberately copies or exports them.
 
@@ -24,7 +24,7 @@ ScopeLedger is a self-hosted, professional-only revenue review system. It assume
 - TLS-first IMAP configuration and private-host protections.
 - Formula-neutralized CSV exports.
 - Versioned reports with source IDs, SOW provenance, model references when available, and SHA-256 checksums.
-- Installation backups with document coverage and checksum validation.
+- Installation backups with document coverage and checksum validation. This is a single-tenant control: it covers the whole database and is a cross-tenant exposure under hosting. See [Known Limitations](KNOWN_LIMITATIONS.md).
 
 ## Human-Control Guarantees
 
@@ -44,4 +44,4 @@ Support bundles redact credentials, tokens, authorization material, email addres
 - External OAuth connectors require customer-owned provider applications and production verification.
 - Host compromise, database-superuser compromise, or loss of the master key is outside application-level recovery guarantees.
 
-See [Backup and Restore](backup-and-restore.md) and [Integration Setup](integration-setup.md) for operator procedures.
+See [Backup and Restore](backup-and-restore.md) and [Integration Setup](integration-setup.md) for the procedures ScopeLedger's own operators follow. Those are internal runbooks, not customer instructions.

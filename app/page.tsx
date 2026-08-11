@@ -24,7 +24,7 @@ const useCases = [
 const connections = [
   ["Text, CSV, and JSON import", "Available", "Previewed, validated, deduplicated, and locally verified."],
   ["Signed inbound webhook", "Available", "HMAC verification and replay protection are locally verified."],
-  ["Self-hosted IMAP", "Bring Your Own Credentials", "Implemented and contract-tested; mailbox verification depends on customer credentials."],
+  ["IMAP mailbox", "Bring Your Own Credentials", "Implemented and contract-tested; mailbox verification depends on customer credentials."],
   ["Slack, Gmail, Microsoft 365", "Private Beta", "Adapters are contract-tested; customer-owned provider apps and live approval are required."],
   ["Call and meeting summaries", "Available", "Paste or import transcript summaries; no meeting bot joins calls."]
 ];
@@ -32,7 +32,7 @@ const connections = [
 const faqs = [
   ["Is ScopeLedger a chatbot?", "No. It is an internal evidence and revenue-control workflow. Requests are compared with the approved SOW and become reviewable findings."],
   ["Does it contact clients or send invoices?", "No. ScopeLedger never sends a client message, change order, invoice, payment request, or notification automatically."],
-  ["Where does analysis run?", "Analysis runs through a configured AI provider, and Anthropic is the default. OpenAI is the alternative. Both are third parties, so SOW and message text submitted for analysis leaves the installation. Nothing else does."],
+  ["Where does analysis run?", "Analysis runs through a configured AI provider, and Anthropic is the default. OpenAI is the alternative. Both are third parties, so SOW and message text submitted for analysis leaves ScopeLedger. Nothing else does."],
   ["What is needed for a free audit?", "One SOW, representative message exports or summaries, the hourly or blended rate, project value, and notes on suspected scope drift."],
   ["Is estimated leakage an approved charge?", "No. AI estimates remain separate from professional-approved hours and amounts. Every billing decision requires human review."],
   ["What is actually live today?", "Manual imports and signed webhooks are locally verified. IMAP and provider connectors require customer credentials; Slack, Google, and Microsoft are not represented as live without them."]
@@ -49,7 +49,7 @@ export default function MarketingPage() {
             rounded-md border border-audit-border px-3 py-2 font-semibold
             text-ink
           ">Private beta applications</span>
-          <span>Self-hosted</span>
+          <span>Nothing to install</span>
           <span aria-hidden="true">/</span>
           <span>Professional-only</span>
           <span aria-hidden="true">/</span>
@@ -73,7 +73,7 @@ export default function MarketingPage() {
           ">
             Request a free leakage audit <ArrowRight className="size-4" aria-hidden="true" />
           </Link>
-          <Link href="#installation" className="
+          <Link href="#getting-started" className="
             inline-flex h-11 items-center rounded-md border border-audit-border
             px-5 text-sm font-semibold
             hover:bg-audit-soft
@@ -86,7 +86,7 @@ export default function MarketingPage() {
         ">
           <span className="inline-flex items-center gap-2"><HardDrive className="
             size-4
-          " aria-hidden="true" /> Your own database</span>
+          " aria-hidden="true" /> Isolated per firm</span>
           <span className="inline-flex items-center gap-2"><ShieldCheck className="
             size-4
           " aria-hidden="true" /> Human approval required</span>
@@ -239,7 +239,7 @@ export default function MarketingPage() {
             size-5
           " aria-hidden="true" /><h2 className="text-3xl font-semibold">Private by deployment, controlled by workflow.</h2></div>
           <p className="mt-4 text-sm/6 text-zinc-700">
-            PostgreSQL, SOW originals, reports, and encrypted connector credentials stay inside the self-hosted installation. Analysis text is the one thing that leaves it, and it goes to the configured AI provider, which is Anthropic by default.
+            ScopeLedger runs the infrastructure. Your firm&apos;s projects, SOW originals, findings, and reports are isolated from every other firm&apos;s by database row-level security, and connector credentials are encrypted before storage. Analysis text is the one thing sent outside ScopeLedger, and it goes to Anthropic by default.
           </p>
           <p className="mt-3 text-sm/6 text-zinc-700">
             OpenAI is a supported alternative. Both providers are third parties, so a firm that cannot send analysis text outside its own walls is not a fit today. Independent penetration testing, legal review, and live third-party connector approval are not claimed in the private beta.
@@ -297,31 +297,31 @@ export default function MarketingPage() {
             ["Free lookback audit", "One representative project", "Find and validate missed billing opportunities before discussing a paid engagement."],
             ["$1,500 setup + $750/month", "Monitoring pilot", "Weekly request review, monthly leakage reporting, and professional-approved draft support."],
             ["10-20% of validated recovery", "Performance option", "Available when recovered revenue can be verified and commercial terms are agreed in writing."],
-            ["Custom enterprise", "Multiple delivery units", "Scope, support, deployment, and connector validation priced for the installation."]
+            ["Custom enterprise", "Multiple delivery units", "Scope, support, onboarding, and connector validation priced for the engagement."]
           ].map(([title, label, copy]) => <article key={title} className="
             rounded-md border border-audit-border bg-white p-5 shadow-audit
           "><div className="text-xs font-semibold text-audit-muted uppercase">{label}</div><h3 className="
             mt-2 text-lg font-semibold
           ">{title}</h3><p className="mt-3 text-sm/6 text-zinc-700">{copy}</p></article>)}
         </div>
-        <p className="mt-4 text-sm text-zinc-600">The customer supplies a PostgreSQL database, an AI provider key, and third-party credentials. The configured provider bills its own per-analysis fee directly.</p>
+        <p className="mt-4 text-sm text-zinc-600">Analysis costs are included. You supply the SOW, the client messages, and a professional to approve each finding.</p>
       </section>
 
-      <section id="installation" className="
+      <section id="getting-started" className="
         grid scroll-mt-28 gap-8 border-y border-audit-border py-12
         lg:grid-cols-[0.8fr_1.2fr]
       ">
         <div>
           <div className="flex items-center gap-2"><Landmark className="size-5" aria-hidden="true" /><h2 className="
             text-3xl font-semibold
-          ">Installation overview</h2></div>
-          <p className="mt-4 text-sm/6 text-zinc-700">The private-beta deployment is designed to be self-hosted and is currently optimized for a Mac-first installation.</p>
+          ">What you need to start</h2></div>
+          <p className="mt-4 text-sm/6 text-zinc-700">There is nothing to install and no infrastructure to run. Bring one project you suspect is leaking revenue.</p>
         </div>
         <ul className="
           grid gap-3 text-sm text-zinc-700
           sm:grid-cols-2
         ">
-          {["A PostgreSQL 15 or newer database", "Private document and backup storage", "An Anthropic or OpenAI API key", "Generated database password and encryption key", "Loopback access by default; HTTPS required beyond it", "Customer-owned credentials for provider integrations"].map((item) => <li key={item} className="
+          {["The governing SOW, pasted or uploaded as TXT, DOCX, or text PDF", "Client messages for that project, pasted or exported as text, CSV, or JSON", "The hourly or blended rate you bill at", "A delivery lead or principal to approve each finding", "Optionally, credentials to connect a mailbox or Slack workspace", "A written change-order process you already use with clients"].map((item) => <li key={item} className="
             flex gap-2
           "><CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-700" aria-hidden="true" />{item}</li>)}
         </ul>

@@ -10,11 +10,11 @@ export default async function PrivacyPage() {
     <div className="mx-auto max-w-4xl space-y-10">
       <header className="border-b border-audit-border pb-8">
         <p className="text-sm font-semibold text-audit-muted">Private-beta privacy overview</p>
-        <h1 className="mt-2 text-4xl font-semibold">Customer-controlled data, explicit processing.</h1>
+        <h1 className="mt-2 text-4xl font-semibold">Isolated data, explicit processing.</h1>
         <p className="mt-4 max-w-3xl text-base/7 text-zinc-700">
-          ScopeLedger is designed for a self-hosted, professional-only workflow. This page describes
-          the current product behavior; it is not a substitute for a customer-specific privacy review
-          or legal agreement.
+          ScopeLedger is a hosted, professional-only workflow. This page describes the current product
+          behavior; it is not a substitute for a customer-specific privacy review or legal
+          agreement.
         </p>
       </header>
 
@@ -26,14 +26,15 @@ export default async function PrivacyPage() {
           <h2 className="text-xl font-semibold">Where records live</h2>
           <p className="mt-3 text-sm/6 text-zinc-700">
             Project records, SOW originals, imported communications, findings, reports, and encrypted
-            connector credentials remain in the customer-operated PostgreSQL and document volumes.
+            connector credentials are held in ScopeLedger&apos;s PostgreSQL database and document
+            storage, scoped to your firm and unreadable by any other firm.
           </p>
         </div>
         <div>
           <h2 className="text-xl font-semibold">Where analysis runs</h2>
           <p className="mt-3 text-sm/6 text-zinc-700">
             Analysis text is sent to the configured AI provider, and Anthropic is the default. OpenAI is the
-            alternative. Both are third parties, so analysis text always leaves the installation. Nothing but
+            alternative. Both are third parties, so analysis text always leaves ScopeLedger. Nothing but
             the text submitted for a given analysis does.
           </p>
         </div>
@@ -45,10 +46,12 @@ export default async function PrivacyPage() {
           </p>
         </div>
         <div>
-          <h2 className="text-xl font-semibold">What the operator controls</h2>
+          <h2 className="text-xl font-semibold">Who controls what</h2>
           <p className="mt-3 text-sm/6 text-zinc-700">
-            The customer controls host access, retention, backups, deletion, integration credentials,
-            network exposure, TLS, and any optional cloud-AI configuration.
+            ScopeLedger operates the infrastructure, the database, and its backups. Your firm controls
+            its own users and roles, which projects and messages are brought in, which integration
+            credentials are supplied, and every billing decision. Your firm&apos;s records are isolated
+            from other firms&apos; by database row-level security.
           </p>
         </div>
       </section>
@@ -57,9 +60,9 @@ export default async function PrivacyPage() {
         <h2 className="text-xl font-semibold">Private-beta limits</h2>
         <ul className="mt-4 list-disc space-y-2 pl-5 text-sm/6 text-zinc-700">
           <li>No independent penetration test or legal privacy review is claimed.</li>
-          <li>Support bundles are designed to redact business text and credentials, but operators must inspect them before sharing.</li>
+          <li>Support bundles are designed to redact business text and credentials, and are inspected before sharing.</li>
           <li>Third-party connectors are subject to the selected provider&apos;s terms and customer-owned approval process.</li>
-          <li>Backups contain confidential records and must be stored on encrypted, access-controlled media.</li>
+          <li>Backups are operated by ScopeLedger. Per-firm data export is not available yet.</li>
         </ul>
       </section>
 
