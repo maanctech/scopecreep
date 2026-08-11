@@ -21,7 +21,7 @@
 - Six versioned audit/report formats with Markdown, formula-safe CSV, print output, source provenance, and content checksums. Generation is explicit; viewing never changes data.
 - System diagnostics, redacted support bundles, correlation IDs, structured safe logs, startup configuration validation, and installation backup controls.
 - Sales asset templates for cold email, LinkedIn DM, discovery calls, audit reveal calls, proposals, follow-up, and objection handling.
-- Ollama-first structured analysis with conservative validation and an explicit test-only demo analyzer.
+- Provider-agnostic structured analysis with conservative validation and an explicit test-only demo analyzer. Anthropic is the default; OpenAI and a local Ollama model are alternatives.
 - Basic tests for AI JSON parsing, validation, API behavior, and local analysis safety cases.
 
 ## Current Routes and Pages

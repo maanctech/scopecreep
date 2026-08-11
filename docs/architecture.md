@@ -8,7 +8,7 @@ ScopeLedger is a self-hosted Next.js application for professional-controlled sco
 2. Next.js route handlers validate requests, authenticate sessions, enforce organization roles, and call domain services.
 3. Domain services own SOW approval, communication ingestion, analysis jobs, finding transitions, reporting, and backup orchestration.
 4. PostgreSQL is the durable commercial store. Private source documents are held under `SCOPELEDGER_DOCUMENT_DIR`.
-5. AI providers implement one structured contract. Ollama is the default; OpenAI is optional and explicit.
+5. AI providers implement one structured contract. Anthropic is the default; OpenAI and a local Ollama model are explicit alternatives.
 6. Connector credentials are encrypted with `SCOPELEDGER_MASTER_KEY` before database storage.
 
 ## Important Ownership Rules

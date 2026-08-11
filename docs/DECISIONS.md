@@ -1,6 +1,6 @@
 # Product and Architecture Decisions
 
-Last updated: 2026-07-22 after Milestone 10 commit `bd5ec5f`. Branch: `commercial-beta-local-first`.
+Last updated: 2026-08-10 after commit `d0cb078`. Branch: `backend-refactor`.
 
 ## Control and Money
 
@@ -21,9 +21,10 @@ Last updated: 2026-07-22 after Milestone 10 commit `bd5ec5f`. Branch: `commercia
 
 ## AI and Evidence
 
-- Ollama is the default provider; OpenAI is optional and explicit.
+- Anthropic is the default provider; OpenAI and a local Ollama model are explicit alternatives. A default installation therefore sends analysis text to a third party, and an installation that cannot do that runs Ollama.
+- Providers are described by one data-only catalog, so adding or switching a provider is a configuration change rather than a code change.
 - ScopeLedger never downloads a model automatically.
-- Real local verification uses `gemma3:12b-it-qat`; model choice remains configurable.
+- Real local verification used `gemma3:12b-it-qat`; model choice remains configurable.
 - Definitive classification requires supplied-SOW evidence. Invalid or unavailable provider output becomes conservative human review with zero recoverable revenue.
 - Analysis requires an approved boundary map and an explicit professional-selected job.
 - The finding review form adopts the versioned API response immediately, while server refresh reconciles summaries and audit history.

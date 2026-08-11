@@ -14,7 +14,7 @@ ScopeLedger is designed for customer-operated infrastructure and professional-on
 
 ## Processing and Disclosure
 
-PostgreSQL and source documents remain within the customer-operated installation. Ollama is the default provider and may run locally. OpenAI receives SOW and message content only when an operator explicitly selects or configures it. Provider connectors disclose only the requests needed for configured read operations; exact scopes are in [Integration Setup](integration-setup.md).
+PostgreSQL and source documents remain within the customer-operated installation. Analysis text is the exception: it is sent to the configured AI provider, and Anthropic is the default, so a default installation sends SOW and message content to a third party. OpenAI is an alternative, and Ollama runs the model locally for installations that must keep analysis text in house. Provider connectors disclose only the requests needed for configured read operations; exact scopes are in [Integration Setup](integration-setup.md).
 
 ScopeLedger does not sell data, create client accounts, contact clients, send invoices, or collect payment. The application does not include telemetry or an operator cloud service in this repository.
 

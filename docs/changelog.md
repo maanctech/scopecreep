@@ -19,6 +19,7 @@
 
 - Added versioned SOW storage, extraction, risk review, and human-approved boundary maps.
 - Added Ollama-first structured analysis, optional OpenAI, bounded retries, evidence validation, and visible jobs.
+- Replaced the Ollama-first default with a provider catalog and made Anthropic the default. Analysis text now leaves a default installation; Ollama remains supported for installations that require local-only analysis.
 - Added manual, transcript, webhook, IMAP, Slack, Google, and Microsoft ingestion adapters with explicit verification states.
 
 ### Operations
