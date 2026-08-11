@@ -1,13 +1,12 @@
-import type { PGlite } from "@electric-sql/pglite";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { query } from "@/lib/db/client";
 import { withSystemAccess, withTenant } from "@/lib/db/tenantContext";
-import { startTestDatabase, stopTestDatabase } from "./support/testDatabase";
+import { startTestDatabase, stopTestDatabase, type TestDatabase } from "./support/testDatabase";
 
 const ACME = "30000000-0000-4000-8000-00000000000a";
 const RIVAL = "30000000-0000-4000-8000-00000000000b";
 
-let database: PGlite;
+let database: TestDatabase;
 
 beforeAll(async () => {
   database = await startTestDatabase();

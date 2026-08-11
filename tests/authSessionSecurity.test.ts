@@ -1,9 +1,8 @@
 import { createHash } from "node:crypto";
-import type { PGlite } from "@electric-sql/pglite";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { query } from "@/lib/db/client";
 import { withSystemAccess } from "@/lib/db/tenantContext";
-import { startTestDatabase, stopTestDatabase } from "./support/testDatabase";
+import { startTestDatabase, stopTestDatabase, type TestDatabase } from "./support/testDatabase";
 import { hashPassword, verifyPassword } from "@/lib/auth/password";
 import {
   authenticateUser,
@@ -38,7 +37,7 @@ function hashTokenForTest(token: string) {
   return createHash("sha256").update(token).digest("hex");
 }
 
-let database: PGlite;
+let database: TestDatabase;
 
 beforeAll(async () => {
   database = await startTestDatabase();

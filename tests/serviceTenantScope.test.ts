@@ -1,10 +1,9 @@
 import { randomUUID } from "node:crypto";
-import type { PGlite } from "@electric-sql/pglite";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { query } from "@/lib/db/client";
 import { withSystemAccess, withTenant } from "@/lib/db/tenantContext";
 import type { AuthContext } from "@/lib/auth/types";
-import { startTestDatabase, stopTestDatabase } from "./support/testDatabase";
+import { startTestDatabase, stopTestDatabase, type TestDatabase } from "./support/testDatabase";
 
 /**
  * Resolving a session is the one thing that cannot run here, because it reads
@@ -23,7 +22,7 @@ import { importManualMessages, listIngestionJobs } from "@/lib/ingestion/service
 import { parseManualImport } from "@/lib/ingestion/manual";
 import { listIntegrations } from "@/lib/connectors/service";
 import { listBackups } from "@/lib/backups/service";
-import { auditLog } from "@/lib/operations/diagnostics";
+import { auditLog, systemDiagnostics } from "@/lib/operations/diagnostics";
 import { analysisWorkspace } from "@/lib/analysisJobs/context";
 
 const ORGANIZATION_A = "60000000-0000-4000-8000-000000000001";
@@ -61,7 +60,7 @@ function actingAs(context: AuthContext) {
 
 const SOW_TEXT = "1. Scope\nDeliver the reporting dashboard.\n2. Exclusions\nData migration is out of scope.";
 
-let database: PGlite;
+let database: TestDatabase;
 let projectA: string;
 let projectB: string;
 
@@ -216,6 +215,25 @@ describe("the diagnostics service under row-level security", () => {
     expect(entries.length).toBeGreaterThan(0);
     expect(entries.some((entry) => entry.action === `seeded.for.${ORGANIZATION_B}`)).toBe(false);
     expect(entries.some((entry) => entry.action === `seeded.for.${ORGANIZATION_A}`)).toBe(true);
+  });
+
+  it("reports the schema as fully migrated with nothing pending", async () => {
+    actingAs(AUTH_CONTEXT_A);
+
+    const diagnostics = await systemDiagnostics();
+
+    expect(diagnostics.migrations.pending).toEqual([]);
+    expect(diagnostics.migrations.applied).toBe(diagnostics.migrations.expected);
+    expect(diagnostics.application.database).toBe("reachable");
+  });
+
+  it("counts only the acting organization's jobs and connections", async () => {
+    actingAs(AUTH_CONTEXT_B);
+
+    const diagnostics = await systemDiagnostics();
+
+    expect(diagnostics.organization.id).toBe(ORGANIZATION_B);
+    expect(diagnostics.ingestionJobs).toEqual([{ status: "Succeeded", count: 1, latest: expect.anything() }]);
   });
 });
 

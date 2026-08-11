@@ -1,10 +1,9 @@
-import type { PGlite } from "@electric-sql/pglite";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { query } from "@/lib/db/client";
 import { withSystemAccess } from "@/lib/db/tenantContext";
 import { VersionConflictError } from "@/lib/storeErrors";
 import type { AuthContext } from "@/lib/auth/types";
-import { startTestDatabase, stopTestDatabase } from "./support/testDatabase";
+import { startTestDatabase, stopTestDatabase, type TestDatabase } from "./support/testDatabase";
 
 /**
  * The postgres store is imported directly rather than through the facade
@@ -63,7 +62,7 @@ function actingAs(context: AuthContext) {
   vi.mocked(currentAuthContext).mockResolvedValue(context);
 }
 
-let database: PGlite;
+let database: TestDatabase;
 
 beforeAll(async () => {
   database = await startTestDatabase();
