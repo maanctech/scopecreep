@@ -1,19 +1,18 @@
 # Model Selection Guide
 
-ScopeLedger recommends `gemma3:12b-it-qat` for the private beta, but model choice remains an operator decision based on hardware, latency, confidentiality, and validation results.
+ScopeLedger defaults to `claude-haiku-4-5` on Anthropic, but model choice remains an operator decision based on cost, latency, and validation results.
 
 ## Selection Order
 
-1. If `OLLAMA_MODEL` is set, ScopeLedger requires that exact installed model.
-2. Otherwise it prefers the recommended model when installed.
-3. Otherwise it selects the first model returned by Ollama.
-4. If no model is available, analysis fails visibly as `Needs Human Review` with zero revenue.
+1. If the provider's model variable is set - `ANTHROPIC_MODEL` or `OPENAI_MODEL` - ScopeLedger uses that exact model.
+2. Otherwise it uses the provider's catalogued default.
+3. If the provider is unreachable or rejects the request, analysis fails visibly as `Needs Human Review` with zero revenue.
 
-ScopeLedger never downloads or replaces a model automatically.
+ScopeLedger never substitutes a different model for the one configured.
 
 ## Validation Before Customer Data
 
-- Run `npm run ollama:check` from the same network context as the application.
+- Run `npm run ai:check` to confirm the configured provider answers with the installation's credentials.
 - Use representative fictional SOWs and messages for an initial structured-output test.
 - Confirm definitive classifications cite actual SOW evidence.
 - Confirm in-scope findings have zero estimated extra hours and revenue.
@@ -22,4 +21,4 @@ ScopeLedger never downloads or replaces a model automatically.
 
 Smaller models may be faster but can produce less reliable evidence selection. Larger models require more memory and can exceed the configured timeout. ScopeLedger retries malformed output only a bounded number of times; it does not turn provider failure into a confident finding.
 
-See [Ollama Setup](ollama-setup.md) for host and protected-LAN configuration.
+Local-model analysis is retired. The Ollama provider is preserved unwired in [`legacy/ollama`](../legacy/README.md).

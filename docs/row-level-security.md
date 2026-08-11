@@ -18,7 +18,7 @@ rights that would also read past every tenant policy:
 | `SCOPELEDGER_DB_USER` | `POSTGRES_PASSWORD` | Owns the schema; runs migrations |
 | `SCOPELEDGER_DB_APP_USER` | `SCOPELEDGER_DB_APP_PASSWORD` | Everything the running application does |
 
-Under Compose this is automatic. `docker-entrypoint.sh` runs the migrations as
+Under the retired Compose path this is automatic. `legacy/docker/docker-entrypoint.sh` runs the migrations as
 the owner, then `npm run db:ensure-app-role` creates the application role with
 CRUD grants and default privileges for future tables, and the application
 process connects as that role. Provisioning refuses to continue if the role
@@ -39,7 +39,7 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public
 
 ## Startup Refuses an Unsafe Configuration
 
-`npm run rls:check` runs after migrations in `docker-entrypoint.sh`. It fails the start when the connected role is a superuser, when it holds `BYPASSRLS`, or when any table is missing enabled-and-forced row-level security. This is deliberate: a silently unprotected installation is worse than one that will not boot.
+`npm run rls:check` runs after migrations in the retired `legacy/docker/docker-entrypoint.sh`, and must run on whatever start-up sequence replaces it. It fails the start when the connected role is a superuser, when it holds `BYPASSRLS`, or when any table is missing enabled-and-forced row-level security. This is deliberate: a silently unprotected installation is worse than one that will not boot.
 
 Run it by hand at any time:
 

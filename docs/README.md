@@ -5,19 +5,18 @@ One line per document in `docs/`, grouped by topic.
 ## Architecture
 
 - [Product Overview](product-overview.md) - current MVP features, routes and pages, and API routes, moved out of the top-level README.
-- [Architecture Overview](architecture.md) - the self-hosted Next.js/PostgreSQL/Ollama system shape and component responsibilities.
+- [Architecture Overview](architecture.md) - the Next.js and PostgreSQL system shape and component responsibilities.
 - [Product and Architecture Decisions](DECISIONS.md) - standing decisions on control/money, storage/tenancy/recovery, AI/evidence, ingestion, and deployment.
 - [Implementation and Verification Status](status-matrix.md) - the status labels used across product, setup, sales, and release discussions.
 
 ## Operating
 
-- [Self-Hosted Installation](installation.md) - the supported Docker/PostgreSQL/Ollama install path, with a macOS quick start.
+- [Self-Hosted Installation](../legacy/docker/installation.md) - the retired Docker/PostgreSQL install path, kept and still tested.
 - [Administrator Guide](admin-guide.md) - first-run and ongoing administrative operations.
 - [Backup and Restore](backup-and-restore.md) - what an installation backup archive contains and how to restore one.
 - [Diagnostics and Support Bundles](diagnostics.md) - reading Settings > System health and generating redacted support bundles.
 - [Migration and Update Guide](migration-guide.md) - what to do before and after updating an installation.
-- [Model Selection Guide](model-selection.md) - how ScopeLedger picks an Ollama model and how to validate one before real use.
-- [Ollama Setup](ollama-setup.md) - installing and configuring the default local AI provider.
+- [Model Selection Guide](model-selection.md) - how to validate an analysis model before real use.
 - [Security Model](security-model.md) - trust boundaries and current security controls.
 - [Security Audit](security-audit.md) - whole-repository review of authentication, tenancy, credentials, and dependencies, with what was fixed and what remains open.
 - [Privacy Model](privacy-model.md) - product data-handling behavior (not a legal privacy policy).

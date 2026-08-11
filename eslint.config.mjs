@@ -99,6 +99,7 @@ const eslintConfig = defineConfig([
     "coverage/**",
     "data/**",
     "backups/**",
+    "legacy/**",
     "next-env.d.ts",
   ]),
 ]);

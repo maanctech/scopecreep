@@ -9,7 +9,7 @@
 
 ## Apply an Update
 
-For Compose installations, rebuild and start the new release as described in [Self-Hosted Installation](installation.md). Startup validates configuration, waits for PostgreSQL, and applies pending migrations. Applied migration checksums cannot change.
+For the retired Compose path, rebuild and start the new release as described in [Self-Hosted Installation](../legacy/docker/installation.md). Startup validates configuration, waits for PostgreSQL, and applies pending migrations. Applied migration checksums cannot change.
 
 After startup, verify `/api/health`, sign-in, one approved SOW, one finding, report history, AI diagnostics, and connector state. Do not delete the prior backup until these checks pass.
 

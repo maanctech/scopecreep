@@ -1,6 +1,16 @@
-# Self-Hosted Installation
+# Self-Hosted Installation (Retired)
 
-This guide describes the supported private-beta installation: one ScopeLedger application container, one private PostgreSQL 15 container, Ollama on the host or a protected local-network machine, and persistent Docker volumes.
+> **This install path is retired.** It is kept here so self-hosting can be
+> revived without reconstructing it, and its assets are still covered by
+> `tests/installation.test.ts`. It is not the path ScopeLedger is sold on.
+>
+> Two things changed when it moved to `legacy/docker`. Run every `docker
+> compose` command below from `legacy/docker/` rather than the repository root
+> — the build context points back up, so they work unchanged from there. And
+> the environment template lost its leading dot: it is now
+> `env.compose.example`.
+
+This guide describes the private-beta installation: one ScopeLedger application container, one private PostgreSQL 15 container, Ollama on the host or a protected local-network machine, and persistent Docker volumes.
 
 ## macOS Quick Start
 
@@ -18,7 +28,8 @@ Start both applications. ScopeLedger does not install Docker, start a virtual ma
 From the project directory:
 
 ```bash
-cp .env.compose.example .env
+cd legacy/docker
+cp env.compose.example .env
 ```
 
 Generate the two required secrets:

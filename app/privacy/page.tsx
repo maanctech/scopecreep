@@ -32,10 +32,9 @@ export default async function PrivacyPage() {
         <div>
           <h2 className="text-xl font-semibold">Where analysis runs</h2>
           <p className="mt-3 text-sm/6 text-zinc-700">
-            Analysis text is sent to the configured AI provider, and Anthropic is the default. OpenAI is an
-            alternative, and Ollama runs the model on the customer&apos;s own machine or protected network for
-            installations that must keep analysis text in house. Nothing but the text submitted for a given
-            analysis leaves the installation.
+            Analysis text is sent to the configured AI provider, and Anthropic is the default. OpenAI is the
+            alternative. Both are third parties, so analysis text always leaves the installation. Nothing but
+            the text submitted for a given analysis does.
           </p>
         </div>
         <div>

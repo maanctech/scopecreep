@@ -41,7 +41,7 @@ npm run dev
 
 Open `http://127.0.0.1:3000`.
 
-For the supported self-hosted container path, see [Self-Hosted Installation](docs/installation.md) instead.
+The Docker self-hosted path is retired. It is kept, and still tested, in [`legacy/docker`](legacy/README.md).
 
 ### Before committing
 
@@ -59,7 +59,7 @@ npm run build
 
 - [Product Overview](docs/product-overview.md) - current MVP features, routes and pages, and API routes.
 - [Architecture](docs/architecture.md) - system overview and component responsibilities.
-- [Self-Hosted Installation](docs/installation.md) - the supported Docker/PostgreSQL/Ollama install path.
+- [Retired Code](legacy/README.md) - the self-hosted Docker install path, kept and still tested but no longer how ScopeLedger ships.
 - [Security Model](docs/security-model.md) - trust boundaries and current controls.
 - [Troubleshooting](docs/troubleshooting.md) - common startup and runtime problems.
 

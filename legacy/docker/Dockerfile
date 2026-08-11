@@ -39,6 +39,7 @@ COPY --chown=scopeledger:scopeledger db ./db
 COPY --chown=scopeledger:scopeledger lib ./lib
 COPY --chown=scopeledger:scopeledger public ./public
 COPY --chown=scopeledger:scopeledger scripts ./scripts
+COPY --chown=scopeledger:scopeledger legacy/docker/docker-entrypoint.sh ./scripts/docker-entrypoint.sh
 COPY --chown=scopeledger:scopeledger next.config.mjs tsconfig.json ./
 
 RUN mkdir -p /app/data/documents /app/data/import-backups /app/backups \

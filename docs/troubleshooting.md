@@ -8,9 +8,9 @@ Run `npm run config:check` and correct every reported production configuration e
 
 Confirm migrations completed and the browser is using the exact `APP_URL` origin. `/setup` works only before the first user exists. Use the documented administrator reset command rather than editing password rows.
 
-## Ollama Is Unavailable
+## The AI Provider Is Unavailable
 
-Run `npm run ollama:check` from the application's network context. Confirm Ollama is running, the configured model is installed, and the firewall permits only the intended host or private network. See [Ollama Setup](ollama-setup.md).
+Run `npm run ai:check` to confirm the configured provider answers with the credentials the installation holds. Check that the provider's API key is present and current, and that outbound HTTPS is permitted. Analysis fails to human review rather than producing a confident finding, so an unavailable provider stalls findings; it does not fabricate them.
 
 ## Import or Connector Problems
 

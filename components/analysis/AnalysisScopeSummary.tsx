@@ -38,9 +38,9 @@ export function AnalysisScopeSummary({
         </div>
       </dl>
       <p className="mt-4 text-sm/6 text-zinc-700">
-        Starting this job sends text only to the configured AI provider. In
-        Ollama mode it remains on the configured local machine. Findings
-        require human review before billing.
+        Starting this job sends text to the configured AI provider, which is a
+        third party. Nothing else leaves the installation, and findings require
+        human review before billing.
       </p>
       <button
         type="button"

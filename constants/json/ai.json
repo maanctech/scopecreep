@@ -1,7 +1,6 @@
 {
   "providerNames": [
     "anthropic",
-    "ollama",
     "openai",
     "demo"
   ],
@@ -23,13 +22,6 @@
         "OPENAI_API_KEY"
       ],
       "runsLocally": false
-    },
-    "ollama": {
-      "displayName": "Ollama",
-      "defaultModel": null,
-      "modelEnvironmentVariable": "OLLAMA_MODEL",
-      "requiredEnvironmentVariables": [],
-      "runsLocally": true
     }
   }
 }

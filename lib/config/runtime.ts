@@ -129,20 +129,6 @@ export function validateProductionConfiguration(env: RuntimeEnvironment = proces
     }
   }
 
-  if (env.OLLAMA_BASE_URL) {
-    try {
-      const ollama = new URL(env.OLLAMA_BASE_URL);
-
-      if (!["http:", "https:"].includes(ollama.protocol)) errors.push("OLLAMA_BASE_URL must use HTTP or HTTPS.");
-
-      if (ollama.username || ollama.password || ollama.search || ollama.hash) {
-        errors.push("OLLAMA_BASE_URL must not contain credentials, query parameters, or a fragment.");
-      }
-    } catch {
-      errors.push("OLLAMA_BASE_URL must be a valid absolute URL.");
-    }
-  }
-
   for (const name of ["ALLOW_PRIVATE_INTEGRATION_HOSTS", "ALLOW_INSECURE_IMAP"]) {
     if (env[name] && !["true", "false"].includes(env[name]!)) {
       errors.push(`${name} must be true or false.`);

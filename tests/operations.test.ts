@@ -112,19 +112,26 @@ describe("production configuration and log safety", () => {
     );
   });
 
-  it("requires the API key of a cloud provider named only as the fallback", () => {
+  it("requires the API key of a provider named only as the fallback", () => {
     expect(
-      validateProductionConfiguration({ ...validInstallation, AI_PROVIDER: "ollama", AI_FALLBACK_PROVIDER: "anthropic" })
+      validateProductionConfiguration({
+        ...validInstallation,
+        AI_PROVIDER: "openai",
+        OPENAI_API_KEY: "test-only-key",
+        AI_FALLBACK_PROVIDER: "anthropic"
+      })
     ).toContain("ANTHROPIC_API_KEY is required when Anthropic is the provider or fallback.");
   });
 
-  it("accepts a local provider without any cloud credential", () => {
-    expect(validateProductionConfiguration({ ...validInstallation, AI_PROVIDER: "ollama" })).toEqual([]);
+  it("accepts an installation once the selected provider has its key", () => {
+    expect(
+      validateProductionConfiguration({ ...validInstallation, ANTHROPIC_API_KEY: "test-only-key" })
+    ).toEqual([]);
   });
 
   it("rejects a provider that is not in the catalog", () => {
     expect(validateProductionConfiguration({ ...validInstallation, AI_PROVIDER: "gemini" })).toContain(
-      "AI_PROVIDER must be one of anthropic, ollama, openai."
+      "AI_PROVIDER must be one of anthropic, openai."
     );
   });
 

@@ -11,9 +11,9 @@ Record the date, operator, commit, host, and evidence for every completed item. 
 - [x] Approved-SOW, import, deduplication, findings, billing transitions, reports, and exports pass local tests.
 - [x] Production build passes.
 - [x] Backup and restore orchestration has automated coverage.
-- [x] Real Ollama model completes the structured analysis fixture on the current verification host.
-- [ ] Docker image builds and Compose starts on release hardware.
-- [ ] Real containerized backup and destructive restore drill succeeds on disposable data.
+- [x] The configured AI provider completes the structured analysis fixture against a real key (`npm run ai:check`).
+- [ ] The chosen deployment target builds and starts on release hardware. Blocked: the target is undecided since the Docker path was retired to `legacy/docker`.
+- [ ] Real backup and destructive restore drill succeeds on disposable data. Note that `lib/backups/native.ts` spawns `pg_dump` and `pg_restore`, so the deployment target must provide both binaries.
 - [x] Full browser workflow is rerun against the final production build.
 - [x] Final secret, private-data, dependency, and Git-status audit is clean for the repository and current host.
 

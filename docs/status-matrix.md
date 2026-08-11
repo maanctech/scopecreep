@@ -15,8 +15,9 @@ Use these labels in product, setup, sales, and release discussions.
 | SOW paste, TXT, DOCX, and text-PDF extraction | Available | Verified locally; image-only PDF OCR is not included |
 | Scope findings and billing decisions | Available | Verified locally with domain, API, and browser workflow checks |
 | Versioned reports and exports | Available | Verified locally |
-| Ollama analysis | Private Beta | Verified locally with Ollama 0.32.1 and `gemma3:12b-it-qat`; platform performance remains hardware-dependent |
+| Anthropic analysis | Bring Your Own Credentials | Default provider; adapter contract-tested, live use requires an explicit customer key |
 | OpenAI analysis | Bring Your Own Credentials | Adapter tested; live use requires an explicit customer key |
+| Local-model analysis | Retired | The Ollama provider is preserved unwired in `legacy/ollama`; no configuration keeps analysis text in house |
 | IMAP | Bring Your Own Credentials | Implemented and contract-tested; live mailbox verification is credential-dependent |
 | Slack | Private Beta / BYOC | Mocked contract only; customer Slack app and workspace approval required |
 | Google Gmail | Private Beta / BYOC | Mocked contract only; customer OAuth app and Google approval may be required |

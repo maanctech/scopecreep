@@ -23,8 +23,8 @@ services:
 
   app:
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ../..
+      dockerfile: legacy/docker/Dockerfile
     restart: unless-stopped
     depends_on:
       postgres:
@@ -48,9 +48,9 @@ services:
       SCOPELEDGER_MASTER_KEY: ${SCOPELEDGER_MASTER_KEY:?Set SCOPELEDGER_MASTER_KEY in .env}
       PG_DUMP_PATH: /usr/bin/pg_dump
       PG_RESTORE_PATH: /usr/bin/pg_restore
-      AI_PROVIDER: ${AI_PROVIDER:-ollama}
-      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
-      OLLAMA_MODEL: ${OLLAMA_MODEL:-gemma3:12b-it-qat}
+      AI_PROVIDER: ${AI_PROVIDER:-anthropic}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-haiku-4-5}
       AI_TIMEOUT_MS: ${AI_TIMEOUT_MS:-90000}
       AI_MAX_ATTEMPTS: ${AI_MAX_ATTEMPTS:-2}
       ANALYSIS_JOB_MAX_ATTEMPTS: ${ANALYSIS_JOB_MAX_ATTEMPTS:-3}
@@ -64,8 +64,6 @@ services:
     volumes:
       - scopeledger_app_data:/app/data
       - scopeledger_backups:/app/backups
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     security_opt:
       - no-new-privileges:true
     cap_drop:

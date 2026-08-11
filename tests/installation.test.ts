@@ -2,14 +2,22 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { CATALOG_PROVIDER_NAMES } from "@/lib/ai/catalog";
 
 const root = process.cwd();
 const read = (filename: string) => readFileSync(path.join(root, filename), "utf8");
 const dockerAvailable = spawnSync("docker", ["compose", "version"], { stdio: "ignore" }).status === 0;
 
-describe("self-hosted installation assets", () => {
+/**
+ * The Docker install path is retired to `legacy/docker` rather than deleted,
+ * so it stays available if self-hosting is revived. Retired is not the same as
+ * abandoned: an install path nobody checks stops working silently, and by the
+ * time it is wanted again it is no longer a fallback. These assertions keep it
+ * honest.
+ */
+describe("the retired self-hosted installation assets", () => {
   it("builds a non-root runtime with matching PostgreSQL backup tools and health checks", () => {
-    const dockerfile = read("Dockerfile");
+    const dockerfile = read("legacy/docker/Dockerfile");
 
     expect(dockerfile).toContain("FROM node:22-bookworm-slim AS runtime");
     expect(dockerfile).toContain("postgresql-client-15");
@@ -25,7 +33,7 @@ describe("self-hosted installation assets", () => {
    * it and neither stage copied it, so the image could not build at all.
    */
   it("copies every root directory the source imports into the stage that needs it", () => {
-    const [, buildStage, runtimeStage] = read("Dockerfile").split(/^FROM /m);
+    const [, buildStage, runtimeStage] = read("legacy/docker/Dockerfile").split(/^FROM /m);
     const copies = (stage: string) => stage.match(/^COPY .*$/gm)?.join("\n") ?? "";
 
     const importedBy = (directories: string[]) => {
@@ -58,8 +66,22 @@ describe("self-hosted installation assets", () => {
     expect(runtimeCopies).toContain("public ./public");
   });
 
+  /**
+   * The entrypoint stopped living under `scripts/` when the install path was
+   * retired, so `COPY scripts ./scripts` no longer carries it and it needs a
+   * line of its own. Nothing else here notices its absence: the image builds
+   * every layer and fails only when a container starts.
+   */
+  it("copies the entrypoint it declares to the path it declares it at", () => {
+    const dockerfile = read("legacy/docker/Dockerfile");
+    const declared = dockerfile.match(/ENTRYPOINT \[.*"([^"]*docker-entrypoint\.sh)"\]/)?.[1] ?? "";
+
+    expect(declared).toBe("/app/scripts/docker-entrypoint.sh");
+    expect(dockerfile).toContain(`docker-entrypoint.sh .${declared.replace("/app", "")}`);
+  });
+
   it("keeps PostgreSQL private, binds the app to loopback by default, and persists required state", () => {
-    const compose = read("compose.yaml");
+    const compose = read("legacy/docker/compose.yaml");
     const postgresService = compose.split("\n  app:")[0];
 
     expect(compose).toContain("image: postgres:15-bookworm");
@@ -74,12 +96,25 @@ describe("self-hosted installation assets", () => {
       expect(compose).toContain(volume);
     }
 
-    expect(compose).toContain("http://host.docker.internal:11434");
     expect(compose).toContain("no-new-privileges:true");
   });
 
+  /**
+   * The default shipped here was `ollama` while every other file said the
+   * default was Anthropic, so an operator who never set AI_PROVIDER got an
+   * installation that expected a local model on port 11434 and failed at the
+   * first analysis. The default has to name a provider the application can
+   * actually construct.
+   */
+  it("defaults to an AI provider the application can select", () => {
+    const compose = read("legacy/docker/compose.yaml");
+    const fallback = compose.match(/AI_PROVIDER: \$\{AI_PROVIDER:-([a-z]+)\}/)?.[1] ?? "";
+
+    expect(CATALOG_PROVIDER_NAMES).toContain(fallback);
+  });
+
   it("validates configuration and database readiness before migration and startup", () => {
-    const entrypoint = read("scripts/docker-entrypoint.sh");
+    const entrypoint = read("legacy/docker/docker-entrypoint.sh");
     const configAt = entrypoint.indexOf("npm run config:check");
     const waitAt = entrypoint.indexOf("npm run db:wait");
     const migrateAt = entrypoint.indexOf("npm run db:migrate");
@@ -92,7 +127,7 @@ describe("self-hosted installation assets", () => {
   });
 
   it("ships placeholders and generation commands instead of committed secrets", () => {
-    const environment = read(".env.compose.example");
+    const environment = read("legacy/docker/env.compose.example");
 
     expect(environment).toContain("POSTGRES_PASSWORD=");
     expect(environment).toContain("SCOPELEDGER_DB_APP_PASSWORD=");
@@ -104,7 +139,7 @@ describe("self-hosted installation assets", () => {
   });
 
   it.skipIf(!dockerAvailable)("passes Docker Compose configuration validation", () => {
-    execFileSync("docker", ["compose", "-f", "compose.yaml", "config", "--quiet"], {
+    execFileSync("docker", ["compose", "-f", "legacy/docker/compose.yaml", "config", "--quiet"], {
       cwd: root,
       env: {
         ...process.env,

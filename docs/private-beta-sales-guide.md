@@ -15,7 +15,7 @@ Start with a free lookback audit of one representative project. Ask for the gove
 - 10-20% of validated recovered revenue only under written attribution and payment terms.
 - Custom enterprise scope for multiple delivery units, support, deployment, and connector validation.
 
-The customer supplies suitable hardware, Docker, Ollama capacity, backups, and third-party credentials. Ollama mode does not create a per-analysis cloud API charge, but hardware and operator costs remain.
+The customer supplies a PostgreSQL database, backups, an AI provider key, and third-party credentials. The provider bills its own per-analysis charge directly, and every analysis incurs one; there is no local-model configuration that avoids it.
 
 ## Demonstration Rules
 

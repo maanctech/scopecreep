@@ -22,7 +22,6 @@
     "constants:generate": "tsx scripts/generate-constants.ts",
     "rls:check": "tsx scripts/check-rls.ts",
     "ai:check": "tsx scripts/check-ai.ts",
-    "ollama:check": "tsx scripts/check-ollama.ts",
     "lint": "eslint .",
     "format": "eslint . --fix",
     "format:check": "eslint .",

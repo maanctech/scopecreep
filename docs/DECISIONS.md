@@ -22,6 +22,7 @@ Last updated: 2026-08-10 after commit `d0cb078`. Branch: `backend-refactor`.
 ## AI and Evidence
 
 - Anthropic is the default provider; OpenAI and a local Ollama model are explicit alternatives. A default installation therefore sends analysis text to a third party, and an installation that cannot do that runs Ollama.
+  - **Superseded.** Local-model analysis is retired and the Ollama provider is unwired into `legacy/ollama`. Every installation now sends analysis text to a third party, and a firm that cannot do that is not served today.
 - Providers are described by one data-only catalog, so adding or switching a provider is a configuration change rather than a code change.
 - ScopeLedger never downloads a model automatically.
 - Real local verification used `gemma3:12b-it-qat`; model choice remains configurable.
@@ -39,7 +40,8 @@ Last updated: 2026-08-10 after commit `d0cb078`. Branch: `backend-refactor`.
 ## Deployment and Commercial Model
 
 - Supported target: self-hosted Next.js, private PostgreSQL, private persistent documents, and Ollama on the host or protected LAN.
+  - **Superseded.** The Docker install path is retired to `legacy/docker` because it targets operators rather than the professionals ScopeLedger is sold to. A replacement deployment target is not yet decided; whatever it is must answer two constraints recorded in `legacy/README.md` - backups spawn `pg_dump`, and the tenant boundary needs a non-superuser database role.
 - Loopback is the default bind. Non-loopback deployment requires HTTPS and operator-managed network controls.
-- Docker Compose remains the documented installation target, but this repository stays **Internal Alpha** until image/startup and real restore evidence exists.
+- Docker Compose was the documented installation target and is now retired to `legacy/docker`, still covered by `tests/installation.test.ts`. The repository stays **Internal Alpha** until image/startup and real restore evidence exists.
 - Public pricing remains a free lookback audit, $1,500 setup plus $750/month, a written 10-20% validated-recovery option, and custom enterprise scope.
 - ScopeLedger is a working commercial name pending trademark and market validation.

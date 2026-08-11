@@ -1,14 +1,12 @@
 import { z } from "zod";
 import { AnthropicProvider } from "@/lib/ai/anthropic";
 import { CATALOG_PROVIDER_NAMES } from "@/lib/ai/catalog";
-import { OllamaProvider } from "@/lib/ai/ollama";
 import { OpenAiProvider } from "@/lib/ai/openai";
 import { AI_PROVIDERS, type AiProvider, type AiProviderName, type RemoteAiProviderName } from "@/lib/ai/types";
 
 const PROVIDER_FACTORIES: Record<RemoteAiProviderName, () => AiProvider> = {
   anthropic: () => new AnthropicProvider(),
-  openai: () => new OpenAiProvider(),
-  ollama: () => new OllamaProvider()
+  openai: () => new OpenAiProvider()
 };
 
 export function configuredProviderName(): AiProviderName {

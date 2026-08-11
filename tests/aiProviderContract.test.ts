@@ -6,8 +6,7 @@ import type { AiRequest, RemoteAiProviderName } from "@/lib/ai/types";
 
 const CREDENTIALS: Record<RemoteAiProviderName, Record<string, string>> = {
   anthropic: { ANTHROPIC_API_KEY: "test-only-key" },
-  openai: { OPENAI_API_KEY: "test-only-key" },
-  ollama: {}
+  openai: { OPENAI_API_KEY: "test-only-key" }
 };
 
 const GROUNDED_ANALYSIS = {
@@ -45,12 +44,6 @@ function successResponse(name: RemoteAiProviderName, url: string) {
   const serialized = JSON.stringify(GROUNDED_ANALYSIS);
   const json = (body: unknown) =>
     new Response(JSON.stringify(body), { status: 200, headers: { "content-type": "application/json" } });
-
-  if (name === "ollama") {
-    if (url.endsWith("/api/tags")) return json({ models: [{ name: "test-model" }] });
-
-    return json({ model: "test-model", message: { content: serialized } });
-  }
 
   if (name === "anthropic") {
     if (url.includes("/v1/models/")) return json({ id: "test-model", type: "model", display_name: "test-model", created_at: "2026-01-01T00:00:00Z" });

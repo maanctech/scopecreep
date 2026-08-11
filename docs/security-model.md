@@ -7,7 +7,7 @@ ScopeLedger is a self-hosted, professional-only revenue review system. It assume
 - Browser sessions authenticate a professional user into one organization and one role.
 - PostgreSQL is the durable commercial store. Organization-owned records are filtered by organization ID.
 - Uploaded SOW originals and future attachment files remain in the private local document directory.
-- Anthropic is the default AI provider, so a default installation sends analysis content off the host. OpenAI is an alternative, and Ollama keeps analysis content on an operator-controlled machine.
+- Anthropic is the default AI provider and OpenAI is the alternative, so every installation sends analysis content off the host to a third party. No configuration keeps it local.
 - Integration credentials are encrypted with `SCOPELEDGER_MASTER_KEY` before database storage.
 - Client-facing drafts remain private until a professional deliberately copies or exports them.
 

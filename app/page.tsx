@@ -32,7 +32,7 @@ const connections = [
 const faqs = [
   ["Is ScopeLedger a chatbot?", "No. It is an internal evidence and revenue-control workflow. Requests are compared with the approved SOW and become reviewable findings."],
   ["Does it contact clients or send invoices?", "No. ScopeLedger never sends a client message, change order, invoice, payment request, or notification automatically."],
-  ["Where does analysis run?", "Analysis runs through a configured AI provider, and Anthropic is the default. OpenAI is an alternative. Ollama runs the model on the firm's own Mac, workstation, or protected LAN server, so an installation that cannot send analysis text to a third party does not have to."],
+  ["Where does analysis run?", "Analysis runs through a configured AI provider, and Anthropic is the default. OpenAI is the alternative. Both are third parties, so SOW and message text submitted for analysis leaves the installation. Nothing else does."],
   ["What is needed for a free audit?", "One SOW, representative message exports or summaries, the hourly or blended rate, project value, and notes on suspected scope drift."],
   ["Is estimated leakage an approved charge?", "No. AI estimates remain separate from professional-approved hours and amounts. Every billing decision requires human review."],
   ["What is actually live today?", "Manual imports and signed webhooks are locally verified. IMAP and provider connectors require customer credentials; Slack, Google, and Microsoft are not represented as live without them."]
@@ -53,7 +53,7 @@ export default function MarketingPage() {
           <span aria-hidden="true">/</span>
           <span>Professional-only</span>
           <span aria-hidden="true">/</span>
-          <span>Local-model capable</span>
+          <span>Evidence-backed</span>
         </div>
         <h1 className="
           mt-6 max-w-5xl text-4xl/tight font-semibold text-ink
@@ -86,7 +86,7 @@ export default function MarketingPage() {
         ">
           <span className="inline-flex items-center gap-2"><HardDrive className="
             size-4
-          " aria-hidden="true" /> Local-model option</span>
+          " aria-hidden="true" /> Your own database</span>
           <span className="inline-flex items-center gap-2"><ShieldCheck className="
             size-4
           " aria-hidden="true" /> Human approval required</span>
@@ -242,7 +242,7 @@ export default function MarketingPage() {
             PostgreSQL, SOW originals, reports, and encrypted connector credentials stay inside the self-hosted installation. Analysis text is the one thing that leaves it, and it goes to the configured AI provider, which is Anthropic by default.
           </p>
           <p className="mt-3 text-sm/6 text-zinc-700">
-            OpenAI and a fully local Ollama model are both supported alternatives, so a firm that cannot send analysis text to a third party can keep it in house. Independent penetration testing, legal review, and live third-party connector approval are not claimed in the private beta.
+            OpenAI is a supported alternative. Both providers are third parties, so a firm that cannot send analysis text outside its own walls is not a fit today. Independent penetration testing, legal review, and live third-party connector approval are not claimed in the private beta.
           </p>
           <Link href="/privacy" className="
             mt-4 inline-flex text-sm font-semibold underline underline-offset-4
@@ -304,7 +304,7 @@ export default function MarketingPage() {
             mt-2 text-lg font-semibold
           ">{title}</h3><p className="mt-3 text-sm/6 text-zinc-700">{copy}</p></article>)}
         </div>
-        <p className="mt-4 text-sm text-zinc-600">The customer supplies local hardware, Docker, an AI provider key, and third-party credentials. The configured provider bills its own per-analysis fee; running Ollama instead replaces that fee with local hardware and operator cost.</p>
+        <p className="mt-4 text-sm text-zinc-600">The customer supplies a PostgreSQL database, an AI provider key, and third-party credentials. The configured provider bills its own per-analysis fee directly.</p>
       </section>
 
       <section id="installation" className="
@@ -321,7 +321,7 @@ export default function MarketingPage() {
           grid gap-3 text-sm text-zinc-700
           sm:grid-cols-2
         ">
-          {["Docker Desktop or compatible Docker Engine", "Private PostgreSQL and document volumes", "An AI provider key, or Ollama on the host or a protected LAN machine", "Generated database password and encryption key", "Loopback access by default; HTTPS required beyond it", "Customer-owned credentials for provider integrations"].map((item) => <li key={item} className="
+          {["A PostgreSQL 15 or newer database", "Private document and backup storage", "An Anthropic or OpenAI API key", "Generated database password and encryption key", "Loopback access by default; HTTPS required beyond it", "Customer-owned credentials for provider integrations"].map((item) => <li key={item} className="
             flex gap-2
           "><CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-700" aria-hidden="true" />{item}</li>)}
         </ul>
