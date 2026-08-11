@@ -8,7 +8,24 @@ PostgreSQL exempts superusers from row-level security, and `FORCE ROW LEVEL SECU
 
 The official PostgreSQL Docker image creates its bootstrap user as a superuser, so the default `POSTGRES_USER` is exactly the wrong account to point `DATABASE_URL` at.
 
-Create a dedicated login role that owns nothing and holds neither `SUPERUSER` nor `BYPASSRLS`:
+## Two Accounts, Not One
+
+An installation uses two database accounts, because creating tables needs
+rights that would also read past every tenant policy:
+
+| Account | Set by | Used for |
+| --- | --- | --- |
+| `SCOPELEDGER_DB_USER` | `POSTGRES_PASSWORD` | Owns the schema; runs migrations |
+| `SCOPELEDGER_DB_APP_USER` | `SCOPELEDGER_DB_APP_PASSWORD` | Everything the running application does |
+
+Under Compose this is automatic. `docker-entrypoint.sh` runs the migrations as
+the owner, then `npm run db:ensure-app-role` creates the application role with
+CRUD grants and default privileges for future tables, and the application
+process connects as that role. Provisioning refuses to continue if the role
+already exists with `SUPERUSER` or `BYPASSRLS`.
+
+For an external PostgreSQL server, create the role by hand and point
+`DATABASE_URL` at it:
 
 ```sql
 CREATE ROLE scopeledger_app LOGIN PASSWORD 'use-a-generated-secret';
@@ -16,9 +33,9 @@ GRANT USAGE ON SCHEMA public TO scopeledger_app;
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO scopeledger_app;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO scopeledger_app;
 GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO scopeledger_app;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+  GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO scopeledger_app;
 ```
-
-Then point `DATABASE_URL` at `scopeledger_app`. Migrations still run as the owning role, since creating tables requires privileges the application account deliberately lacks.
 
 ## Startup Refuses an Unsafe Configuration
 
@@ -44,3 +61,11 @@ Two escapes exist and both are explicit:
 ## Verification
 
 `tests/rowLevelSecurity.test.ts` asserts the policies themselves, and `tests/serviceTenantScope.test.ts` asserts that each service opens a scope. Both connect as an ordinary role — a suite left on a superuser connection would pass with every policy removed.
+
+By default these run against PGlite, which is convenient but is not the server the product ships against. Point the suite at a real PostgreSQL to confirm the policies behave identically:
+
+```bash
+SCOPELEDGER_TEST_DATABASE_URL=postgresql://owner:secret@127.0.0.1:5432/scopeledger_test npm test
+```
+
+The URL must name an account that owns the database, and the harness **drops and recreates the `public` schema** on every run, so it must never point at anything worth keeping. It provisions its own unprivileged role and refuses to run if that role turns out to be privileged, since the assertions would then prove nothing.

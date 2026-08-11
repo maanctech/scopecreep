@@ -9,6 +9,7 @@
     "test": "vitest run",
     "seed": "node scripts/seed-demo.mjs",
     "db:migrate": "tsx scripts/migrate.ts",
+    "db:ensure-app-role": "tsx scripts/ensure-app-role.ts",
     "db:wait": "tsx scripts/wait-for-database.ts",
     "db:import-json": "tsx scripts/import-json.ts",
     "db:seed-demo": "npm run seed && tsx scripts/import-json.ts --file=data/demo-store.json --apply",

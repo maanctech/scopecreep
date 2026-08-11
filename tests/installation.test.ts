@@ -55,6 +55,7 @@ describe("self-hosted installation assets", () => {
     const environment = read(".env.compose.example");
 
     expect(environment).toContain("POSTGRES_PASSWORD=");
+    expect(environment).toContain("SCOPELEDGER_DB_APP_PASSWORD=");
     expect(environment).toContain("SCOPELEDGER_MASTER_KEY=");
     expect(environment).toContain("openssl rand -hex 24");
     expect(environment).toContain("openssl rand -base64 32");
@@ -68,6 +69,7 @@ describe("self-hosted installation assets", () => {
       env: {
         ...process.env,
         POSTGRES_PASSWORD: "test-only-hex-password",
+        SCOPELEDGER_DB_APP_PASSWORD: "test-only-app-password",
         SCOPELEDGER_MASTER_KEY: Buffer.alloc(32).toString("base64")
       },
       stdio: "pipe"
