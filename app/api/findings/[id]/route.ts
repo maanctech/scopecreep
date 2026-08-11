@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { MAX_FINDING_TEXT_LENGTH } from "@/constants/typescript/limits";
 import { TransitionError } from "@/lib/domain/findingTransitions";
 import {
   getFindingDetail,
@@ -11,15 +12,13 @@ import { authErrorResponse, requireApiPermission } from "@/lib/auth/api";
 
 export const runtime = "nodejs";
 
-const MAX_TEXT_LENGTH = 4000;
-
 const updateSchema = z
   .object({
     expected_version: z.number().int().min(1),
     approved_hours: z.number().finite().min(0).max(10000).nullable().optional(),
     approved_amount_cents: z.number().int().min(0).max(1_000_000_000).nullable().optional(),
-    client_facing_explanation: z.string().trim().min(1).max(MAX_TEXT_LENGTH).optional(),
-    internal_note: z.string().trim().max(MAX_TEXT_LENGTH).nullable().optional()
+    client_facing_explanation: z.string().trim().min(1).max(MAX_FINDING_TEXT_LENGTH).optional(),
+    internal_note: z.string().trim().max(MAX_FINDING_TEXT_LENGTH).nullable().optional()
   })
   .strict();
 

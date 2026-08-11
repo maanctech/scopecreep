@@ -1,4 +1,7 @@
-export const ORGANIZATION_ROLES = ["Owner", "Admin", "Reviewer", "Read Only"] as const;
+import { ORGANIZATION_ROLES, PERMISSIONS } from "@/constants/typescript/auth";
+
+export { ORGANIZATION_ROLES, PERMISSIONS };
+
 export type OrganizationRole = (typeof ORGANIZATION_ROLES)[number];
 
 export type AuthContext = {
@@ -12,27 +15,5 @@ export type AuthContext = {
   isSystemAdmin: boolean;
   expiresAt: string;
 };
-
-export const PERMISSIONS = [
-  "projects:read",
-  "projects:write",
-  "leads:read",
-  "leads:write",
-  "findings:read",
-  "findings:review",
-  "billing:read",
-  "billing:write",
-  "reports:read",
-  "reports:write",
-  "exports:read",
-  "integrations:read",
-  "integrations:write",
-  "members:read",
-  "members:write",
-  "settings:read",
-  "settings:write",
-  "backups:read",
-  "backups:write"
-] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];

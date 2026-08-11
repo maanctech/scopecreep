@@ -1,12 +1,12 @@
 import { parse } from "csv-parse/sync";
 import { z } from "zod";
+import { MAX_IMPORT_BYTES, MAX_IMPORT_MESSAGES } from "@/constants/typescript/ingestion";
 import type {
   ImportPreview,
   NormalizedCommunication,
 } from "@/lib/ingestion/types";
 
-export const MAX_IMPORT_BYTES = 5 * 1024 * 1024;
-export const MAX_IMPORT_MESSAGES = 5_000;
+export { MAX_IMPORT_BYTES, MAX_IMPORT_MESSAGES };
 
 const rowSchema = z.looseObject({
     id: z.union([z.string(), z.number()]).optional().nullable(),

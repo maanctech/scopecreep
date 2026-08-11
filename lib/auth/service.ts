@@ -1,19 +1,11 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { isIP } from "node:net";
 import type { PoolClient } from "pg";
+import { SESSION_DURATION_MS, SESSION_IDLE_TIMEOUT } from "@/constants/typescript/auth";
 import { hashPassword, verifyPassword } from "@/lib/auth/password";
 import { normalizeEmail, PublicError } from "@/lib/auth/security";
 import type { AuthContext, OrganizationRole } from "@/lib/auth/types";
 import { query, transaction } from "@/lib/db/client";
-
-const SESSION_DURATION_MS = 12 * 60 * 60 * 1000;
-
-/**
- * A session also dies after this long without a request, so an unattended
- * browser stops being a valid credential well before the absolute expiry.
- * `last_seen_at` is advanced on every authenticated request.
- */
-const SESSION_IDLE_TIMEOUT = "4 hours";
 
 /**
  * Verified against when no user matches, so that a sign-in attempt for an

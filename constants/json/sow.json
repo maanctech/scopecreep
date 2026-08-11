@@ -1,0 +1,44 @@
+{
+  "boundaryTypes": [
+    "Included",
+    "Excluded",
+    "Ambiguous",
+    "Assumption",
+    "Limit"
+  ],
+  "documentStatuses": [
+    "Draft",
+    "Active",
+    "Superseded",
+    "Archived"
+  ],
+  "versionSourceTypes": [
+    "Pasted Text",
+    "TXT",
+    "DOCX",
+    "PDF",
+    "Imported JSON",
+    "Generated"
+  ],
+  "extractionStatuses": [
+    "Succeeded",
+    "Needs Manual Text",
+    "Failed"
+  ],
+  "boundaryMapStatuses": [
+    "Draft",
+    "Active",
+    "Archived"
+  ],
+  "riskReviewStatuses": [
+    "Draft",
+    "Reviewed"
+  ],
+  "riskSeverities": [
+    "High",
+    "Medium",
+    "Low"
+  ],
+  "maxSowFileBytes": 10485760,
+  "maxExtractedCharacters": 2097152
+}

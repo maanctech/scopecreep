@@ -1,0 +1,28 @@
+{
+  "connectorProviders": [
+    "Manual",
+    "Webhook",
+    "IMAP",
+    "Slack",
+    "Google",
+    "Microsoft",
+    "Transcript",
+    "Other"
+  ],
+  "connectorStatuses": [
+    "Not Configured",
+    "Credentials Required",
+    "Connected",
+    "Syncing",
+    "Needs Attention",
+    "Disabled"
+  ],
+  "oauthProviders": [
+    "Google",
+    "Microsoft"
+  ],
+  "maxImportBytes": 5242880,
+  "maxImportMessages": 5000,
+  "webhookSignatureWindowSeconds": 300,
+  "maxEmailSourceBytes": 10485760
+}

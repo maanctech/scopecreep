@@ -1,0 +1,86 @@
+{
+  "classifications": [
+    "In Scope",
+    "Possibly In Scope",
+    "Out of Scope",
+    "Needs Human Review"
+  ],
+  "requestTypes": [
+    "New Deliverable",
+    "Revision",
+    "Support",
+    "Strategy",
+    "Design",
+    "Engineering",
+    "Admin",
+    "Other"
+  ],
+  "messageSources": [
+    "Slack",
+    "Email",
+    "Zoom",
+    "Asana",
+    "Jira",
+    "Other"
+  ],
+  "leadStatuses": [
+    "New",
+    "Contacted",
+    "Audit Running",
+    "Proposal Sent",
+    "Closed Won",
+    "Closed Lost"
+  ],
+  "auditRequestStatuses": [
+    "Submitted",
+    "In Review",
+    "Analyzed"
+  ],
+  "salesTemplateTypes": [
+    "Cold Email",
+    "LinkedIn DM",
+    "Discovery Call Script",
+    "Audit Reveal Call Script",
+    "Proposal Template",
+    "Follow-up Email",
+    "Objection Handling"
+  ],
+  "billingDecisions": [
+    "Undecided",
+    "Bill Separately",
+    "Include In Retainer",
+    "Absorb Courtesy",
+    "Discuss With Client",
+    "Reject Finding"
+  ],
+  "workflowStatuses": [
+    "New",
+    "Needs Review",
+    "Decided",
+    "Discussing",
+    "Invoiced",
+    "Paid",
+    "Closed"
+  ],
+  "billingEventTypes": [
+    "Finding Created",
+    "Estimate Updated",
+    "Decision Updated",
+    "Approved Internally",
+    "Discussing With Client",
+    "Included In Retainer",
+    "Invoiced",
+    "Paid",
+    "Absorbed",
+    "Rejected",
+    "Reopened"
+  ],
+  "reportTypes": [
+    "Internal Scope Audit",
+    "Finding Summary",
+    "Revenue Leakage Report",
+    "Client Discussion Brief",
+    "Change Order Draft",
+    "Invoice Support Summary"
+  ]
+}

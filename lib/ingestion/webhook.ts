@@ -5,6 +5,7 @@ import {
   randomUUID,
   timingSafeEqual,
 } from "node:crypto";
+import { WEBHOOK_SIGNATURE_WINDOW_SECONDS } from "@/constants/typescript/ingestion";
 import { currentAuthContext } from "@/lib/auth/current";
 import { query, transaction } from "@/lib/db/client";
 import { parseManualImport } from "@/lib/ingestion/manual";
@@ -12,7 +13,6 @@ import type { NormalizedCommunication } from "@/lib/ingestion/types";
 import { decryptSecret, encryptSecret } from "@/lib/security/secrets";
 
 type Row = Record<string, unknown>;
-const SIGNATURE_WINDOW_SECONDS = 300;
 
 function contextKey(organizationId: string, connectionId: string) {
   return `${organizationId}:${connectionId}:webhook-signing-secret`;
@@ -38,7 +38,7 @@ export function verifyWebhookSignature(input: {
 
   if (
     !Number.isInteger(timestamp) ||
-    Math.abs(now - timestamp) > SIGNATURE_WINDOW_SECONDS
+    Math.abs(now - timestamp) > WEBHOOK_SIGNATURE_WINDOW_SECONDS
   )
     throw new Error("Webhook timestamp is missing or expired.");
 

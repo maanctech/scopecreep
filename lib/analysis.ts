@@ -1,13 +1,12 @@
 import { createHash } from "node:crypto";
 import { z } from "zod";
+import { ANALYSIS_MAX_OUTPUT_TOKENS } from "@/constants/typescript/analysis";
 import { AI_PROMPT_VERSION, AI_SYSTEM_PROMPT, buildAnalysisPrompt } from "@/lib/aiPrompt";
 import { configuredFallbackProviderName, configuredProviderName, providerFor } from "@/lib/ai/providers";
 import { analysisJsonSchema } from "@/lib/ai/schema";
 import type { AiProviderName, DetailedAnalysis } from "@/lib/ai/types";
 import { redactText } from "@/lib/observability/logger";
 import { CLASSIFICATIONS, REQUEST_TYPES, type AnalysisInput } from "@/lib/types";
-
-const ANALYSIS_MAX_OUTPUT_TOKENS = 1200;
 
 const analysisSchema = z.object({
   classification: z.enum(CLASSIFICATIONS),

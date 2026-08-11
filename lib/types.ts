@@ -1,56 +1,34 @@
-export const CLASSIFICATIONS = [
-  "In Scope",
-  "Possibly In Scope",
-  "Out of Scope",
-  "Needs Human Review"
-] as const;
+import {
+  BILLING_DECISIONS,
+  BILLING_EVENT_TYPES,
+  CLASSIFICATIONS,
+  LEAD_STATUSES,
+  MESSAGE_SOURCES,
+  REPORT_TYPES,
+  REQUEST_TYPES,
+  SALES_TEMPLATE_TYPES,
+  WORKFLOW_STATUSES
+} from "@/constants/typescript/domain";
+
+export {
+  BILLING_DECISIONS,
+  BILLING_EVENT_TYPES,
+  CLASSIFICATIONS,
+  LEAD_STATUSES,
+  MESSAGE_SOURCES,
+  REPORT_TYPES,
+  REQUEST_TYPES,
+  SALES_TEMPLATE_TYPES,
+  WORKFLOW_STATUSES
+};
 
 export type Classification = (typeof CLASSIFICATIONS)[number];
 
-export const REQUEST_TYPES = [
-  "New Deliverable",
-  "Revision",
-  "Support",
-  "Strategy",
-  "Design",
-  "Engineering",
-  "Admin",
-  "Other"
-] as const;
-
 export type RequestType = (typeof REQUEST_TYPES)[number];
-
-export const MESSAGE_SOURCES = [
-  "Slack",
-  "Email",
-  "Zoom",
-  "Asana",
-  "Jira",
-  "Other"
-] as const;
 
 export type MessageSource = (typeof MESSAGE_SOURCES)[number];
 
-export const LEAD_STATUSES = [
-  "New",
-  "Contacted",
-  "Audit Running",
-  "Proposal Sent",
-  "Closed Won",
-  "Closed Lost"
-] as const;
-
 export type LeadStatus = (typeof LEAD_STATUSES)[number];
-
-export const SALES_TEMPLATE_TYPES = [
-  "Cold Email",
-  "LinkedIn DM",
-  "Discovery Call Script",
-  "Audit Reveal Call Script",
-  "Proposal Template",
-  "Follow-up Email",
-  "Objection Handling"
-] as const;
 
 export type SalesTemplateType = (typeof SALES_TEMPLATE_TYPES)[number];
 
@@ -136,15 +114,6 @@ export type ClientMessage = {
   created_at: string;
 };
 
-export const BILLING_DECISIONS = [
-  "Undecided",
-  "Bill Separately",
-  "Include In Retainer",
-  "Absorb Courtesy",
-  "Discuss With Client",
-  "Reject Finding"
-] as const;
-
 export type BillingDecision = (typeof BILLING_DECISIONS)[number];
 
 /**
@@ -164,16 +133,6 @@ export type BillingDecision = (typeof BILLING_DECISIONS)[number];
  * Phase 1 action produces it, and keeping unreachable states in the model
  * would make the transition table dishonest.
  */
-export const WORKFLOW_STATUSES = [
-  "New",
-  "Needs Review",
-  "Decided",
-  "Discussing",
-  "Invoiced",
-  "Paid",
-  "Closed"
-] as const;
-
 export type WorkflowStatus = (typeof WORKFLOW_STATUSES)[number];
 
 /**
@@ -233,20 +192,6 @@ export type AnalysisInput = Pick<
   | "internal_note"
 >;
 
-export const BILLING_EVENT_TYPES = [
-  "Finding Created",
-  "Estimate Updated",
-  "Decision Updated",
-  "Approved Internally",
-  "Discussing With Client",
-  "Included In Retainer",
-  "Invoiced",
-  "Paid",
-  "Absorbed",
-  "Rejected",
-  "Reopened"
-] as const;
-
 export type BillingEventType = (typeof BILLING_EVENT_TYPES)[number];
 
 /**
@@ -290,15 +235,6 @@ export type Report = {
   csv_content?: string;
   csv_sha256?: string | null;
 };
-
-export const REPORT_TYPES = [
-  "Internal Scope Audit",
-  "Finding Summary",
-  "Revenue Leakage Report",
-  "Client Discussion Brief",
-  "Change Order Draft",
-  "Invoice Support Summary"
-] as const;
 
 export type ReportType = (typeof REPORT_TYPES)[number];
 

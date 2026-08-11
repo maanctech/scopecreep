@@ -1,4 +1,5 @@
 import { hash, verify, type Options } from "@node-rs/argon2";
+import { MIN_PASSWORD_LENGTH } from "@/constants/typescript/auth";
 import { PublicError } from "@/lib/auth/security";
 
 const options: Options = {
@@ -9,7 +10,7 @@ const options: Options = {
   outputLen: 32
 };
 
-export const MIN_PASSWORD_LENGTH = 12;
+export { MIN_PASSWORD_LENGTH };
 
 export function validatePassword(password: string) {
   if (password.length < MIN_PASSWORD_LENGTH) {

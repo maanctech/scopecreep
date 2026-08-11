@@ -1,36 +1,15 @@
+import { PROVIDER_CATALOG as GENERATED_PROVIDER_CATALOG } from "@/constants/typescript/ai";
 import type { AiProviderName, RemoteAiProviderName } from "@/lib/ai/types";
 
 export type ProviderCatalogEntry = {
   displayName: string;
   defaultModel: string | null;
   modelEnvironmentVariable: string;
-  requiredEnvironmentVariables: string[];
+  requiredEnvironmentVariables: readonly string[];
   runsLocally: boolean;
 };
 
-export const PROVIDER_CATALOG: Record<RemoteAiProviderName, ProviderCatalogEntry> = {
-  anthropic: {
-    displayName: "Anthropic",
-    defaultModel: "claude-haiku-4-5",
-    modelEnvironmentVariable: "ANTHROPIC_MODEL",
-    requiredEnvironmentVariables: ["ANTHROPIC_API_KEY"],
-    runsLocally: false
-  },
-  openai: {
-    displayName: "OpenAI",
-    defaultModel: "gpt-4.1-mini",
-    modelEnvironmentVariable: "OPENAI_MODEL",
-    requiredEnvironmentVariables: ["OPENAI_API_KEY"],
-    runsLocally: false
-  },
-  ollama: {
-    displayName: "Ollama",
-    defaultModel: null,
-    modelEnvironmentVariable: "OLLAMA_MODEL",
-    requiredEnvironmentVariables: [],
-    runsLocally: true
-  }
-};
+export const PROVIDER_CATALOG: Record<RemoteAiProviderName, ProviderCatalogEntry> = GENERATED_PROVIDER_CATALOG;
 
 export const CATALOG_PROVIDER_NAMES = Object.keys(PROVIDER_CATALOG) as [RemoteAiProviderName, ...RemoteAiProviderName[]];
 

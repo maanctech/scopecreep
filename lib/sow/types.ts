@@ -1,4 +1,7 @@
-export const BOUNDARY_TYPES = ["Included", "Excluded", "Ambiguous", "Assumption", "Limit"] as const;
+import { BOUNDARY_TYPES } from "@/constants/typescript/sow";
+
+export { BOUNDARY_TYPES };
+
 export type BoundaryType = (typeof BOUNDARY_TYPES)[number];
 
 export type SowVersion = {

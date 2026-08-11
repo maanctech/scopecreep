@@ -1,35 +1,16 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
+import {
+  DEMO_AUDIT_REQUEST_ID,
+  DEMO_COMPANY_ID,
+  DEMO_CREATED_AT,
+  DEMO_LEAD_ID,
+  DEMO_PROJECT_ID,
+  DEMO_USER_ID,
+  SAMPLE_SOW
+} from "../constants/javascript/demo.mjs";
 
-const createdAt = "2026-06-05T12:00:00.000Z";
-const DEMO_USER_ID = "11111111-1111-4111-8111-111111111111";
-const DEMO_COMPANY_ID = "11111111-2222-4333-8444-555555555555";
-const DEMO_LEAD_ID = "aaaaaaaa-1111-4111-8111-111111111111";
-const DEMO_AUDIT_REQUEST_ID = "bbbbbbbb-2222-4222-8222-222222222222";
-const DEMO_PROJECT_ID = "22222222-2222-4222-8222-222222222222";
-
-const sowText = `Northstar Digital Studio will redesign and build the public marketing website for ApertureOps, a B2B SaaS company, for a fixed project fee of $48,000.
-
-Included scope:
-- Discovery workshop, stakeholder interviews, sitemap, and information architecture for the marketing website.
-- Design and Webflow implementation for eight included pages: Home, Platform, Solutions, Pricing, Customers, Resources landing, About, and Contact.
-- One reusable blog/article template and one reusable case study template.
-- Migration of up to 12 existing approved resource or case study entries supplied by the client.
-- Two rounds of design revisions before development and one QA bug-fix pass after staging.
-- Basic responsive implementation, standard image compression, form embed placement, and basic metadata for the included pages.
-- Light copy editing for clarity and fit using client-provided final copy.
-
-Client responsibilities:
-- Client will provide final approved copy, product screenshots, brand assets, legal/privacy text, and form embed code.
-- Client will approve the sitemap before visual design and approve page designs before development.
-
-Excluded scope:
-- Net-new copywriting, SEO content strategy, new blog articles, comparison pages, or paid ad landing pages.
-- Interactive calculators, pricing estimators, product tours requiring custom development, customer login portals, account areas, custom dashboards, or application UI work.
-- CRM, marketing automation, enrichment, lifecycle-stage workflows, Slack alerts, or integrations beyond placing the existing form embed code.
-- Multi-language localization, translation, video editing, motion design, A/B testing, accessibility audits beyond basic responsive QA, performance optimization beyond standard image compression, weekend rush work, post-launch maintenance, and additional stakeholder presentation decks.
-
-Timeline: 10 weeks from kickoff, assuming client feedback is returned within two business days.`;
+const createdAt = DEMO_CREATED_AT;
 
 const messageRows = [
   [
@@ -637,7 +618,7 @@ const store = {
       client_name: "ApertureOps",
       project_value: 48000,
       hourly_rate: 175,
-      sow_text: sowText,
+      sow_text: SAMPLE_SOW,
       message_export_text: messages.map((message) => message.message_text).join("\n"),
       suspected_scope_creep_notes:
         "The ROI calculator, HubSpot workflow, SEO content, localization, and login area were all requested casually after the fixed-fee SOW was approved.",
@@ -655,7 +636,7 @@ const store = {
       project_name: "$48,000 B2B SaaS Website Redesign",
       hourly_rate: 175,
       project_value: 48000,
-      sow_text: sowText,
+      sow_text: SAMPLE_SOW,
       created_at: createdAt,
       is_demo: true
     }

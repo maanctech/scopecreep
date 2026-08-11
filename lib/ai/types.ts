@@ -1,6 +1,8 @@
+import { PROVIDER_NAMES as AI_PROVIDERS } from "@/constants/typescript/ai";
 import type { AnalysisInput } from "@/lib/types";
 
-export const AI_PROVIDERS = ["anthropic", "ollama", "openai", "demo"] as const;
+export { AI_PROVIDERS };
+
 export type AiProviderName = (typeof AI_PROVIDERS)[number];
 export type RemoteAiProviderName = Exclude<AiProviderName, "demo">;
 

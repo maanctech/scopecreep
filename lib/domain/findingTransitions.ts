@@ -1,3 +1,4 @@
+import { FINDING_ACTIONS } from "@/constants/typescript/analysis";
 import { dollarsToCents } from "@/lib/domain/money";
 import type {
   BillingDecision,
@@ -28,16 +29,7 @@ import type {
  *   through the full decision flow again before it can ever be paid.
  */
 
-export const FINDING_ACTIONS = [
-  "Mark as Billable",
-  "Include in Retainer",
-  "Discuss With Client",
-  "Mark as Courtesy",
-  "Reject Finding",
-  "Mark as Invoiced",
-  "Mark as Paid",
-  "Reopen Finding"
-] as const;
+export { FINDING_ACTIONS };
 
 export type FindingActionName = (typeof FINDING_ACTIONS)[number];
 

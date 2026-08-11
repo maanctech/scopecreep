@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { MAX_IMPORT_BYTES } from "@/constants/typescript/ingestion";
 import { authErrorResponse, requireApiPermission } from "@/lib/auth/api";
 import { parseManualImport } from "@/lib/ingestion/manual";
 import { importManualMessages } from "@/lib/ingestion/service";
+
+const JSON_ENVELOPE_ALLOWANCE_BYTES = 100_000;
 
 const schema = z
   .object({
@@ -35,7 +38,7 @@ export async function POST(request: Request) {
 
     if (
       Number.isFinite(contentLength) &&
-      contentLength > 5 * 1024 * 1024 + 100_000
+      contentLength > MAX_IMPORT_BYTES + JSON_ENVELOPE_ALLOWANCE_BYTES
     ) {
       return NextResponse.json(
         { error: "Imports must be 5 MB or smaller." },

@@ -1,4 +1,4 @@
-export const SESSION_COOKIE_NAME = "scopeledger_session";
+export { SESSION_COOKIE_NAME } from "@/constants/typescript/auth";
 
 export function shouldUseSecureSessionCookie() {
   if (process.env.NODE_ENV !== "production") return false;

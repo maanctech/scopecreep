@@ -2,6 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { ImapFlow } from "imapflow";
 import { simpleParser } from "mailparser";
 import { z } from "zod";
+import { MAX_EMAIL_SOURCE_BYTES } from "@/constants/typescript/ingestion";
 import { currentAuthContext } from "@/lib/auth/current";
 import { query, transaction } from "@/lib/db/client";
 import { decryptSecret, encryptSecret } from "@/lib/security/secrets";
@@ -241,7 +242,7 @@ export async function syncEmailConnection(connectionId: string) {
 
         highestSeenUid = Math.max(highestSeenUid, item.uid);
 
-        if (item.source.length > 10 * 1024 * 1024) {
+        if (item.source.length > MAX_EMAIL_SOURCE_BYTES) {
           oversized += 1;
           continue;
         }

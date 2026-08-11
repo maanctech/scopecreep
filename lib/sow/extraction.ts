@@ -1,16 +1,9 @@
 import path from "node:path";
 import mammoth from "mammoth";
 import { extractText } from "unpdf";
+import { MAX_EXTRACTED_CHARACTERS, MAX_SOW_FILE_BYTES } from "@/constants/typescript/sow";
 
-export const MAX_SOW_FILE_BYTES = 10 * 1024 * 1024;
-
-/**
- * A DOCX is a zip and a PDF carries its own compression, so a small upload can
- * decompress into an unbounded amount of text. The cap is applied to whatever
- * the parser returns before it reaches the database or a model prompt. It does
- * not bound the parser's own memory use — see docs/security-audit.md.
- */
-export const MAX_EXTRACTED_CHARACTERS = 2 * 1024 * 1024;
+export { MAX_EXTRACTED_CHARACTERS, MAX_SOW_FILE_BYTES };
 
 const ALLOWED_EXTENSIONS = new Set([".txt", ".docx", ".pdf"]);
 

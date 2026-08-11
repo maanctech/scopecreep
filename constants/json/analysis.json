@@ -1,0 +1,20 @@
+{
+  "jobStatuses": [
+    "Queued",
+    "Running",
+    "Succeeded",
+    "Failed",
+    "Cancelled"
+  ],
+  "findingActions": [
+    "Mark as Billable",
+    "Include in Retainer",
+    "Discuss With Client",
+    "Mark as Courtesy",
+    "Reject Finding",
+    "Mark as Invoiced",
+    "Mark as Paid",
+    "Reopen Finding"
+  ],
+  "analysisMaxOutputTokens": 1200
+}

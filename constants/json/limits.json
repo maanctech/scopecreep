@@ -1,0 +1,6 @@
+{
+  "maxSowLength": 20000,
+  "maxMessageLength": 4000,
+  "maxHourlyRate": 10000,
+  "maxFindingTextLength": 4000
+}
