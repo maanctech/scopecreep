@@ -77,6 +77,10 @@ const eslintConfig = defineConfig([
         "always",
         { exceptAfterSingleLine: true },
       ],
+      "no-warning-comments": [
+        "error",
+        { terms: ["todo", "fixme", "xxx", "hack"], location: "anywhere" },
+      ],
       "@typescript-eslint/no-unused-vars": [
         "error",
         {
