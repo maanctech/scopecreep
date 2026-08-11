@@ -8,6 +8,7 @@ RUN npm ci
 
 COPY app ./app
 COPY components ./components
+COPY constants ./constants
 COPY lib ./lib
 COPY next-env.d.ts next.config.mjs postcss.config.js proxy.ts tsconfig.json ./
 RUN npm run build
@@ -33,8 +34,10 @@ RUN npm ci --omit=dev \
     && npm cache clean --force
 
 COPY --from=build --chown=scopeledger:scopeledger /app/.next ./.next
+COPY --chown=scopeledger:scopeledger constants ./constants
 COPY --chown=scopeledger:scopeledger db ./db
 COPY --chown=scopeledger:scopeledger lib ./lib
+COPY --chown=scopeledger:scopeledger public ./public
 COPY --chown=scopeledger:scopeledger scripts ./scripts
 COPY --chown=scopeledger:scopeledger next.config.mjs tsconfig.json ./
 

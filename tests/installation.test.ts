@@ -1,5 +1,5 @@
 import { execFileSync, spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -16,6 +16,46 @@ describe("self-hosted installation assets", () => {
     expect(dockerfile).toContain("USER scopeledger");
     expect(dockerfile).toContain("/api/health");
     expect(dockerfile).not.toMatch(/COPY\s+(?:\.\s+\.|data|backups)/);
+  });
+
+  /**
+   * A directory that the source imports but the Dockerfile never copies fails
+   * only inside the image, which nothing in this suite otherwise builds. The
+   * `constants/` directory was in exactly that state: twenty modules imported
+   * it and neither stage copied it, so the image could not build at all.
+   */
+  it("copies every root directory the source imports into the stage that needs it", () => {
+    const [, buildStage, runtimeStage] = read("Dockerfile").split(/^FROM /m);
+    const copies = (stage: string) => stage.match(/^COPY .*$/gm)?.join("\n") ?? "";
+
+    const importedBy = (directories: string[]) => {
+      const found = new Set<string>();
+
+      for (const directory of directories) {
+        const entries = readdirSync(path.join(root, directory), { recursive: true, encoding: "utf8" });
+
+        for (const entry of entries) {
+          const file = path.join(root, directory, entry);
+
+          if (!/\.(ts|tsx)$/.test(entry) || !statSync(file).isFile()) continue;
+
+          for (const match of readFileSync(file, "utf8").matchAll(/from "@\/([a-zA-Z0-9_-]+)/g)) {
+            const target = path.join(root, match[1]);
+
+            if (existsSync(target) && statSync(target).isDirectory()) found.add(match[1]);
+          }
+        }
+      }
+
+      return [...found].sort();
+    };
+
+    const buildCopies = copies(buildStage);
+    const runtimeCopies = copies(runtimeStage);
+
+    expect(importedBy(["app", "components", "lib"]).filter((name) => !buildCopies.includes(`COPY ${name} `))).toEqual([]);
+    expect(importedBy(["lib", "scripts"]).filter((name) => !runtimeCopies.includes(` ${name} ./${name}`))).toEqual([]);
+    expect(runtimeCopies).toContain("public ./public");
   });
 
   it("keeps PostgreSQL private, binds the app to loopback by default, and persists required state", () => {
