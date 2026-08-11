@@ -9,6 +9,8 @@ import {
 
 const schema = z.object({ action: z.enum(["cancel", "retry"]) }).strict();
 
+export const maxDuration = 300;
+
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> },

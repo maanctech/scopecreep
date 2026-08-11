@@ -13,6 +13,14 @@ const schema = z
   })
   .strict();
 
+/**
+ * The batch keeps working after the response is sent, so the handler's own
+ * limit is what bounds it. It exceeds the batch's time budget deliberately:
+ * the budget stops the loop between jobs, and this stops the platform from
+ * killing one mid-flight.
+ */
+export const maxDuration = 300;
+
 export async function POST(request: Request) {
   try {
     await requireApiPermission(request, "findings:review");

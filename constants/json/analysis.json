@@ -16,5 +16,8 @@
     "Mark as Paid",
     "Reopen Finding"
   ],
-  "analysisMaxOutputTokens": 1200
+  "analysisMaxOutputTokens": 1200,
+  "staleJobMinutes": 15,
+  "jobBudgetMs": 240000,
+  "drainJobLimit": 25
 }

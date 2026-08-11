@@ -20,12 +20,20 @@ ScopeLedger is a Next.js application for professional-controlled scope and reven
 - Finding state changes go through `lib/domain/findingTransitions.ts` and append billing history.
 - Report generation is explicit and versioned; reads never regenerate a report.
 
+## Analysis Job Recovery
+
+An analysis job is a persisted row, not an in-flight promise, so a worker that stops mid-batch leaves it recoverable rather than lost. `processAnalysisBatch` stops drawing new work once its time budget is spent, leaving the rest `Queued`, and the request handlers that run it declare a `maxDuration` above that budget so the platform does not kill a job in flight.
+
+`/api/cron/analysis-jobs` runs on a schedule and closes the remaining gap. It first returns any job left at `Running` past `staleJobMinutes` to the queue, or fails it if no attempts remain, then drains the queue within its own budget. It is the one route authenticated by `CRON_SECRET` rather than a session; the secret is required at startup, and an unset one refuses every caller.
+
+Enumerating the queue crosses organizations and therefore runs with system access, but it returns only job identity. Each job is processed inside its own organization's tenant scope, which is what keeps the finding it writes on the correct side of the boundary.
+
 ## Data and Recovery
 
 Migrations in `db/migrations` are ordered, transactional, and checksum-protected after application. The legacy JSON store is an explicit import source, not the default commercial runtime. Installation backups combine a PostgreSQL custom-format dump, document originals, manifest metadata, and checksums. The encryption key is deliberately excluded.
 
 ## Deployment Boundary
 
-The retired Compose configuration in `legacy/docker` binds the application to host loopback and does not publish PostgreSQL. Remote access requires an operator-managed HTTPS reverse proxy. ScopeLedger does not provision TLS, customer identity providers, or third-party OAuth applications.
+ScopeLedger is deployed and operated by ScopeLedger; customers install nothing. The retired Compose configuration in `legacy/docker` remains available for a single-tenant deployment. ScopeLedger does not provision customer identity providers or third-party OAuth applications.
 
 See [Security Model](security-model.md), [Privacy Model](privacy-model.md), and [Status Matrix](status-matrix.md).

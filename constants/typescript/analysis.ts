@@ -20,3 +20,9 @@ export const FINDING_ACTIONS = [
 ] as const;
 
 export const ANALYSIS_MAX_OUTPUT_TOKENS = 1200;
+
+export const STALE_JOB_MINUTES = 15;
+
+export const JOB_BUDGET_MS = 240000;
+
+export const DRAIN_JOB_LIMIT = 25;

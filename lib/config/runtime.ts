@@ -57,6 +57,14 @@ export function validateProductionConfiguration(env: RuntimeEnvironment = proces
   positiveInteger(env, "AI_MAX_ATTEMPTS", errors);
   positiveInteger(env, "ANALYSIS_JOB_MAX_ATTEMPTS", errors);
 
+  const cronSecret = env.CRON_SECRET?.trim();
+
+  if (!cronSecret) {
+    errors.push("CRON_SECRET is required; without it the scheduled drain refuses every caller and an interrupted analysis job is never recovered.");
+  } else if (cronSecret.length < 32) {
+    errors.push("CRON_SECRET must be at least 32 characters.");
+  }
+
   if (env.SCOPELEDGER_STORAGE === "json") {
     errors.push("SCOPELEDGER_STORAGE=json is not supported for a commercial production start.");
   }

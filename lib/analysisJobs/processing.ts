@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { PoolClient } from "pg";
+import { JOB_BUDGET_MS } from "@/constants/typescript/analysis";
 import { analyzeClientRequestDetailed } from "@/lib/analysis";
 import { query, transaction } from "@/lib/db/client";
 import { withTenant } from "@/lib/db/tenantContext";
@@ -287,18 +288,31 @@ async function processClaimedAnalysisJob(
   }
 }
 
+/**
+ * The batch stops drawing new work once its budget is spent rather than running
+ * until the platform kills it mid-job. Whatever it leaves behind stays Queued,
+ * which is a state the drain can pick up; a killed job would instead sit at
+ * Running with nobody working on it.
+ */
 export async function processAnalysisBatch(
   organizationId: string,
   batchId: string,
+  options: { budgetMs?: number } = {},
 ) {
+  const budgetMs = options.budgetMs ?? JOB_BUDGET_MS;
   const jobs = await withTenant(organizationId, () => query<{ id: string }>(
     "SELECT id FROM analysis_jobs WHERE organization_id=$1 AND batch_id=$2 AND status='Queued' ORDER BY created_at,id",
     [organizationId, batchId],
   ));
-  const results = [];
+  const startedAt = Date.now();
+  const processed = [];
 
-  for (const job of jobs.rows)
-    results.push(await processAnalysisJob(organizationId, job.id));
+  for (const [index, job] of jobs.rows.entries()) {
+    if (index > 0 && Date.now() - startedAt >= budgetMs)
+      return { processed, remaining: jobs.rows.length - index };
 
-  return results;
+    processed.push(await processAnalysisJob(organizationId, job.id));
+  }
+
+  return { processed, remaining: 0 };
 }

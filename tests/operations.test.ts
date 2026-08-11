@@ -97,10 +97,13 @@ describe("versioned report generation", () => {
 });
 
 describe("production configuration and log safety", () => {
+  const SCHEDULE_SECRET = "a-scheduled-secret-of-at-least-32-characters";
+
   const validInstallation = {
     DATABASE_URL: "postgresql://localhost/scopeledger",
     APP_URL: "http://127.0.0.1:3000",
-    SCOPELEDGER_MASTER_KEY: Buffer.alloc(32).toString("base64")
+    SCOPELEDGER_MASTER_KEY: Buffer.alloc(32).toString("base64"),
+    CRON_SECRET: SCHEDULE_SECRET
   };
 
   it("requires the API key of whichever cloud provider is selected", () => {
@@ -129,6 +132,17 @@ describe("production configuration and log safety", () => {
     ).toEqual([]);
   });
 
+  it("refuses to start without the credential the scheduled drain authenticates against", () => {
+    const { CRON_SECRET: _omitted, ...withoutSchedule } = validInstallation;
+
+    expect(validateProductionConfiguration({ ...withoutSchedule, ANTHROPIC_API_KEY: "test-only-key" })).toContain(
+      "CRON_SECRET is required; without it the scheduled drain refuses every caller and an interrupted analysis job is never recovered."
+    );
+    expect(
+      validateProductionConfiguration({ ...validInstallation, CRON_SECRET: "too-short", ANTHROPIC_API_KEY: "test-only-key" })
+    ).toContain("CRON_SECRET must be at least 32 characters.");
+  });
+
   it("rejects a provider that is not in the catalog", () => {
     expect(validateProductionConfiguration({ ...validInstallation, AI_PROVIDER: "gemini" })).toContain(
       "AI_PROVIDER must be one of anthropic, openai."
@@ -144,6 +158,7 @@ describe("production configuration and log safety", () => {
         DATABASE_URL: "postgresql://localhost/scopeledger",
         APP_URL: "http://127.0.0.1:3000",
         SCOPELEDGER_MASTER_KEY: Buffer.alloc(32).toString("base64"),
+        CRON_SECRET: SCHEDULE_SECRET,
         ANTHROPIC_API_KEY: "test-only-key"
       })
     ).toEqual([]);
