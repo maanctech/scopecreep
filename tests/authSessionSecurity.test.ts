@@ -1,10 +1,9 @@
 import { createHash } from "node:crypto";
-import { promises as fs } from "node:fs";
-import path from "node:path";
-import { PGlite } from "@electric-sql/pglite";
-import type { Pool } from "pg";
+import type { PGlite } from "@electric-sql/pglite";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { query, resetPoolForTesting, setPoolForTesting } from "@/lib/db/client";
+import { query } from "@/lib/db/client";
+import { withSystemAccess } from "@/lib/db/tenantContext";
+import { startTestDatabase, stopTestDatabase } from "./support/testDatabase";
 import { hashPassword, verifyPassword } from "@/lib/auth/password";
 import {
   authenticateUser,
@@ -28,65 +27,50 @@ const ORGANIZATION = "50000000-0000-4000-8000-000000000001";
 const USER = "50000000-0000-4000-8000-000000000011";
 const PASSWORD = "CorrectHorse9Battery";
 
+/**
+ * Reads and rewrites persisted rows for assertion purposes. These are the
+ * harness looking at the database, not a path the application takes, so they
+ * run outside any tenant rather than being blocked by the tenant policies.
+ */
+const inspect: typeof query = (text, values) => withSystemAccess(() => query(text, values));
+
 function hashTokenForTest(token: string) {
   return createHash("sha256").update(token).digest("hex");
-}
-
-function createPgliteAdapter(database: PGlite): Pool {
-  const client = {
-    query: async (text: string, values: unknown[] = []) => {
-      const result = await database.query(text, values);
-
-      return { rows: result.rows, rowCount: result.rows.length };
-    },
-    release: () => {}
-  };
-
-  return {
-    query: (text: string, values: unknown[] = []) => client.query(text, values),
-    connect: async () => client,
-    end: async () => {}
-  } as unknown as Pool;
 }
 
 let database: PGlite;
 
 beforeAll(async () => {
-  database = new PGlite();
-  const directory = path.join(process.cwd(), "db", "migrations");
-  const migrations = (await fs.readdir(directory)).filter((name) => name.endsWith(".sql")).sort();
+  database = await startTestDatabase();
 
-  for (const filename of migrations) {
-    await database.exec(await fs.readFile(path.join(directory, filename), "utf8"));
-  }
+  const passwordHash = await hashPassword(PASSWORD);
 
-  setPoolForTesting(createPgliteAdapter(database));
-
-  await query("INSERT INTO organizations (id, name, slug) VALUES ($1,$2,$3)", [
-    ORGANIZATION,
-    "Cadence Partners",
-    "cadence-partners"
-  ]);
-  await query(
-    `INSERT INTO users (id, email, normalized_email, password_hash, display_name)
-     VALUES ($1,$2,$3,$4,$5)`,
-    [USER, "dana@example.com", "dana@example.com", await hashPassword(PASSWORD), "Dana Okafor"]
-  );
-  await query(
-    "INSERT INTO organization_memberships (organization_id, user_id, role) VALUES ($1,$2,'Owner')",
-    [ORGANIZATION, USER]
-  );
+  await withSystemAccess(async () => {
+    await query("INSERT INTO organizations (id, name, slug) VALUES ($1,$2,$3)", [
+      ORGANIZATION,
+      "Cadence Partners",
+      "cadence-partners"
+    ]);
+    await query(
+      `INSERT INTO users (id, email, normalized_email, password_hash, display_name)
+       VALUES ($1,$2,$3,$4,$5)`,
+      [USER, "dana@example.com", "dana@example.com", passwordHash, "Dana Okafor"]
+    );
+    await query(
+      "INSERT INTO organization_memberships (organization_id, user_id, role) VALUES ($1,$2,'Owner')",
+      [ORGANIZATION, USER]
+    );
+  });
 });
 
 afterAll(async () => {
-  resetPoolForTesting();
-  await database.close();
+  await stopTestDatabase(database);
 });
 
 describe("session creation and the inet columns", () => {
   it("stores a null address when no forwarded IP is available", async () => {
     const session = await createSession({ userId: USER, ipAddress: "local" });
-    const stored = await query<{ ip_address: string | null }>(
+    const stored = await inspect<{ ip_address: string | null }>(
       "SELECT ip_address FROM user_sessions WHERE id = (SELECT id FROM user_sessions ORDER BY created_at DESC LIMIT 1)"
     );
 
@@ -96,7 +80,7 @@ describe("session creation and the inet columns", () => {
 
   it("stores a genuine forwarded address unchanged", async () => {
     await createSession({ userId: USER, ipAddress: "203.0.113.7" });
-    const stored = await query<{ ip_address: string | null }>(
+    const stored = await inspect<{ ip_address: string | null }>(
       "SELECT ip_address FROM user_sessions ORDER BY created_at DESC LIMIT 1"
     );
 
@@ -105,7 +89,7 @@ describe("session creation and the inet columns", () => {
 
   it("records a sign-in and a sign-out in the audit log", async () => {
     const session = await createSession({ userId: USER, ipAddress: "198.51.100.4" });
-    const signedIn = await query<{ action: string; ip_address: string | null }>(
+    const signedIn = await inspect<{ action: string; ip_address: string | null }>(
       "SELECT action, ip_address FROM audit_logs WHERE action = 'user.signed_in' ORDER BY created_at DESC LIMIT 1"
     );
 
@@ -113,7 +97,7 @@ describe("session creation and the inet columns", () => {
     expect(signedIn.rows[0].ip_address).toBe("198.51.100.4");
 
     await revokeSession(session.token);
-    const signedOut = await query<{ action: string }>(
+    const signedOut = await inspect<{ action: string }>(
       "SELECT action FROM audit_logs WHERE action = 'user.signed_out' ORDER BY created_at DESC LIMIT 1"
     );
 
@@ -137,7 +121,7 @@ describe("session creation and the inet columns", () => {
     expect(await getAuthContext(other.token)).toBeNull();
     expect(await getAuthContext(kept.token)).not.toBeNull();
 
-    const logged = await query<{ action: string }>(
+    const logged = await inspect<{ action: string }>(
       "SELECT action FROM audit_logs WHERE action = 'user.password_changed' ORDER BY created_at DESC LIMIT 1"
     );
 
@@ -169,12 +153,12 @@ describe("idle session expiry", () => {
   it("advances last_seen_at on every authenticated lookup", async () => {
     const session = await createSession({ userId: USER });
 
-    await query("UPDATE user_sessions SET last_seen_at = now() - interval '30 minutes' WHERE token_hash = $1", [
+    await inspect("UPDATE user_sessions SET last_seen_at = now() - interval '30 minutes' WHERE token_hash = $1", [
       hashTokenForTest(session.token)
     ]);
     expect(await getAuthContext(session.token)).not.toBeNull();
 
-    const touched = await query<{ seconds: number }>(
+    const touched = await inspect<{ seconds: number }>(
       "SELECT EXTRACT(EPOCH FROM (now() - last_seen_at)) AS seconds FROM user_sessions WHERE token_hash = $1",
       [hashTokenForTest(session.token)]
     );
@@ -187,7 +171,7 @@ describe("idle session expiry", () => {
 
     expect(await getAuthContext(session.token)).not.toBeNull();
 
-    await query("UPDATE user_sessions SET last_seen_at = now() - interval '5 hours' WHERE token_hash = $1", [
+    await inspect("UPDATE user_sessions SET last_seen_at = now() - interval '5 hours' WHERE token_hash = $1", [
       hashTokenForTest(session.token)
     ]);
 

@@ -6,6 +6,16 @@ import { hashPassword, verifyPassword } from "@/lib/auth/password";
 import { normalizeEmail, PublicError } from "@/lib/auth/security";
 import type { AuthContext, OrganizationRole } from "@/lib/auth/types";
 import { query, transaction } from "@/lib/db/client";
+import { withSystemAccess } from "@/lib/db/tenantContext";
+
+/**
+ * Identity work runs before a tenant is known, or deliberately spans tenants:
+ * resolving a session, first-run setup, sign-in, and password reset all touch
+ * rows that no organization context could yet select.
+ */
+const systemQuery: typeof query = (text, values) => withSystemAccess(() => query(text, values));
+const systemTransaction: typeof transaction = (work) => withSystemAccess(() => transaction(work));
+
 
 /**
  * Verified against when no user matches, so that a sign-in attempt for an
@@ -70,7 +80,7 @@ async function writeAuditLog(
 }
 
 export async function hasAnyUsers() {
-  const result = await query<{ exists: boolean }>("SELECT EXISTS (SELECT 1 FROM users) AS exists");
+  const result = await systemQuery<{ exists: boolean }>("SELECT EXISTS (SELECT 1 FROM users) AS exists");
 
   return result.rows[0]?.exists ?? false;
 }
@@ -84,7 +94,7 @@ export async function createInitialOwner(input: {
   const passwordHash = await hashPassword(input.password);
   const normalizedEmail = normalizeEmail(input.email);
 
-  return transaction(async (client) => {
+  return systemTransaction(async (client) => {
     await client.query("LOCK TABLE users IN EXCLUSIVE MODE");
     const existing = await client.query("SELECT 1 FROM users LIMIT 1");
 
@@ -134,7 +144,7 @@ export async function createOrganizationUser(input: {
   const passwordHash = await hashPassword(input.password);
   const normalizedEmail = normalizeEmail(input.email);
 
-  return transaction(async (client) => {
+  return systemTransaction(async (client) => {
     const organization = await client.query("SELECT 1 FROM organizations WHERE id = $1", [input.organizationId]);
 
     if (!organization.rowCount) throw new Error("Organization not found.");
@@ -173,7 +183,7 @@ export async function createOrganizationUser(input: {
 }
 
 export async function authenticateUser(email: string, password: string) {
-  const result = await query<{
+  const result = await systemQuery<{
     id: string;
     password_hash: string;
     disabled_at: string | null;
@@ -197,7 +207,7 @@ export async function createSession(input: {
   ipAddress?: string | null;
   userAgent?: string | null;
 }) {
-  const memberships = await query<{ organization_id: string; role: OrganizationRole }>(
+  const memberships = await systemQuery<{ organization_id: string; role: OrganizationRole }>(
     `SELECT organization_id, role
      FROM organization_memberships
      WHERE user_id = $1
@@ -214,7 +224,7 @@ export async function createSession(input: {
   const expiresAt = new Date(Date.now() + SESSION_DURATION_MS);
   const sessionId = randomUUID();
 
-  await transaction(async (client) => {
+  await systemTransaction(async (client) => {
     await client.query(
       `INSERT INTO user_sessions
         (id, user_id, organization_id, token_hash, expires_at, ip_address, user_agent)
@@ -244,7 +254,7 @@ export async function createSession(input: {
 }
 
 export async function getAuthContext(token: string): Promise<AuthContext | null> {
-  const result = await query<AuthContext & { expires_at: string }>(
+  const result = await systemQuery<AuthContext & { expires_at: string }>(
     `WITH touched AS (
        UPDATE user_sessions s SET last_seen_at = now()
        WHERE s.token_hash = $1 AND s.revoked_at IS NULL AND s.expires_at > now()
@@ -268,7 +278,7 @@ export async function getAuthContext(token: string): Promise<AuthContext | null>
 }
 
 export async function revokeSession(token: string) {
-  await transaction(async (client) => {
+  await systemTransaction(async (client) => {
     const revoked = await client.query<{
       id: string;
       user_id: string;
@@ -302,7 +312,7 @@ export async function changePassword(input: {
 }) {
   const passwordHash = await hashPassword(input.newPassword);
 
-  return transaction(async (client) => {
+  return systemTransaction(async (client) => {
     const result = await client.query<{ password_hash: string }>(
       "SELECT password_hash FROM users WHERE id = $1 AND disabled_at IS NULL FOR UPDATE",
       [input.userId]
@@ -336,7 +346,7 @@ export async function createPasswordResetToken(userId: string) {
   const token = randomBytes(32).toString("base64url");
   const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
 
-  await transaction(async (client) => {
+  await systemTransaction(async (client) => {
     await client.query(
       "UPDATE password_reset_tokens SET consumed_at = now() WHERE user_id = $1 AND consumed_at IS NULL",
       [userId]
@@ -354,7 +364,7 @@ export async function createPasswordResetToken(userId: string) {
 export async function resetPassword(token: string, newPassword: string) {
   const passwordHash = await hashPassword(newPassword);
 
-  return transaction(async (client) => {
+  return systemTransaction(async (client) => {
     const result = await client.query<{ id: string; user_id: string }>(
       `SELECT id, user_id FROM password_reset_tokens
        WHERE token_hash = $1 AND consumed_at IS NULL AND expires_at > now()

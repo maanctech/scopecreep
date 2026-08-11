@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import type { PoolClient } from "pg";
 import { transaction } from "@/lib/db/client";
-import { cents, requireContext, type Context, type DbRow } from "@/lib/store/postgres/client";
+import { cents, withStoreContext, type Context, type DbRow } from "@/lib/store/postgres/client";
 import { mapFinding } from "@/lib/store/postgres/mappers";
 import { applyFindingAction, initialFindingState, TransitionError, type FindingActionName } from "@/lib/domain/findingTransitions";
 import { assertIntegerCents } from "@/lib/domain/money";
@@ -36,9 +36,7 @@ export async function saveMessageWithFinding(input: {
   message_date?: string | null; analysis: AnalysisInput; analysis_metadata?: AnalysisMetadata;
   sow_version_id?: string; boundary_map_id?: string;
 }) {
-  const context = await requireContext();
-
-  return transaction(async (client) => {
+  return withStoreContext((context) => transaction(async (client) => {
     const projectResult = await client.query<DbRow>(
       "SELECT * FROM projects WHERE id = $1 AND organization_id = $2", [input.project_id, context.organizationId]
     );
@@ -108,7 +106,7 @@ export async function saveMessageWithFinding(input: {
     }, null);
 
     return { message, finding };
-  });
+  }));
 }
 
 async function lockedFinding(client: PoolClient, context: Context, findingId: string) {
@@ -137,9 +135,7 @@ export async function updateFindingDetails(input: {
   finding_id: string; expected_version: number; approved_hours?: number | null;
   approved_amount_cents?: number | null; client_facing_explanation?: string; internal_note?: string | null;
 }) {
-  const context = await requireContext();
-
-  return transaction(async (client) => {
+  return withStoreContext((context) => transaction(async (client) => {
     const finding = await lockedFinding(client, context, input.finding_id);
 
     if (finding.version !== input.expected_version) throw new VersionConflictError();
@@ -183,15 +179,13 @@ export async function updateFindingDetails(input: {
     }
 
     return updated;
-  });
+  }));
 }
 
 export async function performFindingAction(input: {
   finding_id: string; expected_version: number; action: FindingActionName; note?: string | null;
 }) {
-  const context = await requireContext();
-
-  return transaction(async (client) => {
+  return withStoreContext((context) => transaction(async (client) => {
     const finding = await lockedFinding(client, context, input.finding_id);
 
     if (finding.version !== input.expected_version) throw new VersionConflictError();
@@ -207,5 +201,5 @@ export async function performFindingAction(input: {
     }, context.userId);
 
     return applied.finding;
-  });
+  }));
 }

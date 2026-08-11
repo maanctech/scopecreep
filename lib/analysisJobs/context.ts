@@ -1,6 +1,7 @@
 import type { PoolClient } from "pg";
 import { assertPermission } from "@/lib/auth/authorization";
-import { currentAuthContext } from "@/lib/auth/current";
+import { withAuthenticatedTenant } from "@/lib/auth/scope";
+import type { AuthContext } from "@/lib/auth/types";
 import { query } from "@/lib/db/client";
 import type { AnalysisJobRow, AnalysisMessageRow, Row } from "@/lib/analysisJobs/types";
 
@@ -14,14 +15,12 @@ export const activeControllers =
 
 global.__scopeLedgerAnalysisControllers = activeControllers;
 
-export async function reviewer() {
-  const auth = await currentAuthContext();
+export function asReviewer<T>(work: (auth: AuthContext) => Promise<T>) {
+  return withAuthenticatedTenant((auth) => {
+    assertPermission(auth.role, "findings:review");
 
-  if (!auth) throw new Error("A valid organization session is required.");
-
-  assertPermission(auth.role, "findings:review");
-
-  return auth;
+    return work(auth);
+  });
 }
 
 export function jobMaxAttempts() {
@@ -89,66 +88,68 @@ export async function approvedContext(
 }
 
 export async function approvedAnalysisContext(projectId: string) {
-  const auth = await reviewer();
+  return asReviewer(async (auth) => {
 
-  return approvedContext(auth.organizationId, projectId);
+    return approvedContext(auth.organizationId, projectId);
+  });
 }
 
 export async function analysisWorkspace(projectId: string) {
-  const auth = await reviewer();
-  const project = await query<Row>(
-    "SELECT id,client_name,project_name,active_sow_version_id,active_boundary_map_id FROM projects WHERE id=$1 AND organization_id=$2",
-    [projectId, auth.organizationId],
-  );
+  return asReviewer(async (auth) => {
+    const project = await query<Row>(
+      "SELECT id,client_name,project_name,active_sow_version_id,active_boundary_map_id FROM projects WHERE id=$1 AND organization_id=$2",
+      [projectId, auth.organizationId],
+    );
 
-  if (!project.rows[0]) throw new Error("Project not found.");
+    if (!project.rows[0]) throw new Error("Project not found.");
 
-  let context: Awaited<ReturnType<typeof approvedContext>> | null = null;
-  let boundaryError: string | null = null;
+    let context: Awaited<ReturnType<typeof approvedContext>> | null = null;
+    let boundaryError: string | null = null;
 
-  try {
-    context = await approvedContext(auth.organizationId, projectId);
-  } catch (error) {
-    boundaryError =
-      error instanceof Error ? error.message : "Boundary approval required.";
-  }
+    try {
+      context = await approvedContext(auth.organizationId, projectId);
+    } catch (error) {
+      boundaryError =
+        error instanceof Error ? error.message : "Boundary approval required.";
+    }
 
-  const [messages, jobs] = await Promise.all([
-    query<AnalysisMessageRow>(
-      `SELECT m.id,m.source,m.sender,m.sender_email,m.subject,left(m.message_text,2000) AS message_text,
-              length(m.message_text)::int AS character_count,m.message_date,m.created_at,
-              f.id AS finding_id,j.id AS active_job_id,j.status AS active_job_status
-       FROM client_messages m
-       LEFT JOIN scope_findings f ON f.organization_id=m.organization_id AND f.client_message_id=m.id
-       LEFT JOIN LATERAL (
-         SELECT id,status FROM analysis_jobs aj
-         WHERE aj.organization_id=m.organization_id AND aj.client_message_id=m.id
-         ORDER BY aj.created_at DESC LIMIT 1
-       ) j ON true
-       WHERE m.organization_id=$1 AND m.project_id=$2 AND m.deleted_at IS NULL
-       ORDER BY COALESCE(m.message_date,m.created_at) DESC LIMIT 250`,
-      [auth.organizationId, projectId],
-    ),
-    query<AnalysisJobRow>(
-      `SELECT id,batch_id,client_message_id,status,provider,model,prompt_version,progress,attempt_count,max_attempts,
-              error_message,result,cancel_requested_at,created_at,started_at,completed_at
-       FROM analysis_jobs WHERE organization_id=$1 AND project_id=$2
-       ORDER BY created_at DESC LIMIT 100`,
-      [auth.organizationId, projectId],
-    ),
-  ]);
+    const [messages, jobs] = await Promise.all([
+      query<AnalysisMessageRow>(
+        `SELECT m.id,m.source,m.sender,m.sender_email,m.subject,left(m.message_text,2000) AS message_text,
+                length(m.message_text)::int AS character_count,m.message_date,m.created_at,
+                f.id AS finding_id,j.id AS active_job_id,j.status AS active_job_status
+         FROM client_messages m
+         LEFT JOIN scope_findings f ON f.organization_id=m.organization_id AND f.client_message_id=m.id
+         LEFT JOIN LATERAL (
+           SELECT id,status FROM analysis_jobs aj
+           WHERE aj.organization_id=m.organization_id AND aj.client_message_id=m.id
+           ORDER BY aj.created_at DESC LIMIT 1
+         ) j ON true
+         WHERE m.organization_id=$1 AND m.project_id=$2 AND m.deleted_at IS NULL
+         ORDER BY COALESCE(m.message_date,m.created_at) DESC LIMIT 250`,
+        [auth.organizationId, projectId],
+      ),
+      query<AnalysisJobRow>(
+        `SELECT id,batch_id,client_message_id,status,provider,model,prompt_version,progress,attempt_count,max_attempts,
+                error_message,result,cancel_requested_at,created_at,started_at,completed_at
+         FROM analysis_jobs WHERE organization_id=$1 AND project_id=$2
+         ORDER BY created_at DESC LIMIT 100`,
+        [auth.organizationId, projectId],
+      ),
+    ]);
 
-  return {
-    project: project.rows[0],
-    approvedContext: context
-      ? {
-          sowVersionId: context.sowVersionId,
-          boundaryMapId: context.boundaryMapId,
-          boundaryItemCount: context.boundaryItemCount,
-        }
-      : null,
-    boundaryError,
-    messages: messages.rows,
-    jobs: jobs.rows,
-  };
+    return {
+      project: project.rows[0],
+      approvedContext: context
+        ? {
+            sowVersionId: context.sowVersionId,
+            boundaryMapId: context.boundaryMapId,
+            boundaryItemCount: context.boundaryItemCount,
+          }
+        : null,
+      boundaryError,
+      messages: messages.rows,
+      jobs: jobs.rows,
+    };
+  });
 }

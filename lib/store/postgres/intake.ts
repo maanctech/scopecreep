@@ -1,7 +1,8 @@
 import { createHash, randomUUID } from "node:crypto";
 import type { PoolClient } from "pg";
 import { transaction } from "@/lib/db/client";
-import { cents, publicOrganizationId, requireContext, type DbRow } from "@/lib/store/postgres/client";
+import { cents, publicOrganizationId, withStoreContext, type DbRow } from "@/lib/store/postgres/client";
+import { withTenant } from "@/lib/db/tenantContext";
 import { findOrCreateCompany } from "@/lib/store/postgres/projections";
 import { mapAuditRequest, mapLead, mapProject } from "@/lib/store/postgres/mappers";
 import { splitSowSections } from "@/lib/sow/extraction";
@@ -15,7 +16,7 @@ export async function createLead(input: {
 }) {
   const organizationId = await publicOrganizationId();
 
-  return transaction(async (client) => {
+  return withTenant(organizationId, () => transaction(async (client) => {
     const companyId = await findOrCreateCompany(client, organizationId, input.company, {
       website: input.website, businessType: input.business_type, teamSize: input.team_size
     });
@@ -38,28 +39,28 @@ export async function createLead(input: {
     );
 
     return mapLead(result.rows[0]);
-  });
+  }));
 }
 
 export async function updateLeadStatus(input: { lead_id: string; status: LeadStatus; note?: string | null }) {
-  const context = await requireContext();
+  return withStoreContext((context) => {
+    return transaction(async (client) => {
+      const current = await client.query<DbRow>(
+        "SELECT * FROM leads WHERE id = $1 AND organization_id = $2 FOR UPDATE", [input.lead_id, context.organizationId]
+      );
 
-  return transaction(async (client) => {
-    const current = await client.query<DbRow>(
-      "SELECT * FROM leads WHERE id = $1 AND organization_id = $2 FOR UPDATE", [input.lead_id, context.organizationId]
-    );
+      if (!current.rows[0]) throw new Error("Lead not found.");
 
-    if (!current.rows[0]) throw new Error("Lead not found.");
+      await client.query("UPDATE leads SET status = $1, updated_at = now() WHERE id = $2 AND organization_id = $3", [input.status, input.lead_id, context.organizationId]);
+      await client.query(
+        `INSERT INTO lead_status_history
+         (id, organization_id, lead_id, from_status, to_status, note, actor_user_id)
+         VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+        [randomUUID(), context.organizationId, input.lead_id, current.rows[0].status, input.status, input.note?.trim() || null, context.userId]
+      );
 
-    await client.query("UPDATE leads SET status = $1, updated_at = now() WHERE id = $2 AND organization_id = $3", [input.status, input.lead_id, context.organizationId]);
-    await client.query(
-      `INSERT INTO lead_status_history
-       (id, organization_id, lead_id, from_status, to_status, note, actor_user_id)
-       VALUES ($1,$2,$3,$4,$5,$6,$7)`,
-      [randomUUID(), context.organizationId, input.lead_id, current.rows[0].status, input.status, input.note?.trim() || null, context.userId]
-    );
-
-    return mapLead({ ...current.rows[0], status: input.status });
+      return mapLead({ ...current.rows[0], status: input.status });
+    });
   });
 }
 
@@ -115,7 +116,7 @@ export async function createAuditRequest(input: {
 }) {
   const publicOrganization = await publicOrganizationId();
 
-  return transaction(async (client) => {
+  return withTenant(publicOrganization, () => transaction(async (client) => {
     const organizationId = publicOrganization;
     let lead: DbRow | null = null;
 
@@ -161,18 +162,16 @@ export async function createAuditRequest(input: {
     }
 
     return { auditRequest: mapAuditRequest(result.rows[0]), project };
-  });
+  }));
 }
 
 export async function createProject(input: {
   company_id?: string | null; lead_id?: string | null; audit_request_id?: string | null;
   client_name: string; project_name: string; hourly_rate: number; project_value?: number | null; sow_text: string;
 }) {
-  const context = await requireContext();
-
-  return transaction((client) => insertProjectAndSow(client, context.organizationId, {
+  return withStoreContext((context) => transaction((client) => insertProjectAndSow(client, context.organizationId, {
     companyId: input.company_id ?? null, leadId: input.lead_id ?? null, auditRequestId: input.audit_request_id ?? null,
     clientName: input.client_name, projectName: input.project_name, hourlyRate: input.hourly_rate,
     projectValue: input.project_value ?? null, sowText: input.sow_text
-  }));
+  })));
 }

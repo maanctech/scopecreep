@@ -4,7 +4,11 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import packageJson from "@/package.json";
 import { query } from "@/lib/db/client";
+import { withSystemAccess } from "@/lib/db/tenantContext";
 import { loadMigrations } from "@/lib/db/migrations";
+
+/** A backup covers the whole installation, so it is not scoped to one tenant. */
+const systemQuery: typeof query = (text, values) => withSystemAccess(() => query(text, values));
 
 export type BackupManifest = {
   kind: "scopeledger-installation";
@@ -124,7 +128,7 @@ function assertManifest(value: unknown): asserts value is BackupManifest {
 }
 
 async function requiredDocumentFiles(root: string) {
-  const records = await query<{ storage_path: string }>(
+  const records = await systemQuery<{ storage_path: string }>(
     `SELECT storage_path FROM sow_versions WHERE storage_path IS NOT NULL
      UNION ALL
      SELECT storage_path FROM communication_attachments WHERE storage_path IS NOT NULL`

@@ -1,18 +1,19 @@
-import { promises as fs } from "node:fs";
-import path from "node:path";
-import { PGlite } from "@electric-sql/pglite";
-import type { Pool } from "pg";
+import type { PGlite } from "@electric-sql/pglite";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import { query, resetPoolForTesting, setPoolForTesting } from "@/lib/db/client";
+import { query } from "@/lib/db/client";
+import { withSystemAccess } from "@/lib/db/tenantContext";
 import { VersionConflictError } from "@/lib/storeErrors";
 import type { AuthContext } from "@/lib/auth/types";
+import { startTestDatabase, stopTestDatabase } from "./support/testDatabase";
 
 /**
  * The postgres store is imported directly rather than through the facade
  * (`@/lib/store`). The facade defaults to the JSON store under Vitest, and
- * while `SCOPELEDGER_STORAGE=postgres` now overrides that, `requireContext()`
+ * while `SCOPELEDGER_STORAGE=postgres` now overrides that, resolving a session
  * still depends on `next/headers` `cookies()`, which only resolves inside a
  * real request scope — so the auth dependency has to be mocked either way.
+ * Everything downstream of it is real: the store opens its own tenant scope
+ * from whatever session this returns, exactly as it does in a request.
  */
 vi.mock("@/lib/auth/current", () => ({
   currentAuthContext: vi.fn()
@@ -62,64 +63,31 @@ function actingAs(context: AuthContext) {
   vi.mocked(currentAuthContext).mockResolvedValue(context);
 }
 
-/**
- * Adapts a single PGlite instance to the subset of the node-postgres `Pool`
- * API the store actually calls: `query()` for one-off statements and
- * `connect()` for `transaction()`. PGlite is single-connection, so a plain
- * `BEGIN` / `COMMIT` / `ROLLBACK` issued through `.query()` works the same
- * way it would against a real dedicated connection.
- */
-function createPgliteAdapter(db: PGlite): Pool {
-  const client = {
-    query: async (text: string, values: unknown[] = []) => {
-      const result = await db.query(text, values);
-
-      return { rows: result.rows, rowCount: result.rows.length };
-    },
-    release: () => {}
-  };
-
-  return {
-    query: (text: string, values: unknown[] = []) => client.query(text, values),
-    connect: async () => client,
-    end: async () => {}
-  } as unknown as Pool;
-}
-
-let db: PGlite;
+let database: PGlite;
 
 beforeAll(async () => {
-  db = new PGlite();
-  const directory = path.join(process.cwd(), "db", "migrations");
-  const migrations = (await fs.readdir(directory))
-    .filter((name) => name.endsWith(".sql"))
-    .sort();
+  database = await startTestDatabase();
 
-  for (const filename of migrations) {
-    await db.exec(await fs.readFile(path.join(directory, filename), "utf8"));
-  }
-
-  setPoolForTesting(createPgliteAdapter(db));
-
-  await query(
-    "INSERT INTO organizations (id, name, slug) VALUES ($1,$2,$3), ($4,$5,$6)",
-    [ORGANIZATION_A, "Aperture Consulting", "aperture-consulting", ORGANIZATION_B, "Beacon Studio", "beacon-studio"]
-  );
-  await query(
-    `INSERT INTO users (id, email, normalized_email, password_hash, display_name)
-     VALUES ($1,$2,$3,$4,$5), ($6,$7,$8,$9,$10)`,
-    [USER_A, "alice@example.com", "alice@example.com", "not-a-real-hash", "Alice Rivera",
-     USER_B, "bob@example.com", "bob@example.com", "not-a-real-hash", "Bob Chen"]
-  );
-  await query(
-    "INSERT INTO organization_settings (organization_id, settings) VALUES ($1, $2::jsonb)",
-    [ORGANIZATION_A, JSON.stringify({ publicLeadCapture: true })]
-  );
+  await withSystemAccess(async () => {
+    await query(
+      "INSERT INTO organizations (id, name, slug) VALUES ($1,$2,$3), ($4,$5,$6)",
+      [ORGANIZATION_A, "Aperture Consulting", "aperture-consulting", ORGANIZATION_B, "Beacon Studio", "beacon-studio"]
+    );
+    await query(
+      `INSERT INTO users (id, email, normalized_email, password_hash, display_name)
+       VALUES ($1,$2,$3,$4,$5), ($6,$7,$8,$9,$10)`,
+      [USER_A, "alice@example.com", "alice@example.com", "not-a-real-hash", "Alice Rivera",
+       USER_B, "bob@example.com", "bob@example.com", "not-a-real-hash", "Bob Chen"]
+    );
+    await query(
+      "INSERT INTO organization_settings (organization_id, settings) VALUES ($1, $2::jsonb)",
+      [ORGANIZATION_A, JSON.stringify({ publicLeadCapture: true })]
+    );
+  });
 });
 
 afterAll(async () => {
-  resetPoolForTesting();
-  await db.close();
+  await stopTestDatabase(database);
 });
 
 describe("PostgreSQL store", () => {
@@ -144,10 +112,10 @@ describe("PostgreSQL store", () => {
     expect(lead.email).toBe("priya@example.com");
     expect(lead.status).toBe("New");
 
-    const persisted = await query<{ organization_id: string; company: string }>(
+    const persisted = await withSystemAccess(() => query<{ organization_id: string; company: string }>(
       "SELECT organization_id, company FROM leads WHERE id = $1",
       [lead.id]
-    );
+    ));
 
     expect(persisted.rows[0]).toEqual({ organization_id: ORGANIZATION_A, company: "Northwind Devshop" });
   });

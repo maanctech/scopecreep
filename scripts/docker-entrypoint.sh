@@ -18,4 +18,6 @@ if [ "${SCOPELEDGER_SKIP_MIGRATIONS:-false}" != "true" ]; then
   npm run db:migrate
 fi
 
+npm run rls:check
+
 exec "$@"

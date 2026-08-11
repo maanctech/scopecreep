@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { PoolClient } from "pg";
 import { analyzeClientRequestDetailed } from "@/lib/analysis";
 import { query, transaction } from "@/lib/db/client";
+import { withTenant } from "@/lib/db/tenantContext";
 import { activeControllers, boundaryText } from "@/lib/analysisJobs/context";
 import { initialFindingState } from "@/lib/domain/findingTransitions";
 import type { Row } from "@/lib/analysisJobs/types";
@@ -158,6 +159,17 @@ export async function processAnalysisJob(
   organizationId: string,
   jobId: string,
 ) {
+  return withTenant(organizationId, () => processClaimedAnalysisJob(organizationId, jobId));
+}
+
+/**
+ * Background processing has no session to inherit a tenant from, so the job's
+ * own organization becomes the context for every statement it runs.
+ */
+async function processClaimedAnalysisJob(
+  organizationId: string,
+  jobId: string,
+) {
   const job = await claimJob(organizationId, jobId);
 
   if (!job) return { processed: false };
@@ -279,10 +291,10 @@ export async function processAnalysisBatch(
   organizationId: string,
   batchId: string,
 ) {
-  const jobs = await query<{ id: string }>(
+  const jobs = await withTenant(organizationId, () => query<{ id: string }>(
     "SELECT id FROM analysis_jobs WHERE organization_id=$1 AND batch_id=$2 AND status='Queued' ORDER BY created_at,id",
     [organizationId, batchId],
-  );
+  ));
   const results = [];
 
   for (const job of jobs.rows)

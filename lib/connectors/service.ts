@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
-import { currentAuthContext } from "@/lib/auth/current";
+import { withAuthenticatedTenant } from "@/lib/auth/scope";
+import type { AuthContext } from "@/lib/auth/types";
 import { query, transaction } from "@/lib/db/client";
 import {
   createGoogleConnector,
@@ -43,14 +44,6 @@ const configurationSchema = z.discriminatedUnion("provider", [
   microsoftConfigurationSchema.extend({ provider: z.literal("Microsoft") }),
 ]);
 
-async function auth() {
-  const context = await currentAuthContext();
-
-  if (!context) throw new Error("A valid organization session is required.");
-
-  return context;
-}
-
 function connector(provider: ConnectorProvider) {
   if (provider === "Slack") return createSlackConnector();
 
@@ -60,116 +53,129 @@ function connector(provider: ConnectorProvider) {
 }
 
 export async function listIntegrations() {
-  const context = await auth();
-  const result = await query<IntegrationConnection>(
-    `SELECT c.id,c.provider,c.name,c.status,c.configuration,c.last_error,c.last_synced_at,c.last_tested_at,c.connection_verified_at,c.sync_scope,c.data_permissions,c.created_at,
-            (SELECT count(*)::int FROM ingestion_jobs j WHERE j.organization_id=c.organization_id AND j.connection_id=c.id AND j.status='Failed') AS failed_jobs
-     FROM communication_connections c WHERE c.organization_id=$1 ORDER BY c.provider,c.created_at`,
-    [context.organizationId],
-  );
+  return withAuthenticatedTenant(async (context) => {
+    const result = await query<IntegrationConnection>(
+      `SELECT c.id,c.provider,c.name,c.status,c.configuration,c.last_error,c.last_synced_at,c.last_tested_at,c.connection_verified_at,c.sync_scope,c.data_permissions,c.created_at,
+              (SELECT count(*)::int FROM ingestion_jobs j WHERE j.organization_id=c.organization_id AND j.connection_id=c.id AND j.status='Failed') AS failed_jobs
+       FROM communication_connections c WHERE c.organization_id=$1 ORDER BY c.provider,c.created_at`,
+      [context.organizationId],
+    );
 
-  return result.rows.map((row) => ({
-    ...row,
-    configuration: {
-      ...(row.configuration as Record<string, unknown>),
-      clientId: (row.configuration as Record<string, unknown>)?.clientId
-        ? "Saved"
-        : undefined,
-    },
-  }));
+    return result.rows.map((row) => ({
+      ...row,
+      configuration: {
+        ...(row.configuration as Record<string, unknown>),
+        clientId: (row.configuration as Record<string, unknown>)?.clientId
+          ? "Saved"
+          : undefined,
+      },
+    }));
+  });
 }
 
 export async function configurePlatformConnection(raw: unknown) {
-  const context = await auth();
-  const parsed = configurationSchema.parse(raw);
-  const project = await query(
-    "SELECT id FROM projects WHERE id=$1 AND organization_id=$2",
-    [parsed.projectId, context.organizationId],
-  );
+  return withAuthenticatedTenant(async (context) => {
+    const parsed = configurationSchema.parse(raw);
+    const project = await query(
+      "SELECT id FROM projects WHERE id=$1 AND organization_id=$2",
+      [parsed.projectId, context.organizationId],
+    );
 
-  if (!project.rows[0]) throw new Error("Project not found.");
+    if (!project.rows[0]) throw new Error("Project not found.");
 
-  const connectionId = randomUUID();
-  const { provider, name, ...values } = parsed;
-  const configuration = { ...values } as Record<string, unknown>;
-  const secretName = provider === "Slack" ? "bot-token" : "client-secret";
-  const secretValue =
-    provider === "Slack" ? parsed.botToken : parsed.clientSecret;
+    const connectionId = randomUUID();
+    const { provider, name, ...values } = parsed;
+    const configuration = { ...values } as Record<string, unknown>;
+    const secretName = provider === "Slack" ? "bot-token" : "client-secret";
+    const secretValue =
+      provider === "Slack" ? parsed.botToken : parsed.clientSecret;
 
-  delete configuration.botToken;
-  delete configuration.clientSecret;
-  await transaction(async (client) => {
-    await client.query(
-      `INSERT INTO communication_connections
-       (id,organization_id,provider,name,status,configuration,sync_scope,data_permissions)
-       VALUES ($1,$2,$3,$4,'Credentials Required',$5::jsonb,$6,$7::jsonb)`,
-      [
-        connectionId,
-        context.organizationId,
-        provider,
-        name,
-        JSON.stringify(configuration),
-        provider === "Slack"
-          ? `${parsed.channelIds.length} selected channel(s)`
-          : provider === "Google"
-            ? parsed.query || "Selected Gmail mailbox"
-            : `Outlook ${parsed.mailboxFolder}; ${parsed.teamsChannels.length} Teams channel(s)`,
-        JSON.stringify(
+    delete configuration.botToken;
+    delete configuration.clientSecret;
+    await transaction(async (client) => {
+      await client.query(
+        `INSERT INTO communication_connections
+         (id,organization_id,provider,name,status,configuration,sync_scope,data_permissions)
+         VALUES ($1,$2,$3,$4,'Credentials Required',$5::jsonb,$6,$7::jsonb)`,
+        [
+          connectionId,
+          context.organizationId,
+          provider,
+          name,
+          JSON.stringify(configuration),
           provider === "Slack"
-            ? ["Selected channel messages", "thread replies", "sender profiles"]
+            ? `${parsed.channelIds.length} selected channel(s)`
             : provider === "Google"
-              ? ["Gmail message headers", "plain-text body", "labels"]
-              : ["Outlook mail", "selected Teams channel messages"],
-        ),
-      ],
-    );
-    await saveConnectionSecret(
-      client,
-      context.organizationId,
-      connectionId,
-      secretName,
-      secretValue,
-    );
-    await client.query(
-      "INSERT INTO audit_logs (id,organization_id,actor_user_id,action,resource_type,resource_id,metadata) VALUES ($1,$2,$3,'integration.configured','communication_connection',$4,$5::jsonb)",
-      [
-        randomUUID(),
+              ? parsed.query || "Selected Gmail mailbox"
+              : `Outlook ${parsed.mailboxFolder}; ${parsed.teamsChannels.length} Teams channel(s)`,
+          JSON.stringify(
+            provider === "Slack"
+              ? ["Selected channel messages", "thread replies", "sender profiles"]
+              : provider === "Google"
+                ? ["Gmail message headers", "plain-text body", "labels"]
+                : ["Outlook mail", "selected Teams channel messages"],
+          ),
+        ],
+      );
+      await saveConnectionSecret(
+        client,
         context.organizationId,
-        context.userId,
         connectionId,
-        JSON.stringify({ provider }),
-      ],
-    );
-  });
+        secretName,
+        secretValue,
+      );
+      await client.query(
+        "INSERT INTO audit_logs (id,organization_id,actor_user_id,action,resource_type,resource_id,metadata) VALUES ($1,$2,$3,'integration.configured','communication_connection',$4,$5::jsonb)",
+        [
+          randomUUID(),
+          context.organizationId,
+          context.userId,
+          connectionId,
+          JSON.stringify({ provider }),
+        ],
+      );
+    });
 
-  return {
-    id: connectionId,
-    provider,
-    status: "Credentials Required" as const,
-    requiresAuthorization: provider !== "Slack",
-  };
+    return {
+      id: connectionId,
+      provider,
+      status: "Credentials Required" as const,
+      requiresAuthorization: provider !== "Slack",
+    };
+  });
 }
 
-async function connectionForUser(connectionId: string) {
-  const context = await auth();
-  const result = await query<{
-    id: string;
-    provider: ConnectorProvider;
-    status: string;
-    configuration: Record<string, unknown>;
-  }>(
-    "SELECT id,provider,status,configuration FROM communication_connections WHERE id=$1 AND organization_id=$2 AND provider IN ('Slack','Google','Microsoft')",
-    [connectionId, context.organizationId],
-  );
+type PlatformConnection = {
+  id: string;
+  provider: ConnectorProvider;
+  status: string;
+  configuration: Record<string, unknown>;
+};
 
-  if (!result.rows[0]) throw new Error("Platform connection not found.");
-
-  if (result.rows[0].status === "Disabled")
-    throw new Error(
-      "This connection is disabled. Create a new configuration to reconnect.",
+/**
+ * The tenant scope has to stay open for the caller's own statements, so this
+ * loads the connection and then runs the caller inside the same scope rather
+ * than returning it.
+ */
+function withPlatformConnection<T>(
+  connectionId: string,
+  work: (context: AuthContext, connection: PlatformConnection) => Promise<T>,
+) {
+  return withAuthenticatedTenant(async (context) => {
+    const result = await query<PlatformConnection>(
+      "SELECT id,provider,status,configuration FROM communication_connections WHERE id=$1 AND organization_id=$2 AND provider IN ('Slack','Google','Microsoft')",
+      [connectionId, context.organizationId],
     );
 
-  return { context, connection: result.rows[0] };
+    if (!result.rows[0]) throw new Error("Platform connection not found.");
+
+    if (result.rows[0].status === "Disabled")
+      throw new Error(
+        "This connection is disabled. Create a new configuration to reconnect.",
+      );
+
+    return work(context, result.rows[0]);
+  });
 }
 
 async function usableSecrets(
@@ -208,180 +214,183 @@ async function usableSecrets(
 }
 
 export async function testPlatformConnection(connectionId: string) {
-  const { context, connection } = await connectionForUser(connectionId);
+  return withPlatformConnection(connectionId, async (context, connection) => {
 
-  try {
-    const result = await connector(connection.provider).test(
-      connection.configuration as never,
-      await usableSecrets(context.organizationId, connection),
-    );
-
-    await query(
-      "UPDATE communication_connections SET status='Connected',connection_verified_at=now(),last_tested_at=now(),last_error=NULL,updated_at=now() WHERE id=$1 AND organization_id=$2",
-      [connectionId, context.organizationId],
-    );
-
-    return result;
-  } catch {
-    const message = `${connection.provider} connection test failed. Verify credentials, permissions, selected sources, and provider setup.`;
-
-    await query(
-      "UPDATE communication_connections SET status='Needs Attention',last_tested_at=now(),last_error=$1,updated_at=now() WHERE id=$2 AND organization_id=$3",
-      [message, connectionId, context.organizationId],
-    );
-    throw new Error(message);
-  }
-}
-
-export async function syncPlatformConnection(connectionId: string) {
-  const { context, connection } = await connectionForUser(connectionId);
-
-  if (connection.status !== "Connected")
-    throw new Error("Test this connection successfully before syncing.");
-
-  const jobId = randomUUID();
-
-  await transaction(async (client) => {
-    await client.query(
-      "INSERT INTO ingestion_jobs (id,organization_id,connection_id,project_id,job_type,status,input,attempt_count,progress,max_attempts,started_at) VALUES ($1,$2,$3,$4,$5,'Running','{}'::jsonb,1,5,3,now())",
-      [
-        jobId,
-        context.organizationId,
-        connectionId,
-        connection.configuration.projectId,
-        `${connection.provider} Sync`,
-      ],
-    );
-    await client.query(
-      "UPDATE communication_connections SET status='Syncing',last_error=NULL,updated_at=now() WHERE id=$1 AND organization_id=$2",
-      [connectionId, context.organizationId],
-    );
-  });
-
-  try {
-    const checkpoint = await query<{
-      checkpoint_value: Record<string, unknown>;
-    }>(
-      "SELECT checkpoint_value FROM sync_checkpoints WHERE organization_id=$1 AND connection_id=$2 AND checkpoint_key='provider'",
-      [context.organizationId, connectionId],
-    );
-    const providerResult = await connector(connection.provider).sync(
-      connection.configuration as never,
-      await usableSecrets(context.organizationId, connection),
-      checkpoint.rows[0]?.checkpoint_value || {},
-    );
-    const oversized = providerResult.messages.filter(
-      (message) => message.text.length > 100_000,
-    ).length;
-    const eligibleMessages = providerResult.messages.filter(
-      (message) => message.text.length <= 100_000,
-    );
-
-    if (oversized)
-      providerResult.warnings.push(
-        `${oversized} provider message(s) over 100,000 characters were skipped.`,
+    try {
+      const result = await connector(connection.provider).test(
+        connection.configuration as never,
+        await usableSecrets(context.organizationId, connection),
       );
 
-    return transaction(async (client) => {
-      const persisted = await persistConnectorSync({
-        client,
-        organizationId: context.organizationId,
-        connectionId,
-        projectId: String(connection.configuration.projectId),
-        provider: connection.provider,
-        messages: eligibleMessages,
-      });
-
-      await client.query(
-        `INSERT INTO sync_checkpoints (id,organization_id,connection_id,checkpoint_key,checkpoint_value)
-         VALUES ($1,$2,$3,'provider',$4::jsonb)
-         ON CONFLICT (organization_id,connection_id,checkpoint_key) DO UPDATE SET checkpoint_value=EXCLUDED.checkpoint_value,updated_at=now()`,
-        [
-          randomUUID(),
-          context.organizationId,
-          connectionId,
-          JSON.stringify(providerResult.checkpoint),
-        ],
-      );
-      const result = { ...persisted, warnings: providerResult.warnings };
-
-      await client.query(
-        "UPDATE ingestion_jobs SET status='Succeeded',progress=100,result=$1::jsonb,completed_at=now(),updated_at=now() WHERE id=$2 AND organization_id=$3",
-        [JSON.stringify(result), jobId, context.organizationId],
-      );
-      await client.query(
-        "UPDATE communication_connections SET status='Connected',last_synced_at=now(),last_error=NULL,updated_at=now() WHERE id=$1 AND organization_id=$2",
+      await query(
+        "UPDATE communication_connections SET status='Connected',connection_verified_at=now(),last_tested_at=now(),last_error=NULL,updated_at=now() WHERE id=$1 AND organization_id=$2",
         [connectionId, context.organizationId],
       );
 
       return result;
-    });
-  } catch {
-    const message = `${connection.provider} sync failed. Review the provider permissions, filters, and job diagnostics.`;
+    } catch {
+      const message = `${connection.provider} connection test failed. Verify credentials, permissions, selected sources, and provider setup.`;
+
+      await query(
+        "UPDATE communication_connections SET status='Needs Attention',last_tested_at=now(),last_error=$1,updated_at=now() WHERE id=$2 AND organization_id=$3",
+        [message, connectionId, context.organizationId],
+      );
+      throw new Error(message);
+    }
+  });
+}
+
+export async function syncPlatformConnection(connectionId: string) {
+  return withPlatformConnection(connectionId, async (context, connection) => {
+
+    if (connection.status !== "Connected")
+      throw new Error("Test this connection successfully before syncing.");
+
+    const jobId = randomUUID();
 
     await transaction(async (client) => {
       await client.query(
-        "UPDATE ingestion_jobs SET status='Failed',error_message=$1,completed_at=now(),updated_at=now() WHERE id=$2 AND organization_id=$3",
-        [message, jobId, context.organizationId],
+        "INSERT INTO ingestion_jobs (id,organization_id,connection_id,project_id,job_type,status,input,attempt_count,progress,max_attempts,started_at) VALUES ($1,$2,$3,$4,$5,'Running','{}'::jsonb,1,5,3,now())",
+        [
+          jobId,
+          context.organizationId,
+          connectionId,
+          connection.configuration.projectId,
+          `${connection.provider} Sync`,
+        ],
       );
       await client.query(
-        "UPDATE communication_connections SET status='Needs Attention',last_error=$1,updated_at=now() WHERE id=$2 AND organization_id=$3",
-        [message, connectionId, context.organizationId],
+        "UPDATE communication_connections SET status='Syncing',last_error=NULL,updated_at=now() WHERE id=$1 AND organization_id=$2",
+        [connectionId, context.organizationId],
       );
     });
-    throw new Error(message);
-  }
+
+    try {
+      const checkpoint = await query<{
+        checkpoint_value: Record<string, unknown>;
+      }>(
+        "SELECT checkpoint_value FROM sync_checkpoints WHERE organization_id=$1 AND connection_id=$2 AND checkpoint_key='provider'",
+        [context.organizationId, connectionId],
+      );
+      const providerResult = await connector(connection.provider).sync(
+        connection.configuration as never,
+        await usableSecrets(context.organizationId, connection),
+        checkpoint.rows[0]?.checkpoint_value || {},
+      );
+      const oversized = providerResult.messages.filter(
+        (message) => message.text.length > 100_000,
+      ).length;
+      const eligibleMessages = providerResult.messages.filter(
+        (message) => message.text.length <= 100_000,
+      );
+
+      if (oversized)
+        providerResult.warnings.push(
+          `${oversized} provider message(s) over 100,000 characters were skipped.`,
+        );
+
+      return transaction(async (client) => {
+        const persisted = await persistConnectorSync({
+          client,
+          organizationId: context.organizationId,
+          connectionId,
+          projectId: String(connection.configuration.projectId),
+          provider: connection.provider,
+          messages: eligibleMessages,
+        });
+
+        await client.query(
+          `INSERT INTO sync_checkpoints (id,organization_id,connection_id,checkpoint_key,checkpoint_value)
+           VALUES ($1,$2,$3,'provider',$4::jsonb)
+           ON CONFLICT (organization_id,connection_id,checkpoint_key) DO UPDATE SET checkpoint_value=EXCLUDED.checkpoint_value,updated_at=now()`,
+          [
+            randomUUID(),
+            context.organizationId,
+            connectionId,
+            JSON.stringify(providerResult.checkpoint),
+          ],
+        );
+        const result = { ...persisted, warnings: providerResult.warnings };
+
+        await client.query(
+          "UPDATE ingestion_jobs SET status='Succeeded',progress=100,result=$1::jsonb,completed_at=now(),updated_at=now() WHERE id=$2 AND organization_id=$3",
+          [JSON.stringify(result), jobId, context.organizationId],
+        );
+        await client.query(
+          "UPDATE communication_connections SET status='Connected',last_synced_at=now(),last_error=NULL,updated_at=now() WHERE id=$1 AND organization_id=$2",
+          [connectionId, context.organizationId],
+        );
+
+        return result;
+      });
+    } catch {
+      const message = `${connection.provider} sync failed. Review the provider permissions, filters, and job diagnostics.`;
+
+      await transaction(async (client) => {
+        await client.query(
+          "UPDATE ingestion_jobs SET status='Failed',error_message=$1,completed_at=now(),updated_at=now() WHERE id=$2 AND organization_id=$3",
+          [message, jobId, context.organizationId],
+        );
+        await client.query(
+          "UPDATE communication_connections SET status='Needs Attention',last_error=$1,updated_at=now() WHERE id=$2 AND organization_id=$3",
+          [message, connectionId, context.organizationId],
+        );
+      });
+      throw new Error(message);
+    }
+  });
 }
 
 export async function disablePlatformConnection(connectionId: string) {
-  const context = await auth();
-  const result = await query<{
-    id: string;
-    provider: string;
-    configuration: Record<string, unknown>;
-  }>(
-    "SELECT id,provider,configuration FROM communication_connections WHERE id=$1 AND organization_id=$2",
-    [connectionId, context.organizationId],
-  );
-  const connection = result.rows[0];
-
-  if (!connection) throw new Error("Connection not found.");
-
-  if (connection.provider === "Google") {
-    const secrets = await connectionSecrets(
-      context.organizationId,
-      connectionId,
-    ).catch(() => ({}));
-
-    await createGoogleConnector()
-      .revoke?.(connection.configuration as never, secrets)
-      .catch(() => undefined);
-  }
-
-  await transaction(async (client) => {
-    await client.query(
-      "DELETE FROM encrypted_secrets WHERE organization_id=$1 AND connection_id=$2",
-      [context.organizationId, connectionId],
-    );
-    await client.query(
-      "DELETE FROM sync_checkpoints WHERE organization_id=$1 AND connection_id=$2",
-      [context.organizationId, connectionId],
-    );
-    await client.query(
-      "UPDATE communication_connections SET status='Disabled',last_error=NULL,updated_at=now() WHERE id=$1 AND organization_id=$2",
+  return withAuthenticatedTenant(async (context) => {
+    const result = await query<{
+      id: string;
+      provider: string;
+      configuration: Record<string, unknown>;
+    }>(
+      "SELECT id,provider,configuration FROM communication_connections WHERE id=$1 AND organization_id=$2",
       [connectionId, context.organizationId],
     );
-    await client.query(
-      "INSERT INTO audit_logs (id,organization_id,actor_user_id,action,resource_type,resource_id,metadata) VALUES ($1,$2,$3,'integration.disabled','communication_connection',$4,$5::jsonb)",
-      [
-        randomUUID(),
-        context.organizationId,
-        context.userId,
-        connectionId,
-        JSON.stringify({ provider: connection.provider }),
-      ],
-    );
-  });
+    const connection = result.rows[0];
 
-  return { disabled: true };
+    if (!connection) throw new Error("Connection not found.");
+
+    if (connection.provider === "Google") {
+      const secrets = await connectionSecrets(
+        context.organizationId,
+        connectionId,
+      ).catch(() => ({}));
+
+      await createGoogleConnector()
+        .revoke?.(connection.configuration as never, secrets)
+        .catch(() => undefined);
+    }
+
+    await transaction(async (client) => {
+      await client.query(
+        "DELETE FROM encrypted_secrets WHERE organization_id=$1 AND connection_id=$2",
+        [context.organizationId, connectionId],
+      );
+      await client.query(
+        "DELETE FROM sync_checkpoints WHERE organization_id=$1 AND connection_id=$2",
+        [context.organizationId, connectionId],
+      );
+      await client.query(
+        "UPDATE communication_connections SET status='Disabled',last_error=NULL,updated_at=now() WHERE id=$1 AND organization_id=$2",
+        [connectionId, context.organizationId],
+      );
+      await client.query(
+        "INSERT INTO audit_logs (id,organization_id,actor_user_id,action,resource_type,resource_id,metadata) VALUES ($1,$2,$3,'integration.disabled','communication_connection',$4,$5::jsonb)",
+        [
+          randomUUID(),
+          context.organizationId,
+          context.userId,
+          connectionId,
+          JSON.stringify({ provider: connection.provider }),
+        ],
+      );
+    });
+
+    return { disabled: true };
+  });
 }

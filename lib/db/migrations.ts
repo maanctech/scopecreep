@@ -3,6 +3,9 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import type { PoolClient } from "pg";
 import { transaction } from "@/lib/db/client";
+import { withSystemAccess } from "@/lib/db/tenantContext";
+
+const systemTransaction: typeof transaction = (work) => withSystemAccess(() => transaction(work));
 
 export type Migration = {
   version: string;
@@ -44,7 +47,7 @@ async function ensureMigrationTable(client: Pick<PoolClient, "query">) {
 export async function runMigrations() {
   const migrations = await loadMigrations();
 
-  return transaction(async (client) => {
+  return systemTransaction(async (client) => {
     await ensureMigrationTable(client);
     const applied = await client.query<{ version: string; checksum: string }>(
       "SELECT version, checksum FROM schema_migrations ORDER BY version"

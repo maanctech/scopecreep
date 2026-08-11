@@ -6,7 +6,8 @@ import {
   timingSafeEqual,
 } from "node:crypto";
 import { WEBHOOK_SIGNATURE_WINDOW_SECONDS } from "@/constants/typescript/ingestion";
-import { currentAuthContext } from "@/lib/auth/current";
+import { withAuthenticatedTenant } from "@/lib/auth/scope";
+import { withSystemAccess, withTenant } from "@/lib/db/tenantContext";
 import { query, transaction } from "@/lib/db/client";
 import { parseManualImport } from "@/lib/ingestion/manual";
 import type { NormalizedCommunication } from "@/lib/ingestion/types";
@@ -55,57 +56,56 @@ export async function createWebhookConnection(input: {
   projectId: string;
   name: string;
 }) {
-  const auth = await currentAuthContext();
+  return withAuthenticatedTenant(async (auth) => {
 
-  if (!auth) throw new Error("A valid organization session is required.");
-
-  const project = await query<Row>(
-    "SELECT id FROM projects WHERE id=$1 AND organization_id=$2",
-    [input.projectId, auth.organizationId],
-  );
-
-  if (!project.rows[0]) throw new Error("Project not found.");
-
-  const connectionId = randomUUID();
-  const secret = randomBytes(32).toString("base64url");
-  const encrypted = encryptSecret(
-    secret,
-    contextKey(auth.organizationId, connectionId),
-  );
-
-  await transaction(async (client) => {
-    await client.query(
-      `INSERT INTO communication_connections (id,organization_id,provider,name,status,configuration,sync_scope,data_permissions) VALUES ($1,$2,'Webhook',$3,'Credentials Required',$4::jsonb,'Signed inbound messages','["Message text","sender","recipients","timestamps","thread identifiers"]'::jsonb)`,
-      [
-        connectionId,
-        auth.organizationId,
-        input.name.trim(),
-        JSON.stringify({ projectId: input.projectId }),
-      ],
+    const project = await query<Row>(
+      "SELECT id FROM projects WHERE id=$1 AND organization_id=$2",
+      [input.projectId, auth.organizationId],
     );
-    await client.query(
-      "INSERT INTO encrypted_secrets (id,organization_id,connection_id,name,ciphertext,initialization_vector,auth_tag) VALUES ($1,$2,$3,'webhook-signing-secret',$4,$5,$6)",
-      [
-        randomUUID(),
-        auth.organizationId,
-        connectionId,
-        encrypted.ciphertext,
-        encrypted.initializationVector,
-        encrypted.authTag,
-      ],
+
+    if (!project.rows[0]) throw new Error("Project not found.");
+
+    const connectionId = randomUUID();
+    const secret = randomBytes(32).toString("base64url");
+    const encrypted = encryptSecret(
+      secret,
+      contextKey(auth.organizationId, connectionId),
     );
-    await client.query(
-      "INSERT INTO audit_logs (id,organization_id,actor_user_id,action,resource_type,resource_id,metadata) VALUES ($1,$2,$3,'webhook.connection.created','communication_connection',$4,'{}'::jsonb)",
-      [randomUUID(), auth.organizationId, auth.userId, connectionId],
-    );
+
+    await transaction(async (client) => {
+      await client.query(
+        `INSERT INTO communication_connections (id,organization_id,provider,name,status,configuration,sync_scope,data_permissions) VALUES ($1,$2,'Webhook',$3,'Credentials Required',$4::jsonb,'Signed inbound messages','["Message text","sender","recipients","timestamps","thread identifiers"]'::jsonb)`,
+        [
+          connectionId,
+          auth.organizationId,
+          input.name.trim(),
+          JSON.stringify({ projectId: input.projectId }),
+        ],
+      );
+      await client.query(
+        "INSERT INTO encrypted_secrets (id,organization_id,connection_id,name,ciphertext,initialization_vector,auth_tag) VALUES ($1,$2,$3,'webhook-signing-secret',$4,$5,$6)",
+        [
+          randomUUID(),
+          auth.organizationId,
+          connectionId,
+          encrypted.ciphertext,
+          encrypted.initializationVector,
+          encrypted.authTag,
+        ],
+      );
+      await client.query(
+        "INSERT INTO audit_logs (id,organization_id,actor_user_id,action,resource_type,resource_id,metadata) VALUES ($1,$2,$3,'webhook.connection.created','communication_connection',$4,'{}'::jsonb)",
+        [randomUUID(), auth.organizationId, auth.userId, connectionId],
+      );
+    });
+
+    return {
+      connectionId,
+      secret,
+      endpoint: `/api/webhooks/${connectionId}`,
+      status: "Credentials Required" as const,
+    };
   });
-
-  return {
-    connectionId,
-    secret,
-    endpoint: `/api/webhooks/${connectionId}`,
-    status: "Credentials Required" as const,
-  };
 }
 
 function messageHash(message: NormalizedCommunication) {
@@ -133,10 +133,10 @@ export async function receiveWebhook(input: {
   if (Buffer.byteLength(input.body) > 1_000_000)
     throw new Error("Webhook payloads must be 1 MB or smaller.");
 
-  const connection = await query<Row>(
+  const connection = await withSystemAccess(() => query<Row>(
     `SELECT c.*,s.ciphertext,s.initialization_vector,s.auth_tag FROM communication_connections c JOIN encrypted_secrets s ON s.connection_id=c.id AND s.organization_id=c.organization_id AND s.name='webhook-signing-secret' WHERE c.id=$1 AND c.provider='Webhook' AND c.status<>'Disabled'`,
     [input.connectionId],
-  );
+  ));
   const row = connection.rows[0];
 
   if (!row) throw new Error("Webhook connection not found.");
@@ -165,7 +165,7 @@ export async function receiveWebhook(input: {
   const preview = parseManualImport({ format: "JSON", content: input.body });
   const payloadHash = createHash("sha256").update(input.body).digest("hex");
 
-  return transaction(async (client) => {
+  return withTenant(organizationId, () => transaction(async (client) => {
     const prior = await client.query<{ payload_sha256: string }>(
       "SELECT payload_sha256 FROM webhook_deliveries WHERE organization_id=$1 AND connection_id=$2 AND delivery_id=$3",
       [organizationId, input.connectionId, input.deliveryId],
@@ -264,5 +264,5 @@ export async function receiveWebhook(input: {
     );
 
     return result;
-  });
+  }));
 }

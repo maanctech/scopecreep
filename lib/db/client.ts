@@ -1,4 +1,5 @@
 import { Pool, type PoolClient, type QueryResult, type QueryResultRow } from "pg";
+import { currentTenantContext } from "@/lib/db/tenantContext";
 
 declare global {
   var __scopeLedgerPool: Pool | undefined;
@@ -47,11 +48,26 @@ export function getPool() {
   return global.__scopeLedgerPool;
 }
 
+/**
+ * Row-level security reads the organization from these settings, and they are
+ * set with `is_local = true` so they are discarded when the transaction ends.
+ * Without a scope the settings stay empty, every policy fails to match, and a
+ * caller that forgot its context reads nothing instead of reading everything.
+ */
+async function applyTenantContext(client: Pick<PoolClient, "query">) {
+  const context = currentTenantContext();
+
+  await client.query("SELECT set_config('app.organization_id', $1, true), set_config('app.system_access', $2, true)", [
+    context?.organizationId ?? "",
+    context?.systemAccess ? "on" : ""
+  ]);
+}
+
 export async function query<T extends QueryResultRow = QueryResultRow>(
   text: string,
   values: readonly unknown[] = []
 ): Promise<QueryResult<T>> {
-  return getPool().query<T>(text, [...values]);
+  return transaction((client) => client.query<T>(text, [...values]));
 }
 
 export async function transaction<T>(work: (client: PoolClient) => Promise<T>): Promise<T> {
@@ -59,6 +75,7 @@ export async function transaction<T>(work: (client: PoolClient) => Promise<T>): 
 
   try {
     await client.query("BEGIN");
+    await applyTenantContext(client);
     const result = await work(client);
 
     await client.query("COMMIT");

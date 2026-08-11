@@ -19,6 +19,7 @@
     "restore": "tsx scripts/restore.ts",
     "config:check": "tsx scripts/validate-config.ts",
     "constants:generate": "tsx scripts/generate-constants.ts",
+    "rls:check": "tsx scripts/check-rls.ts",
     "ai:check": "tsx scripts/check-ai.ts",
     "ollama:check": "tsx scripts/check-ollama.ts",
     "lint": "eslint .",
