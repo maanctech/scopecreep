@@ -24,9 +24,7 @@ export const PERMISSIONS = [
   "members:read",
   "members:write",
   "settings:read",
-  "settings:write",
-  "backups:read",
-  "backups:write"
+  "settings:write"
 ] as const;
 
 export const SESSION_COOKIE_NAME = "scopeledger_session";

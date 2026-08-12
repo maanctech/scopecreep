@@ -17,11 +17,10 @@ vi.mock("@/lib/auth/current", () => ({
 
 import { currentAuthContext } from "@/lib/auth/current";
 import { createProject } from "@/lib/store/postgres";
-import { createSowVersion, getSowWorkspace } from "@/lib/sow/service";
+import { createSowVersion, getSowOriginal, getSowWorkspace } from "@/lib/sow/service";
 import { importManualMessages, listIngestionJobs } from "@/lib/ingestion/service";
 import { parseManualImport } from "@/lib/ingestion/manual";
 import { listIntegrations } from "@/lib/connectors/service";
-import { listBackups } from "@/lib/backups/service";
 import { auditLog, systemDiagnostics } from "@/lib/operations/diagnostics";
 import { analysisWorkspace } from "@/lib/analysisJobs/context";
 
@@ -63,6 +62,7 @@ const SOW_TEXT = "1. Scope\nDeliver the reporting dashboard.\n2. Exclusions\nDat
 let database: TestDatabase;
 let projectA: string;
 let projectB: string;
+let uploadedVersionId: string;
 
 beforeAll(async () => {
   database = await startTestDatabase();
@@ -163,6 +163,77 @@ describe("the SOW service under row-level security", () => {
 
     await expect(createSowVersion({ projectId: projectA, text: SOW_TEXT })).rejects.toThrow("Project not found.");
   });
+
+  it("serves the uploaded original back to the organization that uploaded it", async () => {
+    actingAs(AUTH_CONTEXT_A);
+
+    const created = await createSowVersion({
+      projectId: projectA,
+      text: `${SOW_TEXT}\n4. Handover\nOne handover session is included.`,
+      extracted: {
+        text: SOW_TEXT,
+        sourceType: "TXT",
+        safeFilename: "signed-agreement.txt",
+        mediaType: "text/plain",
+        warning: null
+      },
+      fileBuffer: Buffer.from("the bytes the client actually signed")
+    });
+
+    const original = await getSowOriginal(projectA, created.versionId);
+
+    expect(original?.filename).toBe("signed-agreement.txt");
+    expect(original?.mediaType).toBe("text/plain");
+    expect(Buffer.from(await new Response(original!.stream).arrayBuffer()).toString())
+      .toBe("the bytes the client actually signed");
+
+    uploadedVersionId = created.versionId;
+  });
+
+  it("reports another organization's original as absent rather than streaming it", async () => {
+    actingAs(AUTH_CONTEXT_B);
+
+    expect(await getSowOriginal(projectA, uploadedVersionId)).toBeNull();
+    expect(await getSowOriginal(projectB, uploadedVersionId)).toBeNull();
+  });
+
+  it("will not serve an original through a project that does not own it", async () => {
+    actingAs(AUTH_CONTEXT_A);
+
+    expect(await getSowOriginal(projectB, uploadedVersionId)).toBeNull();
+  });
+
+  it("records no version when the write it belonged to never commits", async () => {
+    actingAs(AUTH_CONTEXT_A);
+
+    await expect(createSowVersion({
+      projectId: "60000000-0000-4000-8000-0000000000ff",
+      text: SOW_TEXT,
+      extracted: {
+        text: SOW_TEXT,
+        sourceType: "TXT",
+        safeFilename: "never-committed.txt",
+        mediaType: "text/plain",
+        warning: null
+      },
+      fileBuffer: Buffer.from("bytes that must not outlive the failed write")
+    })).rejects.toThrow("Project not found.");
+
+    const orphans = await withTenant(ORGANIZATION_A, () => query<{ count: number }>(
+      "SELECT count(*)::int AS count FROM sow_versions WHERE source_filename = $1",
+      ["never-committed.txt"]
+    ));
+
+    expect(orphans.rows[0].count).toBe(0);
+  });
+
+  it("stores no original for a version that was pasted rather than uploaded", async () => {
+    actingAs(AUTH_CONTEXT_A);
+
+    const created = await createSowVersion({ projectId: projectA, text: `${SOW_TEXT}\n5. Training\nTwo training hours.` });
+
+    expect(await getSowOriginal(projectA, created.versionId)).toBeNull();
+  });
 });
 
 describe("the ingestion service under row-level security", () => {
@@ -192,17 +263,6 @@ describe("the connectors service under row-level security", () => {
     const integrations = await listIntegrations();
 
     expect(integrations.map((row) => row.name)).toEqual(["Manual imports"]);
-  });
-});
-
-describe("the backups service under row-level security", () => {
-  it("lists only the acting organization's backup records", async () => {
-    actingAs(AUTH_CONTEXT_A);
-
-    const backups = await listBackups();
-
-    expect(backups.length).toBe(1);
-    expect(backups[0].status).toBe("Succeeded");
   });
 });
 

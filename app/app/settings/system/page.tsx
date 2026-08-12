@@ -2,19 +2,14 @@ import Link from "next/link";
 import { Activity, Download, ShieldCheck } from "lucide-react";
 import { requirePagePermission } from "@/lib/auth/current";
 import { auditLog, systemDiagnostics } from "@/lib/operations/diagnostics";
-import { listBackups } from "@/lib/backups/service";
-import { BackupPanel } from "@/components/operations/BackupPanel";
-import { hasPermission } from "@/lib/auth/authorization";
 
 export const dynamic = "force-dynamic";
 
 export default async function SystemSettingsPage() {
-  const auth = await requirePagePermission("settings:read");
-  const canReadBackups = hasPermission(auth.role, "backups:read");
-  const [diagnostics, events, backups] = await Promise.all([
+  await requirePagePermission("settings:read");
+  const [diagnostics, events] = await Promise.all([
     systemDiagnostics(),
-    auditLog(100),
-    canReadBackups ? listBackups() : Promise.resolve([])
+    auditLog(100)
   ]);
   const failedJobs = [...diagnostics.analysisJobs, ...diagnostics.ingestionJobs].filter(
     (row) => row.status === "Failed"
@@ -112,34 +107,12 @@ export default async function SystemSettingsPage() {
       </section>
 
       <section>
-        <h2 className="text-xl font-semibold">Installation backups</h2>
+        <h2 className="text-xl font-semibold">Backups</h2>
         <p className="mt-2 max-w-3xl text-sm/6 text-zinc-700">
-          A complete backup contains a PostgreSQL dump, encrypted integration-secret records, required local documents, migration metadata, and SHA-256 checksums. Restore is deliberately command-line only and requires explicit confirmation.
+          ScopeLedger operates the database and is responsible for its backups and
+          recovery. There is nothing here for a firm to run, and no firm can reach
+          another firm&rsquo;s records through this page.
         </p>
-        <div className="mt-4"><BackupPanel canCreate={auth.isSystemAdmin && hasPermission(auth.role, "backups:write")} /></div>
-        <div className="
-          mt-4 overflow-x-auto rounded-md border border-audit-border
-        ">
-          <table className="min-w-full text-left text-sm">
-            <caption className="sr-only">Installation backup history</caption>
-            <thead className="bg-audit-soft"><tr><th className="p-3">Created</th><th className="
-              p-3
-            ">Status</th><th className="p-3">Coverage</th><th className="p-3">Size</th><th className="
-              p-3
-            ">Filesystem path</th></tr></thead>
-            <tbody className="divide-y divide-audit-border">
-              {backups.length ? backups.map((backup) => (
-                <tr key={backup.id}><td className="p-3 whitespace-nowrap">{new Date(backup.created_at).toLocaleString()}</td><td className="
-                  p-3 font-semibold
-                ">{backup.status}</td><td className="p-3">{backup.includes_database && backup.includes_documents && backup.includes_encrypted_secrets ? "Database + documents + encrypted secrets" : "Incomplete"}</td><td className="
-                  p-3
-                ">{backup.byte_size == null ? "-" : `${(backup.byte_size / 1024 / 1024).toFixed(1)} MB`}</td><td className="
-                  max-w-md p-3 font-mono text-xs break-all
-                ">{backup.storage_path || backup.error_message || "In progress"}</td></tr>
-              )) : <tr><td colSpan={5} className="p-6 text-zinc-600">No installation backups have been recorded.</td></tr>}
-            </tbody>
-          </table>
-        </div>
       </section>
 
       <section>

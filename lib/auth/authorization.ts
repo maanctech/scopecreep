@@ -22,8 +22,7 @@ const readOnlyPermissions: Permission[] = [
   "exports:read",
   "integrations:read",
   "members:read",
-  "settings:read",
-  "backups:read"
+  "settings:read"
 ];
 
 const adminPermissions: Permission[] = [
@@ -33,9 +32,7 @@ const adminPermissions: Permission[] = [
   "integrations:write",
   "members:read",
   "members:write",
-  "settings:write",
-  "backups:read",
-  "backups:write"
+  "settings:write"
 ];
 
 const permissionsByRole: Record<OrganizationRole, ReadonlySet<Permission>> = {

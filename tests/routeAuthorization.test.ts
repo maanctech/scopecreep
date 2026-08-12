@@ -116,13 +116,6 @@ describe("a signed-in role without the permission is refused", () => {
     expect(response.status).toBe(403);
   });
 
-  it("refuses Read Only an installation backup", async () => {
-    const { POST } = await import("@/app/api/backups/route");
-    const response = await POST(signedInRequest("backups", "POST", {}));
-
-    expect(response.status).toBe(403);
-  });
-
   it("refuses Read Only a lead status change", async () => {
     const { PATCH } = await import("@/app/api/leads/[id]/status/route");
     const response = await PATCH(
