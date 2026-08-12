@@ -18,7 +18,7 @@ Last updated: 2026-08-12. Branch: `backend-refactor`.
 - Image-only PDFs are not OCR'd. Paste text or provide a text-based PDF, TXT, or DOCX.
 - Public lead and audit submissions are not idempotent across independent HTTP retries; an obvious duplicate intake may need merging by hand.
 - Organization switching and browser-based member management are not implemented.
-- Per-firm data export does not exist. The privacy page says so; do not promise it in a sales conversation. It is the replacement the retired installation backup pretended to be, and it is not built.
+- Per-firm data export exists as an API (`POST /api/exports`, then download) but has no button in the interface, so today an operator triggers it. The file carries every organization-scoped table plus the firm's own members, and deliberately withholds encrypted secrets, in-flight OAuth verifiers, and session token hashes. Uploaded SOW originals are not inside it - they are downloaded one at a time from their version.
 - There is no client login, approval link, notification, automatic email, automatic change order, invoice integration, payment collection, or accounting integration.
 - AI estimates can be wrong. Every scope and billing decision requires professional evidence review.
 
@@ -30,7 +30,7 @@ Last updated: 2026-08-12. Branch: `backend-refactor`.
 
 ## Current Test Evidence
 
-- 360 automated tests pass on PGlite. The 327 predating analysis job recovery also pass on real PostgreSQL 17.6; the recovery, document storage, deployment configuration, and serverless boundary suites have only been run on PGlite so far.
+- 374 automated tests pass on PGlite. The 327 predating analysis job recovery also pass on real PostgreSQL 17.6; the recovery, document storage, deployment configuration, and serverless boundary suites have only been run on PGlite so far.
 - Type checking, ESLint, and the production build pass.
 - Tenant isolation is exercised against a connection role holding neither SUPERUSER nor BYPASSRLS, so the assertions test policies rather than privilege.
 - Route handler authentication and authorization are swept from disk, so a new route is covered without being enrolled by hand.
@@ -38,4 +38,4 @@ Last updated: 2026-08-12. Branch: `backend-refactor`.
 
 ## Exact Next Objective
 
-Run the CI tenant-boundary job once against real PostgreSQL and fix whatever it finds, then build the tenant-scoped export. After that, the read path: `lib/store/postgres/projections.ts` loads every row of nine tables on every page and joins them in JavaScript, which measured 12 seconds per page load at 38,400 records.
+Run the CI tenant-boundary job once against real PostgreSQL and fix whatever it finds. Then the read path: `lib/store/postgres/projections.ts` loads every row of nine tables on every page and joins them in JavaScript, which measured 12 seconds per page load at 38,400 records.

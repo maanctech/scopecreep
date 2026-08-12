@@ -62,7 +62,7 @@ export default async function PrivacyPage() {
           <li>No independent penetration test or legal privacy review is claimed.</li>
           <li>Support bundles are designed to redact business text and credentials, and are inspected before sharing.</li>
           <li>Third-party connectors are subject to the selected provider&apos;s terms and customer-owned approval process.</li>
-          <li>Backups are operated by ScopeLedger. Per-firm data export is not available yet.</li>
+          <li>Backups are operated by ScopeLedger. Your firm can export its own records at any time; uploaded contract originals are downloaded individually rather than inside that file.</li>
         </ul>
       </section>
 
