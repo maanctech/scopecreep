@@ -21,13 +21,11 @@ export function AnalysisJobsTable({
   return (
     <section>
       <h2 className="text-xl font-semibold">Analysis jobs</h2>
-      <p className="mt-2 text-sm text-zinc-700">
+      <p className="mt-2 text-sm text-audit-body">
         Jobs keep their original SOW and boundary references. Failed jobs can
         be retried; canceling a running job discards its result.
       </p>
-      <div className="
-        mt-4 overflow-x-auto rounded-md border border-audit-border
-      ">
+      <div className="sl-table-wrap mt-4">
         <table className="min-w-full text-left text-sm">
           <caption className="sr-only">
             Analysis job progress and errors
@@ -70,7 +68,7 @@ export function AnalysisJobsTable({
                         disabled={busy}
                         onClick={() => onJobAction(job.id, "recover")}
                         className="
-                          min-h-10 font-semibold text-red-800 underline
+                          min-h-10 font-semibold text-critical underline
                           disabled:opacity-50
                         "
                       >
@@ -82,7 +80,7 @@ export function AnalysisJobsTable({
                         disabled={busy}
                         onClick={() => onJobAction(job.id, "cancel")}
                         className="
-                          min-h-10 font-semibold text-red-800 underline
+                          min-h-10 font-semibold text-critical underline
                           disabled:opacity-50
                         "
                       >
@@ -116,7 +114,7 @@ export function AnalysisJobsTable({
                         Start over
                       </button>
                     ) : ["Failed", "Cancelled"].includes(job.status) ? (
-                      <span className="text-zinc-600">No actions available</span>
+                      <span className="text-audit-muted">No actions available</span>
                     ) : job.result?.findingId ? (
                       <Link
                         href={`/app/projects/${projectId}?finding=${job.result.findingId}#finding-${job.result.findingId}`}
@@ -132,7 +130,7 @@ export function AnalysisJobsTable({
               ))
             ) : (
               <tr>
-                <td colSpan={6} className="p-6 text-zinc-600">
+                <td colSpan={6} className="p-6 text-audit-muted">
                   No analysis jobs for this project yet.
                 </td>
               </tr>

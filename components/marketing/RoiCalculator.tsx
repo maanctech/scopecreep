@@ -35,19 +35,21 @@ export function RoiCalculator() {
 
   return (
     <div className="
-      grid gap-6
-      lg:grid-cols-[1fr_0.85fr]
+      grid overflow-hidden border border-ink/20 bg-bright-paper
+      lg:grid-cols-[1.15fr_0.85fr]
     ">
       <div className="
-        grid gap-4
-        sm:grid-cols-2
+        grid gap-x-6 p-5
+        sm:grid-cols-2 sm:p-6
       ">
-        <label className="block">
-          <span className="text-sm font-medium">Average hourly or blended rate</span>
+        <label className="
+          border-b border-audit-border py-4
+          first:pt-0
+        ">
+          <span className="sl-metadata text-audit-muted">01 / BLENDED RATE</span>
+          <span className="mt-1 block text-sm font-medium text-audit-body">Average hourly or blended rate</span>
           <input
-            className="
-              mt-2 w-full rounded-md border border-audit-border px-3 py-2
-            "
+            className="sl-field mt-2"
             type="number"
             inputMode="decimal"
             min="0"
@@ -57,12 +59,14 @@ export function RoiCalculator() {
             onChange={(event) => setHourlyRate(event.target.value)}
           />
         </label>
-        <label className="block">
-          <span className="text-sm font-medium">Unbilled hours per project/month</span>
+        <label className="
+          border-b border-audit-border py-4
+          first:pt-0
+        ">
+          <span className="sl-metadata text-audit-muted">02 / UNPRICED LABOR</span>
+          <span className="mt-1 block text-sm font-medium text-audit-body">Unbilled hours per project/month</span>
           <input
-            className="
-              mt-2 w-full rounded-md border border-audit-border px-3 py-2
-            "
+            className="sl-field mt-2"
             type="number"
             inputMode="decimal"
             min="0"
@@ -72,12 +76,11 @@ export function RoiCalculator() {
             onChange={(event) => setUnbilledHours(event.target.value)}
           />
         </label>
-        <label className="block">
-          <span className="text-sm font-medium">Active projects</span>
+        <label className="py-4">
+          <span className="sl-metadata text-audit-muted">03 / ACTIVE CASES</span>
+          <span className="mt-1 block text-sm font-medium text-audit-body">Active projects</span>
           <input
-            className="
-              mt-2 w-full rounded-md border border-audit-border px-3 py-2
-            "
+            className="sl-field mt-2"
             type="number"
             inputMode="numeric"
             min="0"
@@ -87,12 +90,11 @@ export function RoiCalculator() {
             onChange={(event) => setActiveProjects(event.target.value)}
           />
         </label>
-        <label className="block">
-          <span className="text-sm font-medium">Typical retainer or project value</span>
+        <label className="py-4">
+          <span className="sl-metadata text-audit-muted">04 / CONTRACT VALUE</span>
+          <span className="mt-1 block text-sm font-medium text-audit-body">Typical retainer or project value</span>
           <input
-            className="
-              mt-2 w-full rounded-md border border-audit-border px-3 py-2
-            "
+            className="sl-field mt-2"
             type="number"
             inputMode="decimal"
             min="0"
@@ -105,44 +107,44 @@ export function RoiCalculator() {
       </div>
 
       <div className="
-        rounded-md border border-audit-border bg-white p-5 shadow-audit
+        border-t border-signal/25 bg-signal/5 p-6 text-ink
+        lg:border-t-0 lg:border-l
       ">
-        <div className="text-sm text-audit-muted">Estimated monthly leakage</div>
-        <div className="mt-2 text-3xl font-semibold">{money(result.monthlyLeakage)}</div>
-        <div className="mt-5 grid gap-3 text-sm">
+        <div className="sl-metadata text-audit-muted">CALCULATION / POTENTIAL ONLY</div>
+        <div className="mt-8 text-sm text-audit-muted">Estimated monthly leakage</div>
+        <div data-financial-value className="
+          sl-editorial mt-1 text-5xl text-signal
+        ">{money(result.monthlyLeakage)}</div>
+        <div className="mt-7 grid gap-4 text-sm">
           <div className="
-            flex justify-between border-b border-audit-border pb-2
+            flex justify-between gap-4 border-b border-audit-border pb-3
           ">
-            <span>Annualized leakage</span>
-            <strong>{money(result.annualLeakage)}</strong>
+            <span className="text-audit-muted">Annualized leakage</span>
+            <strong data-financial-value>{money(result.annualLeakage)}</strong>
           </div>
           <div className="
-            flex justify-between border-b border-audit-border pb-2
+            flex justify-between gap-4 border-b border-audit-border pb-3
           ">
-            <span>Suggested service range</span>
-            <strong>
+            <span className="text-audit-muted">Suggested service range</span>
+            <strong className="text-right">
               {result.serviceLow === null || result.serviceHigh === null
                 ? "Confirm leakage first"
                 : `${money(result.serviceLow)}-${money(result.serviceHigh)}/month`}
             </strong>
           </div>
-          <div className="flex justify-between">
-            <span>Monthly leakage vs. project value</span>
-            <strong>{result.projectRisk}%</strong>
+          <div className="flex justify-between gap-4">
+            <span className="text-audit-muted">Monthly leakage vs. project value</span>
+            <strong data-financial-value>{result.projectRisk}%</strong>
           </div>
         </div>
-        <p className="mt-4 text-xs/5 text-audit-muted">
+        <p className="mt-6 text-xs/5 text-audit-muted">
           Illustrative estimate only. It is not validated recovery, an approved charge, or a guarantee.
         </p>
         <Link
           href="/request-audit"
-          className="
-            mt-6 inline-flex h-11 w-full items-center justify-center rounded-md
-            bg-ink px-4 text-sm font-semibold text-white
-            hover:bg-zinc-800
-          "
+          className="sl-button-primary mt-6 w-full"
         >
-          Request free audit
+          Request a free audit
         </Link>
       </div>
     </div>

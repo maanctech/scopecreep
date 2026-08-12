@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Disclaimer } from "@/components/ui/Disclaimer";
+import { Page, PageHeader } from "@/components/ui/Page";
 import { findingDisplayLabel } from "@/lib/domain/findingTransitions";
 import { formatCents, formatDollars } from "@/lib/domain/money";
 import { getFindings } from "@/lib/store";
@@ -66,22 +67,15 @@ export default async function FindingsPage({ searchParams }: FindingsPageProps) 
   );
 
   return (
-    <div className="space-y-8">
-      <section className="border-b border-audit-border pb-7">
-        <h1 className="text-3xl font-semibold">All scope findings</h1>
-        <p className="mt-3 max-w-2xl text-base/7 text-zinc-700">
-          Every AI-flagged request across all projects, with your billing decisions. Open a
-          project to review and decide on a finding.
-        </p>
-      </section>
+    <Page>
+      <PageHeader eyebrow="Revenue evidence" title="All findings" description="Compare every evidence-linked request across projects. Potential estimates and professional-entered financial values remain separate." />
 
       <Disclaimer />
 
       <form
         method="GET"
         className="
-          grid gap-4 rounded-md border border-audit-border bg-white p-5
-          shadow-audit
+          sl-panel grid gap-4 p-5
           sm:grid-cols-2
           lg:grid-cols-4
         "
@@ -91,9 +85,7 @@ export default async function FindingsPage({ searchParams }: FindingsPageProps) 
           <select
             name="client"
             defaultValue={filters.client ?? ""}
-            className="
-              mt-2 w-full rounded-md border border-audit-border px-3 py-2
-            "
+            className="sl-field mt-2"
           >
             <option value="">All clients</option>
             {clients.map((client) => (
@@ -106,9 +98,7 @@ export default async function FindingsPage({ searchParams }: FindingsPageProps) 
           <select
             name="project"
             defaultValue={filters.project ?? ""}
-            className="
-              mt-2 w-full rounded-md border border-audit-border px-3 py-2
-            "
+            className="sl-field mt-2"
           >
             <option value="">All projects</option>
             {projects.map((project) => (
@@ -123,9 +113,7 @@ export default async function FindingsPage({ searchParams }: FindingsPageProps) 
           <select
             name="classification"
             defaultValue={filters.classification ?? ""}
-            className="
-              mt-2 w-full rounded-md border border-audit-border px-3 py-2
-            "
+            className="sl-field mt-2"
           >
             <option value="">All classifications</option>
             {CLASSIFICATIONS.map((item) => (
@@ -138,9 +126,7 @@ export default async function FindingsPage({ searchParams }: FindingsPageProps) 
           <select
             name="decision"
             defaultValue={filters.decision ?? ""}
-            className="
-              mt-2 w-full rounded-md border border-audit-border px-3 py-2
-            "
+            className="sl-field mt-2"
           >
             <option value="">All decisions</option>
             {BILLING_DECISIONS.map((item) => (
@@ -153,9 +139,7 @@ export default async function FindingsPage({ searchParams }: FindingsPageProps) 
           <select
             name="status"
             defaultValue={filters.status ?? ""}
-            className="
-              mt-2 w-full rounded-md border border-audit-border px-3 py-2
-            "
+            className="sl-field mt-2"
           >
             <option value="">All statuses</option>
             {WORKFLOW_STATUSES.map((item) => (
@@ -169,9 +153,7 @@ export default async function FindingsPage({ searchParams }: FindingsPageProps) 
             type="date"
             name="from"
             defaultValue={filters.from ?? ""}
-            className="
-              mt-2 w-full rounded-md border border-audit-border px-3 py-2
-            "
+            className="sl-field mt-2"
           />
         </label>
         <label className="block">
@@ -180,38 +162,26 @@ export default async function FindingsPage({ searchParams }: FindingsPageProps) 
             type="date"
             name="to"
             defaultValue={filters.to ?? ""}
-            className="
-              mt-2 w-full rounded-md border border-audit-border px-3 py-2
-            "
+            className="sl-field mt-2"
           />
         </label>
         <div className="flex items-end gap-3">
           <button
             type="submit"
-            className="
-              inline-flex h-11 items-center rounded-md bg-ink px-5 text-sm
-              font-semibold text-white
-              hover:bg-zinc-800
-            "
+            className="sl-button-primary"
           >
             Apply filters
           </button>
           <Link
             href="/app/findings"
-            className="
-              inline-flex h-11 items-center rounded-md border
-              border-audit-border px-4 text-sm font-semibold
-              hover:bg-audit-soft
-            "
+            className="sl-button-secondary"
           >
             Clear
           </Link>
         </div>
       </form>
 
-      <section className="
-        rounded-md border border-audit-border bg-white shadow-audit
-      ">
+      <section className="sl-panel">
         <div className="border-b border-audit-border px-5 py-4">
           <h2 className="text-xl font-semibold">
             {rows.length} finding{rows.length === 1 ? "" : "s"}
@@ -245,9 +215,9 @@ export default async function FindingsPage({ searchParams }: FindingsPageProps) 
                       <p className="leading-6">{message?.message_text ?? finding.reasoning}</p>
                       {finding.is_demo ? (
                         <span className="
-                          mt-1 inline-block rounded-sm border border-zinc-300
-                          bg-zinc-100 px-1.5 py-0.5 text-xs font-semibold
-                          text-zinc-700
+                          mt-1 inline-block rounded-sm border
+                          border-audit-border bg-audit-soft px-1.5 py-0.5
+                          text-xs font-semibold text-audit-body
                         ">
                           Fictional demo data
                         </span>
@@ -255,8 +225,12 @@ export default async function FindingsPage({ searchParams }: FindingsPageProps) 
                     </td>
                     <td className="px-5 py-4">{project?.client_name ?? "Unknown"}</td>
                     <td className="px-5 py-4">{project?.project_name ?? "Unknown"}</td>
-                    <td className="px-5 py-4">{formatDollars(finding.estimated_revenue)}</td>
-                    <td className="px-5 py-4">
+                    <td data-financial-value className="
+                      px-5 py-4 font-semibold text-audit-amber
+                    ">{formatDollars(finding.estimated_revenue)}</td>
+                    <td data-financial-value className="
+                      px-5 py-4 font-semibold text-approved
+                    ">
                       {finding.approved_amount_cents === null
                         ? "Not set"
                         : formatCents(finding.approved_amount_cents)}
@@ -288,6 +262,6 @@ export default async function FindingsPage({ searchParams }: FindingsPageProps) 
           </table>
         </div>
       </section>
-    </div>
+    </Page>
   );
 }

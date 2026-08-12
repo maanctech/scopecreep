@@ -52,10 +52,7 @@ export function GenerateReportButton({
           value={reportType}
           onChange={(event) => setReportType(event.target.value as ReportType)}
           disabled={isSubmitting}
-          className="
-            min-h-11 w-full rounded-md border border-audit-border bg-white px-3
-            text-sm
-          "
+          className="sl-field text-sm"
         >
           {REPORT_TYPES.map((type) => <option key={type}>{type}</option>)}
         </select>
@@ -64,12 +61,7 @@ export function GenerateReportButton({
         type="button"
         onClick={generate}
         disabled={isSubmitting}
-        className="
-          inline-flex h-11 items-center justify-center rounded-md bg-ink px-5
-          text-sm font-semibold text-white
-          hover:bg-zinc-800
-          disabled:cursor-not-allowed disabled:opacity-60
-        "
+        className="sl-button-primary"
       >
         {isSubmitting
           ? "Generating report..."
@@ -78,7 +70,7 @@ export function GenerateReportButton({
             : "Generate report"}
       </button>
       <div aria-live="polite" role="status">
-        {error ? <p className="text-sm text-red-700">{error}</p> : null}
+        {error ? <p className="text-sm text-critical">{error}</p> : null}
       </div>
     </div>
   );

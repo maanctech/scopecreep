@@ -35,19 +35,15 @@ export function BackupPanel({ canCreate }: { canCreate: boolean }) {
         type="button"
         onClick={create}
         disabled={!canCreate || busy}
-        className="
-          inline-flex min-h-11 items-center gap-2 rounded-md bg-ink px-4 text-sm
-          font-semibold text-white
-          disabled:opacity-50
-        "
+        className="sl-button-primary"
       >
         <DatabaseBackup className="size-4" aria-hidden="true" />
         {busy ? "Creating verified backup..." : "Create installation backup"}
       </button>
-      {!canCreate ? <p className="mt-2 text-sm text-zinc-600">A system administrator must create installation backups.</p> : null}
+      {!canCreate ? <p className="mt-2 text-sm text-audit-muted">A system administrator must create installation backups.</p> : null}
       <div aria-live="polite" className="mt-3 text-sm">
-        {notice.error ? <p className="text-red-800">{notice.error}</p> : null}
-        {notice.success ? <p className="text-emerald-800">{notice.success}</p> : null}
+        {notice.error ? <p className="text-critical">{notice.error}</p> : null}
+        {notice.success ? <p className="text-signal">{notice.success}</p> : null}
       </div>
     </div>
   );

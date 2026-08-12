@@ -24,11 +24,9 @@ export function ConnectionForm({
     );
 
   return (
-    <section className="
-      rounded-md border border-audit-border bg-white p-6 shadow-audit
-    ">
+    <section className="sl-panel p-6">
       <h2 className="text-xl font-semibold">Configure a connection</h2>
-      <p className="mt-2 text-sm text-zinc-700">
+      <p className="mt-2 text-sm text-audit-body">
         Credentials are encrypted before storage and are never returned.
         Google and Microsoft also require an app registration and OAuth
         approval.
@@ -247,8 +245,7 @@ export function ConnectionForm({
           <button
             disabled={Boolean(busy)}
             className="
-              min-h-11 rounded-md bg-ink px-5 text-sm font-semibold text-white
-              disabled:opacity-60
+              sl-button-primary
               md:col-span-2
             "
           >
@@ -258,7 +255,7 @@ export function ConnectionForm({
           </button>
         </form>
       ) : (
-        <p className="mt-4 text-sm text-zinc-700">
+        <p className="mt-4 text-sm text-audit-body">
           Create a project before configuring a source route.
         </p>
       )}

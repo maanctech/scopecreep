@@ -46,17 +46,15 @@ export function IntegrationCatalog() {
         {catalog.map(([name, purpose, availability]) => (
           <article
             key={name}
-            className="
-              rounded-md border border-audit-border bg-white p-5 shadow-audit
-            "
+            className="sl-panel p-5"
           >
             <div className="flex items-start justify-between gap-3">
               <h3 className="font-semibold">{name}</h3>
-              <span className="text-xs font-semibold text-zinc-600">
+              <span className="text-xs font-semibold text-audit-muted">
                 {availability}
               </span>
             </div>
-            <p className="mt-2 text-sm/6 text-zinc-700">{purpose}</p>
+            <p className="mt-2 text-sm/6 text-audit-body">{purpose}</p>
             {name.includes("Import") ? (
               <Link
                 href="/app/import"

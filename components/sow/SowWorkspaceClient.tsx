@@ -79,24 +79,22 @@ export function SowWorkspaceClient({ projectId, initialWorkspace, canEdit }: { p
   return <div className="space-y-8">
     {message ? <div role="status" aria-live="polite" className={`
       rounded-md border p-4 text-sm
-      ${message.kind === "success" ? `
-        border-emerald-300 bg-emerald-50 text-emerald-900
-      ` : `border-red-300 bg-red-50 text-red-900`}
+      ${message.kind === "success" ? `border-signal/25 bg-signal/5 text-signal` : `
+        border-critical/25 bg-critical/5 text-critical
+      `}
     `}>{message.text}</div> : null}
 
-    <section className="
-      rounded-md border border-audit-border bg-white p-6 shadow-audit
-    ">
+    <section className="sl-panel p-6">
       <div className="flex flex-wrap items-start justify-between gap-4"><div><h2 className="
         text-xl font-semibold
-      ">Active agreement</h2><p className="mt-2 text-sm text-zinc-700">{initialWorkspace.activeVersion ? `Version ${initialWorkspace.activeVersion.versionNumber} / ${initialWorkspace.activeVersion.sourceType}` : "No active version"}</p></div><span className={`
+      ">Active agreement</h2><p className="mt-2 text-sm text-audit-body">{initialWorkspace.activeVersion ? `Version ${initialWorkspace.activeVersion.versionNumber} / ${initialWorkspace.activeVersion.sourceType}` : "No active version"}</p></div><span className={`
         rounded-md border px-3 py-1 text-sm font-semibold
         ${initialWorkspace.activeBoundaryMap ? `
-          border-emerald-300 bg-emerald-50 text-emerald-900
-        ` : `border-amber-300 bg-amber-50 text-amber-900`}
+          border-signal/25 bg-signal/5 text-signal
+        ` : `border-audit-amber/30 bg-audit-amber/5 text-audit-amber`}
       `}>{initialWorkspace.activeBoundaryMap ? "Boundary approved" : "Approval required"}</span></div>
       {initialWorkspace.draftBoundaryMap ? <p className="
-        mt-3 text-sm font-semibold text-amber-800
+        mt-3 text-sm font-semibold text-audit-amber
       ">A newer draft review is pending. The approved map remains authoritative until this draft is approved.</p> : null}
       {initialWorkspace.activeVersion ? <details className="mt-5"><summary className="
         cursor-pointer font-medium
@@ -106,89 +104,87 @@ export function SowWorkspaceClient({ projectId, initialWorkspace, canEdit }: { p
       ">{initialWorkspace.activeVersion.content}</pre></details> : null}
     </section>
 
-    {canEdit ? <section className="
-      rounded-md border border-audit-border bg-white p-6 shadow-audit
-    "><h2 className="text-xl font-semibold">Add a new agreement version</h2><p className="
-      mt-2 text-sm/6 text-zinc-700
+    {canEdit ? <section className="sl-panel p-6"><h2 className="
+      text-xl font-semibold
+    ">Add a new agreement version</h2><p className="
+      mt-2 text-sm/6 text-audit-body
     ">Use paste for scanned documents. Upload accepts TXT, DOCX, and text-based PDF up to 10 MB.</p><div className="
       mt-4 flex gap-2
     " role="group" aria-label="SOW source"><button type="button" onClick={() => setMode("paste")} className={`
       h-10 rounded-md border px-4 text-sm font-medium
-      ${mode === "paste" ? `border-ink bg-ink text-white` : `
+      ${mode === "paste" ? `border-signal bg-signal text-white` : `
         border-audit-border
       `}
     `}>Paste text</button><button type="button" onClick={() => setMode("upload")} className={`
       h-10 rounded-md border px-4 text-sm font-medium
-      ${mode === "upload" ? `border-ink bg-ink text-white` : `
+      ${mode === "upload" ? `border-signal bg-signal text-white` : `
         border-audit-border
       `}
     `}>Upload file</button></div><form onSubmit={submitVersion} className="
       mt-5 grid gap-4
     ">{mode === "paste" ? <label><span className="text-sm font-medium">SOW text</span><textarea name="text" rows={10} required className="
-      mt-2 w-full rounded-md border border-audit-border p-3
+      sl-field mt-2
     " /></label> : <label><span className="text-sm font-medium">SOW file</span><input name="file" type="file" required accept=".txt,.docx,.pdf,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" className="
-      mt-2 block w-full rounded-md border border-audit-border p-3
+      sl-field mt-2 block
     " /></label>}<label><span className="text-sm font-medium">What changed?</span><input name="changeNote" maxLength={500} placeholder="Example: Added signed amendment dated July 22" className="
-      mt-2 w-full rounded-md border border-audit-border p-3
-    " /></label><button disabled={Boolean(busy)} className="
-      h-11 rounded-md bg-ink px-5 text-sm font-semibold text-white
-      disabled:opacity-60
-    ">{busy === "version" ? "Saving version..." : "Save new version"}</button></form></section> : null}
+      sl-field mt-2
+    " /></label><button disabled={Boolean(busy)} className="sl-button-primary">{busy === "version" ? "Saving version..." : "Save new version"}</button></form></section> : null}
 
     <section className="space-y-4"><div className="
       flex flex-wrap items-end justify-between gap-4
     "><div><h2 className="text-xl font-semibold">Risk review</h2><p className="
-      mt-2 text-sm text-zinc-700
+      mt-2 text-sm text-audit-body
     ">Potential contract weaknesses for professional review. This is not legal advice.</p></div>{canEdit && initialWorkspace.activeVersion ? <button onClick={generateReview} disabled={Boolean(busy)} className="
-      h-11 rounded-md border border-ink px-4 text-sm font-semibold
-      disabled:opacity-60
+      sl-button-secondary
     ">{busy === "analyze" ? "Reviewing agreement..." : initialWorkspace.riskReview ? "Regenerate draft review" : "Generate draft review"}</button> : null}</div>{initialWorkspace.riskReview ? <div className="
-      rounded-md border border-audit-border bg-white p-6 shadow-audit
+      sl-panel p-6
     "><p className="leading-7">{initialWorkspace.riskReview.summary}</p><div className="
       mt-5 divide-y divide-audit-border
     ">{initialWorkspace.riskReview.items.length ? initialWorkspace.riskReview.items.map((risk) => <article key={risk.id} className="
       py-4
     "><div className="font-semibold">{risk.severity}: {risk.category}</div><p className="
-      mt-2 text-sm/6 text-zinc-700
+      mt-2 text-sm/6 text-audit-body
     ">{risk.description}</p><p className="mt-2 text-sm"><strong>Recommendation:</strong> {risk.recommendation}</p><blockquote className="
-      mt-2 border-l-2 border-zinc-300 pl-3 text-sm text-zinc-600
+      mt-2 border-l-2 border-audit-border pl-3 text-sm text-audit-muted
     ">{risk.evidence}</blockquote></article>) : <p className="
-      text-sm text-zinc-600
+      text-sm text-audit-muted
     ">No specific risk items were identified. Review the agreement manually before approval.</p>}</div></div> : <div className="
-      rounded-md border border-dashed border-zinc-300 p-6 text-sm text-zinc-700
+      rounded-md border border-dashed border-audit-border p-6 text-sm
+      text-audit-body
     ">No risk review has been generated for this version.</div>}</section>
 
     <section className="space-y-4"><div><h2 className="text-xl font-semibold">Scope Boundary Map</h2><p className="
-      mt-2 text-sm/6 text-zinc-700
+      mt-2 text-sm/6 text-audit-body
     ">A draft becomes authoritative only after a professional approves it.</p></div>{displayedBoundaryMap ? <div className="
       space-y-4
     ">{items.map((item, index) => <fieldset key={item.id || index} disabled={!canEdit || displayedBoundaryMap.status === "Active"} className="
-      grid gap-4 rounded-md border border-audit-border bg-white p-5 shadow-audit
+      sl-panel grid gap-4 p-5
     "><legend className="px-2 text-sm font-semibold">Boundary item {index + 1}</legend><div className="
       grid gap-4
       sm:grid-cols-2
     "><label><span className="text-sm font-medium">Boundary type</span><select value={item.boundaryType} onChange={(event) => updateItem(index, "boundaryType", event.target.value)} className="
-      mt-2 w-full rounded-md border border-audit-border p-3
+      sl-field mt-2
     ">{BOUNDARY_TYPES.map((type) => <option key={type}>{type}</option>)}</select></label><label><span className="
       text-sm font-medium
     ">Category</span><input value={item.category} onChange={(event) => updateItem(index, "category", event.target.value)} className="
-      mt-2 w-full rounded-md border border-audit-border p-3
+      sl-field mt-2
     " /></label></div><label><span className="text-sm font-medium">Plain-English boundary</span><textarea value={item.description} onChange={(event) => updateItem(index, "description", event.target.value)} rows={2} className="
-      mt-2 w-full rounded-md border border-audit-border p-3
+      sl-field mt-2
     " /></label><label><span className="text-sm font-medium">Agreement evidence</span><textarea value={item.evidence} onChange={(event) => updateItem(index, "evidence", event.target.value)} rows={2} className="
-      mt-2 w-full rounded-md border border-audit-border p-3
+      sl-field mt-2
     " /></label></fieldset>)}{canEdit && initialWorkspace.draftBoundaryMap ? <div className="
       flex flex-wrap gap-3
     "><button onClick={() => saveMap(false)} disabled={Boolean(busy)} className="
-      h-11 rounded-md border border-ink px-4 text-sm font-semibold
+      sl-button-secondary
     ">{busy === "save" ? "Saving..." : "Save draft"}</button><button onClick={() => saveMap(true)} disabled={Boolean(busy)} className="
-      h-11 rounded-md bg-ink px-4 text-sm font-semibold text-white
+      sl-button-primary
     ">{busy === "approve" ? "Approving..." : "Approve boundary map"}</button></div> : null}</div> : <div className="
-      rounded-md border border-dashed border-zinc-300 p-6 text-sm text-zinc-700
+      rounded-md border border-dashed border-audit-border p-6 text-sm
+      text-audit-body
     ">Generate a draft review to create the first boundary map.</div>}</section>
 
     <section><h2 className="text-xl font-semibold">Version history</h2><div className="
-      mt-4 overflow-x-auto rounded-md border border-audit-border
+      sl-table-wrap mt-4
     "><table className="min-w-full text-left text-sm"><thead className="
       bg-audit-soft
     "><tr><th className="p-3">Version</th><th className="p-3">Source</th><th className="

@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { safePostLoginPath } from "@/lib/auth/redirect";
 
 type SubmissionState = { kind: "idle" | "loading" | "error" | "success"; message: string };
 
@@ -26,8 +27,8 @@ function Status({ state }: { state: SubmissionState }) {
         rounded-md border px-3 py-2 text-sm
         ${
         state.kind === "error"
-          ? "border-red-200 bg-red-50 text-red-800"
-          : "border-emerald-200 bg-emerald-50 text-emerald-800"
+          ? "border-critical/25 bg-critical/5 text-critical"
+          : "border-signal/25 bg-signal/5 text-signal"
       }
       `}
     >
@@ -36,8 +37,8 @@ function Status({ state }: { state: SubmissionState }) {
   );
 }
 
-const inputClass = "mt-1 h-11 w-full rounded-md border border-audit-border px-3 text-base outline-hidden focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200";
-const buttonClass = "inline-flex h-11 items-center justify-center rounded-md bg-ink px-5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60";
+const inputClass = "sl-field mt-1";
+const buttonClass = "sl-button-primary w-full";
 
 export function LoginForm({ nextPath = "/app" }: { nextPath?: string }) {
   const router = useRouter();
@@ -51,7 +52,7 @@ export function LoginForm({ nextPath = "/app" }: { nextPath?: string }) {
 
     try {
       await submit("/api/auth/login", { email: String(data.get("email")), password: String(data.get("password")) });
-      router.replace(nextPath.startsWith("/") ? nextPath : "/app");
+      router.replace(safePostLoginPath(nextPath));
       router.refresh();
     } catch (error) {
       setState({ kind: "error", message: error instanceof Error ? error.message : "Sign in failed." });

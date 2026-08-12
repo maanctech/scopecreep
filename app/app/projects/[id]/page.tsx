@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Disclaimer } from "@/components/ui/Disclaimer";
+import { Page, PageHeader, SectionHeader } from "@/components/ui/Page";
 import { FindingCard } from "@/components/findings/FindingCard";
 import { MessageAnalysisForm } from "@/components/forms/MessageAnalysisForm";
 import { findingDisplayLabel } from "@/lib/domain/findingTransitions";
@@ -77,47 +78,32 @@ export default async function ProjectPage({ params, searchParams }: ProjectPageP
     : detail.messages.filter((row) => matchesFilter(row.finding, filter));
 
   return (
-    <div className="space-y-8">
-      <section className="
-        flex flex-col gap-4 border-b border-audit-border pb-7
-        lg:flex-row lg:items-end lg:justify-between
-      ">
-        <div>
-          <div className="text-sm text-audit-muted">
-            {detail.project.client_name}
-            {detail.project.is_demo ? " - Fictional demonstration data" : ""}
-          </div>
-          <h1 className="mt-2 text-3xl font-semibold">{detail.project.project_name}</h1>
-          <p className="mt-3 max-w-2xl text-base/7 text-zinc-700">
+    <Page>
+      <PageHeader
+        eyebrow={`${detail.project.client_name}${detail.project.is_demo ? " · Fictional demonstration data" : ""}`}
+        title={detail.project.project_name}
+        description={<>
             Hourly rate: {formatDollars(detail.project.hourly_rate)}
             {detail.project.project_value
-              ? ` | Project value: ${formatDollars(detail.project.project_value)}`
+              ? ` · Project value: ${formatDollars(detail.project.project_value)}`
               : ""}
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-3">
+        </>}
+        actions={<>
           {boundaryApproved ? <Link href={`/app/projects/${detail.project.id}/analysis`} className="
-            inline-flex h-11 items-center justify-center rounded-md border
-            border-ink px-4 text-sm font-semibold
-            hover:bg-audit-soft
-          ">Analyze imported messages</Link> : null}
+            sl-button-secondary
+          ">Analyze messages</Link> : null}
           <Link href={`/app/projects/${detail.project.id}/sow`} className="
-            inline-flex h-11 items-center justify-center rounded-md border
-            border-ink px-4 text-sm font-semibold
-            hover:bg-audit-soft
+            sl-button-secondary
           ">Review SOW</Link>
           <Link href={`/app/projects/${detail.project.id}/report`} className="
-            inline-flex h-11 items-center justify-center rounded-md bg-ink px-4
-            text-sm font-semibold text-white
-            hover:bg-zinc-800
-          ">View audit report</Link>
-        </div>
-      </section>
+            sl-button-primary
+          ">Audit report</Link>
+        </>}
+      />
 
       {query.created === "audit" ? (
         <div className="
-          rounded-md border border-emerald-200 bg-emerald-50 p-4 text-sm
-          text-emerald-800
+          rounded-md border border-signal/25 bg-signal/5 p-4 text-sm text-signal
         ">
           Audit workspace created. Analyze individual client requests below, then review each
           finding.
@@ -125,8 +111,7 @@ export default async function ProjectPage({ params, searchParams }: ProjectPageP
       ) : null}
       {query.created === "project" ? (
         <div className="
-          rounded-md border border-emerald-200 bg-emerald-50 p-4 text-sm
-          text-emerald-800
+          rounded-md border border-signal/25 bg-signal/5 p-4 text-sm text-signal
         ">
           Project saved. Review and approve the SOW boundary before analyzing client requests.
         </div>
@@ -142,13 +127,11 @@ export default async function ProjectPage({ params, searchParams }: ProjectPageP
       ) : null}
 
       <section className="space-y-4">
-        <h2 className="text-xl font-semibold">Where this project&apos;s money stands</h2>
+        <SectionHeader title="Financial position" description="Potential, approved, invoiced, and recovered values are mutually exclusive workflow stages." />
         <BillingSummary totals={totals} />
       </section>
 
-      <section className="
-        rounded-md border border-audit-border bg-audit-soft p-5
-      ">
+      <section className="sl-panel p-5">
         <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="
           text-xl font-semibold
         ">Current SOW text</h2><Link href={`/app/projects/${detail.project.id}/sow`} className="
@@ -156,7 +139,7 @@ export default async function ProjectPage({ params, searchParams }: ProjectPageP
         ">Open version and boundary workspace</Link></div>
         <p className="
           mt-3 max-h-44 overflow-auto text-sm/6 whitespace-pre-wrap
-          text-zinc-700
+          text-audit-body
         ">
           {detail.project.sow_text}
         </p>
@@ -164,12 +147,13 @@ export default async function ProjectPage({ params, searchParams }: ProjectPageP
 
       {canReview && boundaryApproved ? (
         <section className="space-y-4">
-          <h2 className="text-xl font-semibold">Analyze a new client message</h2>
+          <SectionHeader title="Analyze a new client message" description="Manual analysis creates a private draft finding and never contacts the client." />
           <MessageAnalysisForm projectId={detail.project.id} />
         </section>
       ) : canReview ? (
         <section className="
-          rounded-md border border-amber-300 bg-amber-50 p-5 text-amber-950
+          rounded-md border border-audit-amber/30 bg-audit-amber/5 p-5
+          text-audit-amber
         ">
           <h2 className="text-xl font-semibold">Approve the scope boundary before analysis</h2>
           <p className="mt-2 max-w-2xl text-sm/6">
@@ -186,7 +170,7 @@ export default async function ProjectPage({ params, searchParams }: ProjectPageP
 
       <section className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-xl font-semibold">Review findings</h2>
+          <h2 className="text-xl font-semibold tracking-tight">Review findings</h2>
           <span className="text-sm text-audit-muted">
             Showing {visibleRows.length} of {detail.messages.length}
           </span>
@@ -206,7 +190,7 @@ export default async function ProjectPage({ params, searchParams }: ProjectPageP
                 font-medium
                 ${
                 filter === item.key
-                  ? "border-ink bg-ink text-white"
+                  ? "border-signal bg-signal text-white"
                   : `
                     border-audit-border bg-white
                     hover:bg-audit-soft
@@ -236,10 +220,7 @@ export default async function ProjectPage({ params, searchParams }: ProjectPageP
               </div>
             ))
           ) : (
-            <div className="
-              rounded-md border border-audit-border bg-white p-6 text-sm
-              text-audit-muted shadow-audit
-            ">
+            <div className="sl-panel p-6 text-sm text-audit-muted">
               {detail.messages.length
                 ? "No findings match this filter."
                 : "No messages analyzed yet."}
@@ -247,6 +228,6 @@ export default async function ProjectPage({ params, searchParams }: ProjectPageP
           )}
         </div>
       </section>
-    </div>
+    </Page>
   );
 }

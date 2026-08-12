@@ -5,14 +5,15 @@ export default async function ResetPasswordPage({ searchParams }: { searchParams
 
   return (
     <section className="
-      mx-auto max-w-md rounded-md border border-audit-border bg-white p-6
-      shadow-audit
+      sl-panel mx-auto my-10 max-w-md p-6
+      sm:my-16 sm:p-8
     ">
-      <p className="text-sm font-semibold text-audit-muted uppercase">Account recovery</p>
-      <h1 className="mt-2 text-2xl font-semibold">Set a new password</h1>
+      <p className="sl-eyebrow">Account recovery</p>
+      <h1 className="mt-2 text-2xl font-semibold tracking-tight">Set a new password</h1>
       <p className="mt-2 text-sm text-audit-muted">Reset links expire after 30 minutes and can be used once.</p>
       {!token ? <p className="
-        mt-5 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800
+        mt-5 rounded-md border border-critical/25 bg-critical/5 p-3 text-sm
+        text-critical
       ">This reset link is incomplete.</p> : null}
       <div className="mt-6"><ResetPasswordForm token={token} /></div>
     </section>

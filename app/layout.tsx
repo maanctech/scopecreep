@@ -5,9 +5,9 @@ import { currentAuthContext } from "@/lib/auth/current";
 import { unreadNotificationCountFor } from "@/lib/notifications/service";
 
 export const metadata: Metadata = {
-  title: "ScopeLedger | Scope Creep Revenue Recovery",
+  title: "ScopeLedger | Find the work your agency never billed",
   description:
-    "Professional-controlled revenue audits that detect out-of-scope client requests before they become free work."
+    "Compare client requests with approved SOWs, surface evidence-linked potential leakage, and keep every billing decision in professional hands."
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
@@ -17,7 +17,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     : 0;
 
   return (
-    <html lang="en">
+    <html lang="en" data-scroll-behavior="smooth">
       <body>
         <Shell
           auth={auth ? { role: auth.role, isSystemAdmin: auth.isSystemAdmin } : null}

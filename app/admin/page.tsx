@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { LeadStatusForm } from "@/components/forms/LeadStatusForm";
+import { Page, PageHeader } from "@/components/ui/Page";
 import { getBusinessDashboard } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
@@ -16,54 +17,43 @@ export default async function AdminDashboardPage() {
   const dashboard = await getBusinessDashboard();
 
   return (
-    <div className="space-y-8">
-      <section className="border-b border-audit-border pb-7">
-        <h1 className="text-3xl font-semibold">Founder dashboard</h1>
-        <p className="mt-3 max-w-2xl text-sm/6 text-zinc-700">
-          Manage leads, audit requests, projects, and the manual sales pipeline from
-          one local operator view.
-        </p>
-      </section>
+    <Page>
+      <PageHeader eyebrow="Administration" title="Founder dashboard" description="Manage qualified leads, audit requests, active projects, and the founder-led sales pipeline from one private operator view." />
 
-      <section className="
-        grid gap-4
-        md:grid-cols-5
-      ">
+      <section className="border-y border-ink bg-bright-paper" aria-label="Founder ledger totals">
         <div className="
-          rounded-md border border-audit-border bg-white p-5 shadow-audit
+          grid divide-y divide-audit-border
+          md:grid-cols-5 md:divide-x md:divide-y-0
         ">
-          <div className="text-sm text-audit-muted">Leads</div>
-          <div className="mt-2 text-2xl font-semibold">{dashboard.totals.leads}</div>
-        </div>
-        <div className="
-          rounded-md border border-audit-border bg-white p-5 shadow-audit
-        ">
-          <div className="text-sm text-audit-muted">Audit requests</div>
-          <div className="mt-2 text-2xl font-semibold">{dashboard.totals.audit_requests}</div>
-        </div>
-        <div className="
-          rounded-md border border-audit-border bg-white p-5 shadow-audit
-        ">
-          <div className="text-sm text-audit-muted">Projects</div>
-          <div className="mt-2 text-2xl font-semibold">{dashboard.totals.projects}</div>
-        </div>
-        <div className="
-          rounded-md border border-audit-border bg-white p-5 shadow-audit
-        ">
-          <div className="text-sm text-audit-muted">Out of scope</div>
-          <div className="mt-2 text-2xl font-semibold">{dashboard.totals.out_of_scope_count}</div>
-        </div>
-        <div className="
-          rounded-md border border-audit-border bg-white p-5 shadow-audit
-        ">
-          <div className="text-sm text-audit-muted">Recovered potential</div>
-          <div className="mt-2 text-2xl font-semibold">{money(dashboard.totals.potential_recovered_revenue)}</div>
+          {[
+            ["A-01", "Leads", dashboard.totals.leads],
+            ["A-02", "Audit requests", dashboard.totals.audit_requests],
+            ["A-03", "Projects", dashboard.totals.projects],
+            ["A-04", "Out of scope", dashboard.totals.out_of_scope_count],
+          ].map(([reference, label, value]) => (
+            <div key={reference} className="p-4">
+              <div className="sl-metadata text-audit-muted">{reference}</div>
+              <div className="
+                mt-3 text-xs font-semibold text-audit-muted uppercase
+              ">{label}</div>
+              <div className="sl-editorial mt-1 text-3xl tabular-nums">{value}</div>
+            </div>
+          ))}
+          <div className="bg-audit-amber/5 p-4">
+            <div className="sl-metadata text-audit-amber">A-05 / AI ESTIMATE</div>
+            <div className="
+              mt-3 text-xs font-semibold text-audit-amber uppercase
+            ">Potential leakage</div>
+            <div data-financial-value className="
+              sl-editorial mt-1 text-3xl tabular-nums
+            ">
+              {money(dashboard.totals.potential_recovered_revenue)}
+            </div>
+          </div>
         </div>
       </section>
 
-      <section className="
-        rounded-md border border-audit-border bg-white shadow-audit
-      ">
+      <section className="sl-panel">
         <div className="border-b border-audit-border px-5 py-4">
           <h2 className="text-xl font-semibold">Incoming leads</h2>
         </div>
@@ -95,7 +85,7 @@ export default async function AdminDashboardPage() {
                     </td>
                     <td className="px-5 py-4">{lead.business_type}</td>
                     <td className="px-5 py-4">{lead.hourly_rate ? money(lead.hourly_rate) : "Unknown"}</td>
-                    <td className="max-w-md px-5 py-4 text-zinc-700">{lead.pain_point}</td>
+                    <td className="max-w-md px-5 py-4 text-audit-body">{lead.pain_point}</td>
                     <td className="px-5 py-4">
                       <LeadStatusForm leadId={lead.id} status={lead.status} />
                     </td>
@@ -117,9 +107,7 @@ export default async function AdminDashboardPage() {
         grid gap-6
         lg:grid-cols-2
       ">
-        <div className="
-          rounded-md border border-audit-border bg-white shadow-audit
-        ">
+        <div className="sl-panel">
           <div className="border-b border-audit-border px-5 py-4">
             <h2 className="text-xl font-semibold">Audit requests</h2>
           </div>
@@ -136,12 +124,10 @@ export default async function AdminDashboardPage() {
                         {money(request.project_value)} project | {money(request.hourly_rate)}/hour
                       </div>
                     </div>
-                    <span className="
-                      rounded-md border border-audit-border px-2 py-1 text-xs
-                    ">{request.status}</span>
+                    <span className="sl-review-stamp text-audit-muted">{request.status}</span>
                   </div>
                   {request.suspected_scope_creep_notes ? (
-                    <p className="mt-3 text-sm/6 text-zinc-700">{request.suspected_scope_creep_notes}</p>
+                    <p className="mt-3 text-sm/6 text-audit-body">{request.suspected_scope_creep_notes}</p>
                   ) : null}
                   {project ? (
                     <div className="mt-4 flex flex-wrap gap-3">
@@ -165,9 +151,7 @@ export default async function AdminDashboardPage() {
           </div>
         </div>
 
-        <div className="
-          rounded-md border border-audit-border bg-white shadow-audit
-        ">
+        <div className="sl-panel">
           <div className="border-b border-audit-border px-5 py-4">
             <h2 className="text-xl font-semibold">Highest estimated leakage</h2>
           </div>
@@ -181,7 +165,9 @@ export default async function AdminDashboardPage() {
                     <div className="font-semibold">{company.name}</div>
                     <div className="text-sm text-audit-muted">{company.business_type ?? "Unknown business type"}</div>
                   </div>
-                  <div className="text-right font-semibold">{money(company.estimated_leakage)}</div>
+                  <div data-financial-value className="
+                    text-right font-semibold text-audit-amber
+                  ">{money(company.estimated_leakage)}</div>
                 </div>
               ))
             ) : (
@@ -191,9 +177,7 @@ export default async function AdminDashboardPage() {
         </div>
       </section>
 
-      <section className="
-        rounded-md border border-audit-border bg-white shadow-audit
-      ">
+      <section className="sl-panel">
         <div className="border-b border-audit-border px-5 py-4">
           <h2 className="text-xl font-semibold">Projects under review</h2>
         </div>
@@ -214,7 +198,9 @@ export default async function AdminDashboardPage() {
                   <tr key={project.id} className="border-t border-audit-border">
                     <td className="px-5 py-4 font-medium">{project.client_name}</td>
                     <td className="px-5 py-4">{project.project_name}</td>
-                    <td className="px-5 py-4 font-semibold">{money(project.potential_recovered_revenue)}</td>
+                    <td data-financial-value className="
+                      px-5 py-4 font-semibold text-audit-amber
+                    ">{money(project.potential_recovered_revenue)}</td>
                     <td className="px-5 py-4">{project.out_of_scope_count}</td>
                     <td className="px-5 py-4">
                       <Link className="
@@ -236,6 +222,6 @@ export default async function AdminDashboardPage() {
           </table>
         </div>
       </section>
-    </div>
+    </Page>
   );
 }

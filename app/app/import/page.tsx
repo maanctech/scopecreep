@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { CommunicationImportForm } from "@/components/ingestion/CommunicationImportForm";
+import { Page, PageHeader, SectionHeader } from "@/components/ui/Page";
 import { currentAuthContext } from "@/lib/auth/current";
 import { hasPermission } from "@/lib/auth/authorization";
 import { listIngestionJobs } from "@/lib/ingestion/service";
@@ -18,19 +19,8 @@ export default async function ImportPage() {
   );
 
   return (
-    <div className="space-y-8">
-      <section className="border-b border-audit-border pb-7">
-        <p className="text-sm font-medium text-audit-muted">
-          Private communication intake
-        </p>
-        <h1 className="mt-2 text-3xl font-semibold">
-          Import client communications
-        </h1>
-        <p className="mt-3 max-w-3xl text-base/7 text-zinc-700">
-          Preview pasted text, CSV, or JSON before saving it to a project.
-          Importing does not run AI analysis and never contacts a client.
-        </p>
-      </section>
+    <Page>
+      <PageHeader eyebrow="Private communication intake" title="Import client requests" description="Preview pasted text, CSV, or JSON before saving it to a project. Importing never runs AI analysis and never contacts a client." />
       {canImport && dashboard.projects.length ? (
         <CommunicationImportForm
           projects={dashboard.projects.map((project) => ({
@@ -39,36 +29,23 @@ export default async function ImportPage() {
           }))}
         />
       ) : canImport ? (
-        <section className="
-          rounded-md border border-audit-border bg-white p-6 shadow-audit
-        ">
+        <section className="sl-panel p-6">
           <h2 className="text-xl font-semibold">Create a project first</h2>
-          <p className="mt-2 max-w-2xl text-zinc-700">
+          <p className="mt-2 max-w-2xl text-audit-body">
             Communications must be routed to a client project so every source
             record has a clear audit trail. Nothing will be analyzed or sent.
           </p>
-          <Link
-            href="/app/projects/new"
-            className="
-              mt-5 inline-flex min-h-11 items-center rounded-md bg-ink px-5
-              text-sm font-semibold text-white
-            "
-          >
+          <Link href="/app/projects/new" className="sl-button-primary mt-5">
             Create project
           </Link>
         </section>
       ) : (
-        <div className="
-          rounded-md border border-audit-border bg-white p-5 text-sm
-        ">
+        <div className="sl-panel p-5 text-sm">
           Your role can review import history but cannot add communications.
         </div>
       )}
       <section>
-        <h2 className="text-xl font-semibold">Recent import jobs</h2>
-        <p className="mt-2 text-sm text-zinc-700">
-          Completed and failed jobs remain visible for diagnosis.
-        </p>
+        <SectionHeader title="Recent import jobs" description="Completed and failed jobs remain visible for diagnosis." />
         <div className="
           mt-4 overflow-x-auto rounded-md border border-audit-border
         ">
@@ -103,7 +80,7 @@ export default async function ImportPage() {
                 ))
               ) : (
                 <tr>
-                  <td className="p-5 text-zinc-600" colSpan={5}>
+                  <td className="p-5 text-audit-muted" colSpan={5}>
                     No communication imports yet.
                   </td>
                 </tr>
@@ -112,6 +89,6 @@ export default async function ImportPage() {
           </table>
         </div>
       </section>
-    </div>
+    </Page>
   );
 }

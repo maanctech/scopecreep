@@ -1,4 +1,5 @@
 import { NotificationInbox } from "@/components/notifications/NotificationInbox";
+import { Page, PageHeader } from "@/components/ui/Page";
 import { requirePagePermission } from "@/lib/auth/current";
 import {
   getNotificationPreference,
@@ -15,20 +16,13 @@ export default async function NotificationsPage() {
   ]);
 
   return (
-    <div className="space-y-7">
-      <section className="border-b border-audit-border pb-7">
-        <p className="text-sm font-medium text-audit-muted">Professional review only</p>
-        <h1 className="mt-2 text-3xl font-semibold">Review inbox</h1>
-        <p className="mt-3 max-w-3xl text-base/7 text-zinc-700">
-          Findings, evidence changes, and monitoring failures appear here. ScopeLedger
-          does not contact clients or make billing decisions.
-        </p>
-      </section>
+    <Page>
+      <PageHeader eyebrow="Primary daily workflow" title="Needs review" description="New findings, changed source evidence, failed analyses, and monitoring failures appear here. ScopeLedger does not contact clients or make billing decisions." />
       <NotificationInbox
         initialNotifications={notifications}
         initialDigestEnabled={preference.daily_digest_enabled}
         initialDelivery={preference.last_delivery}
       />
-    </div>
+    </Page>
   );
 }

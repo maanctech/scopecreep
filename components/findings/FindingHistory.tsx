@@ -27,7 +27,7 @@ export function FindingHistory({ events }: { events: BillingEvent[] }) {
             <span className="font-semibold">{event.event_type}</span>
             <span className="text-audit-muted">{formatTimestamp(event.created_at)}</span>
           </div>
-          <div className="mt-1 space-y-1 leading-6 text-zinc-700">
+          <div className="mt-1 space-y-1 leading-6 text-audit-body">
             {event.previous_status && event.new_status && event.previous_status !== event.new_status ? (
               <div>
                 Status: {event.previous_status} to {event.new_status}

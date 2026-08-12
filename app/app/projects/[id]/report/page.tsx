@@ -4,6 +4,7 @@ import { CopyMarkdownButton } from "@/components/reports/CopyMarkdownButton";
 import { Disclaimer } from "@/components/ui/Disclaimer";
 import { GenerateReportButton } from "@/components/forms/GenerateReportButton";
 import { PrintReportButton } from "@/components/reports/PrintReportButton";
+import { Page, PageHeader } from "@/components/ui/Page";
 import { formatDollars } from "@/lib/domain/money";
 import { getReportHistory, readAuditReport } from "@/lib/store";
 import { currentAuthContext } from "@/lib/auth/current";
@@ -16,11 +17,6 @@ type ReportPageProps = {
   params: Promise<{ id: string }>;
 };
 
-/**
- * Viewing this page is read-only: it never creates or regenerates a report.
- * Reports are only created by the explicit "Generate report" action, which
- * calls POST /api/projects/[id]/report. Older reports are kept in history.
- */
 export default async function ReportPage({ params }: ReportPageProps) {
   const { id } = await params;
   const auth = await currentAuthContext();
@@ -32,69 +28,54 @@ export default async function ReportPage({ params }: ReportPageProps) {
   const history = await getReportHistory(id);
 
   return (
-    <div className="space-y-8">
-      <section className="
-        flex flex-col gap-4 border-b border-audit-border pb-7
-        lg:flex-row lg:items-end lg:justify-between
-      ">
-        <div>
-          <div className="text-sm text-audit-muted">
-            {result.project.client_name}
-            {result.project.is_demo ? " - Fictional demonstration data" : ""}
-          </div>
-          <h1 className="mt-2 text-3xl font-semibold">
-            {result.report?.title ?? `${result.project.client_name} Scope Creep Audit`}
-          </h1>
-          <p className="mt-3 max-w-2xl text-base/7 text-zinc-700">
-            Plain markdown report for audit reveal calls, proposals, or manual export. Viewing this
-            page never changes your data.
-          </p>
-        </div>
-        <Link
-          href={`/app/projects/${result.project.id}`}
-          className="
-            inline-flex h-11 items-center justify-center rounded-md border
-            border-audit-border px-4 text-sm font-semibold
-            hover:bg-audit-soft
-          "
-        >
-          Back to project
-        </Link>
-      </section>
+    <Page>
+      <PageHeader
+        eyebrow={`${result.project.client_name}${result.project.is_demo ? " · Fictional demonstration data" : ""}`}
+        title={result.report?.title ?? `${result.project.client_name} Scope Creep Audit`}
+        description="Versioned audit record for professional review and manual export. Viewing this page never regenerates a report or changes project data."
+        actions={<Link href={`/app/projects/${result.project.id}`} className="
+          sl-button-secondary
+        ">Back to project</Link>}
+      />
 
       <Disclaimer />
 
       {result.report ? (
         <>
-          <section className="
-            grid gap-4
-            md:grid-cols-3
-          ">
+          <section className="border-y border-ink bg-bright-paper" aria-label="Report ledger totals">
             <div className="
-              rounded-md border border-audit-border bg-white p-5 shadow-audit
+              grid divide-y divide-audit-border
+              md:grid-cols-3 md:divide-x md:divide-y-0
             ">
-              <div className="text-sm text-audit-muted">Potential leakage (AI estimate)</div>
-              <div className="mt-2 text-2xl font-semibold">
-                {formatDollars(result.report.total_revenue_leakage)}
+              <div className="bg-audit-amber/5 p-5">
+                <div className="sl-metadata text-audit-amber">R-01 / AI ESTIMATE</div>
+                <div className="
+                  mt-4 text-xs font-semibold text-audit-amber uppercase
+                ">Potential leakage</div>
+                <div data-financial-value className="
+                  sl-editorial mt-1 text-3xl tabular-nums
+                ">
+                  {formatDollars(result.report.total_revenue_leakage)}
+                </div>
               </div>
-            </div>
-            <div className="
-              rounded-md border border-audit-border bg-white p-5 shadow-audit
-            ">
-              <div className="text-sm text-audit-muted">Analyzed messages</div>
-              <div className="mt-2 text-2xl font-semibold">{result.report.analyzed_messages_count}</div>
-            </div>
-            <div className="
-              rounded-md border border-audit-border bg-white p-5 shadow-audit
-            ">
-              <div className="text-sm text-audit-muted">Out-of-scope requests</div>
-              <div className="mt-2 text-2xl font-semibold">{result.report.out_of_scope_count}</div>
+              <div className="p-5">
+                <div className="sl-metadata text-audit-muted">R-02 / EVIDENCE</div>
+                <div className="
+                  mt-4 text-xs font-semibold text-audit-muted uppercase
+                ">Analyzed messages</div>
+                <div className="sl-editorial mt-1 text-3xl tabular-nums">{result.report.analyzed_messages_count}</div>
+              </div>
+              <div className="p-5">
+                <div className="sl-metadata text-audit-muted">R-03 / CLASSIFIED</div>
+                <div className="
+                  mt-4 text-xs font-semibold text-audit-muted uppercase
+                ">Out-of-scope requests</div>
+                <div className="sl-editorial mt-1 text-3xl tabular-nums">{result.report.out_of_scope_count}</div>
+              </div>
             </div>
           </section>
 
-          <section className="
-            rounded-md border border-audit-border bg-white p-5 shadow-audit
-          ">
+          <section className="sl-panel p-5">
             <div className="
               mb-4 flex flex-col gap-3
               sm:flex-row sm:items-center sm:justify-between
@@ -114,11 +95,7 @@ export default async function ReportPage({ params }: ReportPageProps) {
                 <CopyMarkdownButton markdown={result.report.markdown} />
                 <Link
                   href={`/api/projects/${result.project.id}/report?format=markdown`}
-                  className="
-                    inline-flex h-11 items-center rounded-md border
-                    border-audit-border px-4 text-sm font-semibold
-                    hover:bg-audit-soft
-                  "
+                  className="sl-button-secondary"
                 >
                   Download Markdown
                 </Link>
@@ -126,11 +103,7 @@ export default async function ReportPage({ params }: ReportPageProps) {
                   <>
                     <Link
                       href={`/api/projects/${result.project.id}/report?format=csv`}
-                      className="
-                        inline-flex h-11 items-center rounded-md border
-                        border-audit-border px-4 text-sm font-semibold
-                        hover:bg-audit-soft
-                      "
+                      className="sl-button-secondary"
                     >
                       Download CSV
                     </Link>
@@ -168,8 +141,8 @@ export default async function ReportPage({ params }: ReportPageProps) {
               aria-label="Report markdown"
               value={result.report.markdown}
               className="
-                min-h-[620px] w-full rounded-md border border-audit-border
-                bg-audit-soft p-4 font-mono text-sm/6
+                min-h-[620px] w-full border-x border-y-2 border-audit-border
+                bg-bright-paper p-5 font-mono text-sm/6
                 print:hidden
               "
             />
@@ -181,12 +154,10 @@ export default async function ReportPage({ params }: ReportPageProps) {
 
           <section>
             <h2 className="text-xl font-semibold">Report history</h2>
-            <p className="mt-2 text-sm text-zinc-700">
+            <p className="mt-2 text-sm text-audit-body">
               Every explicit generation is preserved with its source findings, SOW version, model references, and checksums.
             </p>
-            <div className="
-              mt-4 overflow-x-auto rounded-md border border-audit-border
-            ">
+            <div className="mt-4 overflow-x-auto border-y border-audit-border">
               <table className="min-w-full text-left text-sm">
                 <caption className="sr-only">Saved report versions</caption>
                 <thead className="bg-audit-soft"><tr><th className="p-3">Version</th><th className="
@@ -218,16 +189,16 @@ export default async function ReportPage({ params }: ReportPageProps) {
         </>
       ) : (
         <section className="
-          rounded-md border border-audit-border bg-white p-8 text-center
-          shadow-audit
+          border-y border-dashed border-audit-border bg-bright-paper px-6 py-10
         ">
-          <h2 className="text-xl font-semibold">No report yet</h2>
-          <p className="mx-auto mt-2 max-w-xl text-base/7 text-zinc-700">
+          <p className="sl-coordinate">REPORT / NOT GENERATED</p>
+          <h2 className="mt-4 text-xl font-semibold">No report yet</h2>
+          <p className="mt-2 max-w-xl text-base/7 text-audit-body">
             Reports are only created when you ask for one. Generate a report to get a markdown
             summary of this project&apos;s findings and billing review status.
           </p>
           {canGenerate ? (
-            <div className="mt-5 flex justify-center">
+            <div className="mt-5 flex">
               <GenerateReportButton projectId={result.project.id} hasExistingReport={false} />
             </div>
           ) : (
@@ -235,6 +206,6 @@ export default async function ReportPage({ params }: ReportPageProps) {
           )}
         </section>
       )}
-    </div>
+    </Page>
   );
 }

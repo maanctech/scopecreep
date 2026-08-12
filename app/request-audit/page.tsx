@@ -1,5 +1,6 @@
 import { connection } from "next/server";
 import { LeadCaptureForm } from "@/components/forms/LeadCaptureForm";
+import { Page, PageHeader } from "@/components/ui/Page";
 import { getPublicIntakeAvailability } from "@/lib/store";
 
 // The nonce in the Content-Security-Policy is per request, so a page
@@ -9,28 +10,49 @@ export default async function RequestAuditPage() {
   const intake = await getPublicIntakeAvailability();
 
   return (
-    <div className="mx-auto max-w-4xl space-y-8">
-      <section className="border-b border-audit-border pb-6">
-        <p className="text-sm font-semibold text-audit-muted">Free lookback audit / private-beta application</p>
-        <h1 className="mt-2 text-3xl font-semibold">Request a ScopeLedger revenue leakage audit</h1>
-        <p className="mt-3 max-w-2xl text-sm/6 text-zinc-700">
-          Tell us about the firm and the scope problem. After this step, you can securely paste
-          one SOW and representative client-message exports for a manual review.
-        </p>
-      </section>
-      <section className="
-        grid gap-4 border-b border-audit-border pb-8 text-sm/6 text-zinc-700
-        sm:grid-cols-3
+    <Page className="
+      mx-auto max-w-5xl py-10
+      sm:py-14
+    ">
+      <PageHeader
+        eyebrow="Free lookback audit"
+        title="Request a revenue leakage audit"
+        description="Share basic agency information first. Rates, SOWs, and client communications are collected only in the secure next stage."
+      />
+      <div className="
+        grid gap-8
+        lg:grid-cols-[0.72fr_1.28fr] lg:items-start
       ">
-        <div><strong className="block text-ink">1. Business context</strong>Project economics, team size, and the margin problem.</div>
-        <div><strong className="block text-ink">2. Private intake</strong>SOW text and representative messages saved to the professional workspace.</div>
-        <div><strong className="block text-ink">3. Human review</strong>Evidence and estimates are validated before any findings are discussed.</div>
-      </section>
-      {intake.enabled ? (
-        <LeadCaptureForm />
-      ) : (
+        <aside className="
+          space-y-6
+          lg:sticky lg:top-24
+        ">
+          <div>
+            <h2 className="text-lg font-semibold tracking-tight">What happens next</h2>
+            <ol className="
+              mt-4 divide-y divide-audit-border border-y border-audit-border
+            ">
+              {[
+                ["01", "Fit review", "We confirm that the engagement has written scope and enough request volume for a useful audit."],
+                ["02", "Private evidence", "An authorized contact provides one SOW and a bounded communication export."],
+                ["03", "Professional readout", "Every potential opportunity is reviewed before results are discussed."],
+              ].map(([number, title, description]) => (
+                <li key={number} className="
+                  grid grid-cols-[36px_1fr] gap-3 py-4
+                ">
+                  <span className="sl-metadata text-signal">{number}</span>
+                  <div><h3 className="text-sm font-semibold">{title}</h3><p className="
+                    mt-1 text-sm/6 text-audit-muted
+                  ">{description}</p></div>
+                </li>
+              ))}
+            </ol>
+          </div>
+          <p className="text-xs/5 text-audit-muted">Nothing is sent to a client. No estimate becomes an approved charge without professional review.</p>
+        </aside>
+        {intake.enabled ? <LeadCaptureForm /> : (
         <section className="
-          rounded-md border border-amber-300 bg-amber-50 p-6 text-amber-950
+          border-y border-audit-amber/30 bg-audit-amber/5 p-6 text-audit-amber
         ">
           <h2 className="text-xl font-semibold">Public audit requests are currently closed</h2>
           <p className="mt-2 max-w-2xl text-sm/6">
@@ -38,12 +60,8 @@ export default async function RequestAuditPage() {
             An authorized operator must enable public intake before this form becomes available.
           </p>
         </section>
-      )}
-      <p className="text-xs/5 text-zinc-600">
-        This form does not subscribe you to automated marketing or contact a client. Submitted
-        materials may contain confidential business information and should only be provided when
-        you are authorized to share them for the audit.
-      </p>
-    </div>
+        )}
+      </div>
+    </Page>
   );
 }

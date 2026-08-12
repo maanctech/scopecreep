@@ -93,7 +93,7 @@ export function NotificationInbox({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="text-xl font-semibold">Items requiring attention</h2>
-            <p className="mt-1 text-sm text-zinc-600">{unread} unread</p>
+            <p className="mt-1 text-sm text-audit-muted">{unread} unread</p>
           </div>
           <button
             type="button"
@@ -101,7 +101,7 @@ export function NotificationInbox({
             disabled={busy || unread === 0}
             className="
               inline-flex min-h-11 items-center gap-2 rounded-md border
-              border-zinc-400 px-4 text-sm font-semibold
+              border-audit-border px-4 text-sm font-semibold
               disabled:opacity-50
             "
           >
@@ -116,7 +116,7 @@ export function NotificationInbox({
           {notifications.length ? (
             notifications.map((item) => (
               <article key={item.id} className={item.read_at ? "p-5" : `
-                border-l-4 border-l-ink p-5
+                border-l-4 border-l-signal bg-signal/5 p-5
               `}>
                 <div className="
                   flex flex-wrap items-start justify-between gap-3
@@ -127,16 +127,16 @@ export function NotificationInbox({
                     ">{item.notification_type}</p>
                     <h3 className="mt-1 font-semibold">{item.title}</h3>
                     {item.project_name ? (
-                      <p className="mt-1 text-sm text-zinc-600">
+                      <p className="mt-1 text-sm text-audit-muted">
                         {item.client_name} / {item.project_name}
                       </p>
                     ) : null}
                   </div>
-                  <time className="text-xs text-zinc-500" dateTime={item.created_at}>
+                  <time className="text-xs text-audit-muted" dateTime={item.created_at}>
                     {new Date(item.created_at).toLocaleString()}
                   </time>
                 </div>
-                <p className="mt-3 text-sm/6 text-zinc-700">{item.detail}</p>
+                <p className="mt-3 text-sm/6 text-audit-body">{item.detail}</p>
                 <button
                   type="button"
                   onClick={async () => {
@@ -163,7 +163,7 @@ export function NotificationInbox({
           ) : (
             <div className="p-8 text-center">
               <h3 className="font-semibold">No review alerts</h3>
-              <p className="mt-2 text-sm text-zinc-600">
+              <p className="mt-2 text-sm text-audit-muted">
                 New findings and monitoring failures will appear here.
               </p>
             </div>
@@ -173,7 +173,7 @@ export function NotificationInbox({
       <aside className="border-l border-audit-border pl-6">
         <Mail className="size-5" aria-hidden="true" />
         <h2 className="mt-3 text-lg font-semibold">Daily email digest</h2>
-        <p className="mt-2 text-sm/6 text-zinc-700">
+        <p className="mt-2 text-sm/6 text-audit-body">
           Receive one summary at the professional email on your account. Message and SOW
           bodies are never included.
         </p>
@@ -187,12 +187,12 @@ export function NotificationInbox({
           />
           Enable daily digest
         </label>
-        {message ? <p className="mt-4 text-sm text-zinc-700" role="status">{message}</p> : null}
-        {initialDelivery?.status === "Failed" ? (
+        {message ? <p className="mt-4 text-sm text-audit-body" role="status">{message}</p> : null}
+        {initialDelivery?.status === "Delivery Uncertain" ? (
           <div className="
-            mt-5 border-l-4 border-l-red-700 pl-3 text-sm text-red-900
+            mt-5 border-l-4 border-l-red-700 pl-3 text-sm text-critical
           ">
-            <p className="font-semibold">Last digest failed</p>
+            <p className="font-semibold">Last digest needs operator review</p>
             <p className="mt-1">{initialDelivery.error}</p>
           </div>
         ) : null}

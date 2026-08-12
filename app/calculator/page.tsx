@@ -1,5 +1,6 @@
 import { connection } from "next/server";
 import { RoiCalculator } from "@/components/marketing/RoiCalculator";
+import { Page, PageHeader } from "@/components/ui/Page";
 
 // The nonce in the Content-Security-Policy is per request, so a page
 // prerendered at build time would carry script tags the policy rejects.
@@ -7,15 +8,13 @@ export default async function CalculatorPage() {
   await connection();
 
   return (
-    <div className="mx-auto max-w-5xl space-y-8">
-      <section className="border-b border-audit-border pb-6">
-        <h1 className="text-3xl font-semibold">Revenue leakage calculator</h1>
-        <p className="mt-3 max-w-2xl text-sm/6 text-zinc-700">
-          Estimate how much margin disappears when out-of-scope work is handled without
-          a change order.
-        </p>
-      </section>
+    <Page className="
+      mx-auto max-w-5xl py-10
+      sm:py-14
+    ">
+      <PageHeader eyebrow="Illustrative economics" title="Revenue leakage calculator" description="Estimate how much margin may disappear when out-of-scope work is handled without an explicit commercial decision." />
       <RoiCalculator />
-    </div>
+      <p className="text-xs/5 text-audit-muted">These outputs are illustrative planning estimates. They are not validated findings, approved charges, invoices, recovered revenue, or a guarantee.</p>
+    </Page>
   );
 }

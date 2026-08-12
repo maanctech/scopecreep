@@ -50,7 +50,8 @@ export function MessageAnalysisForm({ projectId }: { projectId: string }) {
 
   return (
     <form onSubmit={onSubmit} className="
-      grid gap-5 rounded-md border border-audit-border bg-white p-6 shadow-audit
+      sl-panel grid gap-5 p-5
+      sm:p-6
     ">
       <div className="
         grid gap-4
@@ -58,9 +59,7 @@ export function MessageAnalysisForm({ projectId }: { projectId: string }) {
       ">
         <label className="block">
           <span className="text-sm font-medium">Source</span>
-          <select name="source" className="
-            mt-2 w-full rounded-md border border-audit-border px-3 py-2
-          ">
+          <select name="source" className="sl-field mt-2">
             {MESSAGE_SOURCES.map((source) => (
               <option key={source}>{source}</option>
             ))}
@@ -68,18 +67,14 @@ export function MessageAnalysisForm({ projectId }: { projectId: string }) {
         </label>
         <label className="block">
           <span className="text-sm font-medium">Sender</span>
-          <input name="sender" className="
-            mt-2 w-full rounded-md border border-audit-border px-3 py-2
-          " />
+          <input name="sender" className="sl-field mt-2" />
         </label>
         <label className="block">
           <span className="text-sm font-medium">Message date</span>
           <input
             name="messageDate"
             type="date"
-            className="
-              mt-2 w-full rounded-md border border-audit-border px-3 py-2
-            "
+            className="sl-field mt-2"
           />
         </label>
       </div>
@@ -89,20 +84,18 @@ export function MessageAnalysisForm({ projectId }: { projectId: string }) {
         <textarea
           name="messageText"
           rows={5}
-          className="
-            mt-2 w-full rounded-md border border-audit-border px-3 py-2
-          "
+          className="sl-field mt-2"
           required
         />
       </label>
 
       {error ? <div className="
-        rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700
+        rounded-md border border-critical/25 bg-critical/5 p-3 text-sm
+        text-critical
       ">{error}</div> : null}
       {success ? (
         <div className="
-          rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm
-          text-emerald-800
+          rounded-md border border-signal/25 bg-signal/5 p-3 text-sm text-signal
         ">
           {success}
         </div>
@@ -111,12 +104,7 @@ export function MessageAnalysisForm({ projectId }: { projectId: string }) {
       <button
         type="submit"
         disabled={isSubmitting}
-        className="
-          inline-flex h-11 items-center justify-center rounded-md bg-ink px-4
-          text-sm font-semibold text-white
-          hover:bg-zinc-800
-          disabled:cursor-not-allowed disabled:opacity-60
-        "
+        className="sl-button-primary"
       >
         {isSubmitting ? "Analyzing request..." : "Analyze and save request"}
       </button>

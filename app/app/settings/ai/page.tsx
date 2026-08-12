@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { Activity, CheckCircle2, XCircle } from "lucide-react";
+import { CheckCircle2, XCircle } from "lucide-react";
+import { Page, PageHeader } from "@/components/ui/Page";
 import { configuredProviderHealth } from "@/lib/ai/providers";
 import { requirePagePermission } from "@/lib/auth/current";
 
@@ -16,52 +17,32 @@ export default async function AiSettingsPage({
   const StatusIcon = health.available ? CheckCircle2 : XCircle;
 
   return (
-    <div className="space-y-8">
+    <Page>
       {firstRun ? (
         <section className="
-          rounded-md border border-emerald-300 bg-emerald-50 p-5
-          text-emerald-950
+          rounded-md border border-signal/25 bg-signal/5 p-5 text-signal
         ">
           <h1 className="text-lg font-semibold">Secure workspace created</h1>
           <p className="mt-2 text-sm/6">
             Confirm the analysis provider below. When it is ready, create a project or review the installation diagnostics.
           </p>
           <div className="mt-4 flex flex-wrap gap-3">
-            <Link className="
-              inline-flex h-11 items-center rounded-md bg-ink px-4 text-sm
-              font-semibold text-white
-            " href="/app/projects/new">Create first project</Link>
-            <Link className="
-              inline-flex h-11 items-center rounded-md border border-emerald-800
-              px-4 text-sm font-semibold
-            " href="/app/settings/system">Review system checks</Link>
+            <Link className="sl-button-primary" href="/app/projects/new">Create first project</Link>
+            <Link className="sl-button-secondary" href="/app/settings/system">Review system checks</Link>
           </div>
         </section>
       ) : null}
-      <section className="border-b border-audit-border pb-7">
-        <div className="
-          flex items-center gap-2 text-sm font-medium text-audit-muted
-        ">
-          <Activity className="size-4" aria-hidden="true" />
-          Analysis provider
-        </div>
-        <h1 className="mt-2 text-3xl font-semibold">AI diagnostics</h1>
-        <p className="mt-3 max-w-2xl text-base/7 text-zinc-700">
-          ScopeLedger uses the selected provider only for evidence-based SOW comparison. Every result still requires professional review.
-        </p>
-      </section>
+      <PageHeader eyebrow="Analysis provider" title="AI diagnostics" description="ScopeLedger uses the configured provider only for evidence-based SOW comparison. Provider configuration does not replace live validation, and every result requires professional review." />
 
-      <section className="
-        rounded-md border border-audit-border bg-white p-6 shadow-audit
-      ">
+      <section className="sl-panel p-6">
         <div className="flex items-start gap-3">
           <StatusIcon className={`
             mt-0.5 size-5
-            ${health.available ? `text-emerald-700` : `text-red-700`}
+            ${health.available ? `text-signal` : `text-critical`}
           `} aria-hidden="true" />
           <div>
             <h2 className="text-xl font-semibold capitalize">{health.provider}</h2>
-            <p className="mt-1 text-sm text-zinc-700">{health.message}</p>
+            <p className="mt-1 text-sm text-audit-body">{health.message}</p>
           </div>
         </div>
         <dl className="
@@ -89,11 +70,11 @@ export default async function AiSettingsPage({
       </section>
 
       <p className="
-        rounded-md border border-amber-300 bg-amber-50 p-4 text-sm/6
-        text-amber-900
+        rounded-md border border-audit-amber/30 bg-audit-amber/5 p-4 text-sm/6
+        text-audit-amber
       ">
         Provider output is never a billing authorization. ScopeLedger recalculates revenue from hours and the project rate, requires SOW evidence for definitive decisions, and falls back to Needs Human Review when output is unavailable or invalid.
       </p>
-    </div>
+    </Page>
   );
 }

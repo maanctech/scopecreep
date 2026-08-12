@@ -1,4 +1,5 @@
 import { IntegrationHub } from "@/components/integrations/IntegrationHub";
+import { Page, PageHeader } from "@/components/ui/Page";
 import { requirePagePermission } from "@/lib/auth/current";
 import { hasPermission } from "@/lib/auth/authorization";
 import { listIntegrations } from "@/lib/connectors/service";
@@ -19,18 +20,8 @@ export default async function IntegrationsPage({
   ]);
 
   return (
-    <div className="space-y-8">
-      <section className="border-b border-audit-border pb-7">
-        <p className="text-sm font-medium text-audit-muted">
-          Private source connections
-        </p>
-        <h1 className="mt-2 text-3xl font-semibold">Integration Hub</h1>
-        <p className="mt-3 max-w-3xl text-base/7 text-zinc-700">
-          Route selected client communications into a project. A saved setup is
-          not called connected until ScopeLedger completes a real provider test.
-          Imports never start analysis or contact a client automatically.
-        </p>
-      </section>
+    <Page>
+      <PageHeader eyebrow="Monitoring" title="Connections" description="Route selected client communications into a project. Saved configuration and verified provider connectivity are shown as distinct states. Imports never start analysis or contact a client." />
       <IntegrationHub
         initialConnections={connections}
         projects={dashboard.projects.map((project) => ({
@@ -42,6 +33,6 @@ export default async function IntegrationsPage({
         )}
         oauthNotice={parameters.notice || null}
       />
-    </div>
+    </Page>
   );
 }

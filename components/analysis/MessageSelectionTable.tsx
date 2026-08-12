@@ -33,7 +33,7 @@ export function MessageSelectionTable({
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h2 className="text-xl font-semibold">1. Choose communications</h2>
-          <p className="mt-2 text-sm text-zinc-700">
+          <p className="mt-2 text-sm text-audit-body">
             Showing the 250 most recent source records. Existing findings and
             prior jobs cannot be selected again; retry failed jobs below.
           </p>
@@ -44,9 +44,7 @@ export function MessageSelectionTable({
             <select
               value={source}
               onChange={(event) => onSourceChange(event.target.value)}
-              className="
-                mt-1 min-h-11 rounded-md border border-audit-border px-3
-              "
+              className="sl-field mt-1 min-w-36"
             >
               {sources.map((item) => (
                 <option key={item}>{item}</option>
@@ -59,9 +57,7 @@ export function MessageSelectionTable({
               type="date"
               value={startDate}
               onChange={(event) => onStartDateChange(event.target.value)}
-              className="
-                mt-1 min-h-11 rounded-md border border-audit-border px-3
-              "
+              className="sl-field mt-1"
             />
           </label>
           <label>
@@ -70,16 +66,12 @@ export function MessageSelectionTable({
               type="date"
               value={endDate}
               onChange={(event) => onEndDateChange(event.target.value)}
-              className="
-                mt-1 min-h-11 rounded-md border border-audit-border px-3
-              "
+              className="sl-field mt-1"
             />
           </label>
         </div>
       </div>
-      <div className="
-        mt-4 overflow-x-auto rounded-md border border-audit-border
-      ">
+      <div className="sl-table-wrap mt-4">
         <table className="min-w-full text-left text-sm">
           <caption className="sr-only">
             Imported communications available for controlled analysis
@@ -108,7 +100,7 @@ export function MessageSelectionTable({
                   </td>
                   <td className="p-3 align-top whitespace-nowrap">
                     <div className="font-medium">{message.source}</div>
-                    <div className="mt-1 text-zinc-600">
+                    <div className="mt-1 text-audit-muted">
                       {displayDate(
                         message.message_date || message.created_at,
                       )}
@@ -121,11 +113,11 @@ export function MessageSelectionTable({
                         "Sender not provided"}
                       {message.subject ? ` - ${message.subject}` : ""}
                     </div>
-                    <p className="mt-1 whitespace-pre-wrap text-zinc-700">
+                    <p className="mt-1 whitespace-pre-wrap text-audit-body">
                       {message.message_text}
                     </p>
                     {message.character_count > message.message_text.length ? (
-                      <p className="mt-1 text-xs text-zinc-600">
+                      <p className="mt-1 text-xs text-audit-muted">
                         Preview shortened from{" "}
                         {message.character_count.toLocaleString()} characters.
                       </p>
@@ -140,7 +132,7 @@ export function MessageSelectionTable({
               ))
             ) : (
               <tr>
-                <td colSpan={4} className="p-6 text-zinc-600">
+                <td colSpan={4} className="p-6 text-audit-muted">
                   No communications match this source and date range.
                 </td>
               </tr>

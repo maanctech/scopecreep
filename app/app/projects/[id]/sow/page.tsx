@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { SowWorkspaceClient } from "@/components/sow/SowWorkspaceClient";
+import { Page, PageHeader } from "@/components/ui/Page";
 import { currentAuthContext } from "@/lib/auth/current";
 import { hasPermission } from "@/lib/auth/authorization";
 import { getProjectDetail } from "@/lib/store";
@@ -24,28 +25,27 @@ export default async function SowWorkspacePage({
   const canEdit = Boolean(auth && hasPermission(auth.role, "projects:write"));
 
   return (
-    <div className="space-y-8">
-      <section className="border-b border-audit-border pb-7">
-        <Link href={`/app/projects/${id}`} className="
-          text-sm font-medium text-zinc-700 underline
-        ">Back to project</Link>
-        <p className="mt-5 text-sm text-audit-muted">{project.project.client_name} / {project.project.project_name}</p>
-        <h1 className="mt-2 text-3xl font-semibold">Statement of Work workspace</h1>
-        <p className="mt-3 max-w-3xl text-base/7 text-zinc-700">Keep agreement versions, review contractual risk, and approve the boundary map used for scope analysis. Nothing here is shared with the client.</p>
-      </section>
+    <Page>
+      <PageHeader
+        eyebrow={`${project.project.client_name} · ${project.project.project_name}`}
+        title="Statement of Work"
+        description="Version the governing agreement, review contractual risk, and approve the evidence map used for scope analysis. Nothing here is shared with the client."
+        actions={<Link href={`/app/projects/${id}`} className="
+          sl-button-secondary
+        ">Back to project</Link>}
+      />
       <div className="
-        rounded-md border border-amber-300 bg-amber-50 p-4 text-sm/6
-        text-amber-950
+        rounded-md border border-audit-amber/30 bg-audit-amber/5 p-4 text-sm/6
+        text-audit-amber
       "><strong>Professional approval required.</strong> AI suggestions are a review aid, not legal advice or billing authorization. A new SOW version does not rewrite prior findings.</div>
       {query.created === "project" ? (
         <div className="
-          rounded-md border border-emerald-300 bg-emerald-50 p-4 text-sm
-          text-emerald-900
+          rounded-md border border-signal/25 bg-signal/5 p-4 text-sm text-signal
         ">
           Project saved. Generate, review, and approve the boundary map before analyzing requests.
         </div>
       ) : null}
       <SowWorkspaceClient projectId={id} initialWorkspace={workspace} canEdit={canEdit} />
-    </div>
+    </Page>
   );
 }

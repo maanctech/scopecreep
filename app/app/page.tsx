@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { Plus, ShieldCheck } from "lucide-react";
+import { Plus } from "lucide-react";
 import { BillingSummary } from "@/components/billing/BillingSummary";
 import { Disclaimer } from "@/components/ui/Disclaimer";
+import { Page, PageHeader, SectionHeader } from "@/components/ui/Page";
 import { formatCents, formatDollars } from "@/lib/domain/money";
 import { getAppDashboard } from "@/lib/store";
 import { currentAuthContext } from "@/lib/auth/current";
@@ -23,76 +24,57 @@ export default async function ProductDashboardPage({ searchParams }: { searchPar
   const dashboard = await getAppDashboard();
 
   return (
-    <div className="space-y-10">
+    <Page>
       {query.notice === "permission-denied" ? (
         <div role="alert" className="
-          rounded-md border border-amber-300 bg-amber-50 p-4 text-sm
-          text-amber-900
+          rounded-md border border-audit-amber/30 bg-audit-amber/5 p-4 text-sm
+          text-audit-amber
         ">
           Your role does not allow access to that page. No data was changed.
         </div>
       ) : null}
-      <section className="
-        flex flex-col gap-4 border-b border-audit-border pb-7
-        lg:flex-row lg:items-end lg:justify-between
-      ">
-        <div>
-          <div className="
-            flex items-center gap-2 text-sm font-medium text-audit-muted
-          ">
-            <ShieldCheck className="size-4" aria-hidden="true" />
-            Audit console
-          </div>
-          <h1 className="mt-2 text-3xl font-semibold">Revenue workflow dashboard</h1>
-          <p className="mt-3 max-w-2xl text-base/7 text-zinc-700">
-            Review AI-flagged scope findings, make billing decisions, and track what you approved,
-            invoiced, and recovered. Nothing here contacts your clients.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-3">
+      <PageHeader
+        eyebrow="Revenue control"
+        title="Revenue workflow"
+        description="Review evidence-linked findings, make explicit billing decisions, and track potential, approved, invoiced, and recovered value without combining those stages."
+        actions={
+          <>
           <Link
             href="/app/findings"
-            className="
-              inline-flex h-11 items-center rounded-md border
-              border-audit-border bg-white px-4 text-sm font-semibold
-              hover:bg-audit-soft
-            "
+            className="sl-button-secondary"
           >
-            Review all findings
+            All findings
           </Link>
           {canCreateProject ? (
             <Link
               href="/app/projects/new"
-              className="
-                inline-flex h-11 items-center gap-2 rounded-md bg-ink px-4
-                text-sm font-semibold text-white
-                hover:bg-zinc-800
-              "
+              className="sl-button-primary"
             >
               <Plus className="size-4" aria-hidden="true" />
               New project
             </Link>
           ) : null}
-        </div>
-      </section>
+          </>
+        }
+      />
 
       <Disclaimer />
 
       {!dashboard.projects.length ? (
         <section className="border-y border-audit-border py-6">
-          <h2 className="text-xl font-semibold">Start the first revenue audit</h2>
+          <h2 className="text-xl font-semibold tracking-tight">Start the first revenue audit</h2>
           <ol className="
             mt-4 grid gap-4 text-sm
             sm:grid-cols-3
           ">
             <li><span className="font-semibold">1. Add the engagement.</span><p className="
-              mt-1 text-zinc-700
+              mt-1 text-audit-body
             ">Create a project and paste the signed SOW.</p></li>
             <li><span className="font-semibold">2. Approve scope boundaries.</span><p className="
-              mt-1 text-zinc-700
+              mt-1 text-audit-body
             ">Review the SOW map before any communication can be analyzed.</p></li>
             <li><span className="font-semibold">3. Import and review.</span><p className="
-              mt-1 text-zinc-700
+              mt-1 text-audit-body
             ">Import client requests, run selected analyses, then make each billing decision.</p></li>
           </ol>
           {canCreateProject ? (
@@ -107,7 +89,7 @@ export default async function ProductDashboardPage({ searchParams }: { searchPar
 
       {dashboard.hasRealFindings ? (
         <section className="space-y-4">
-          <h2 className="text-xl font-semibold">Your live totals</h2>
+          <SectionHeader title="Your live totals" description="Potential and professional-entered financial stages are reported separately." />
           <BillingSummary totals={dashboard.realTotals} />
         </section>
       ) : null}
@@ -115,10 +97,11 @@ export default async function ProductDashboardPage({ searchParams }: { searchPar
       {dashboard.hasDemoFindings ? (
         <section className="space-y-4">
           <div>
-            <h2 className="text-xl font-semibold">Demo totals</h2>
+            <h2 className="text-xl font-semibold tracking-tight">Demo totals</h2>
             <p className="
-              mt-1 inline-flex rounded-md border border-amber-300 bg-amber-50
-              px-2.5 py-1 text-sm font-semibold text-amber-900
+              mt-1 inline-flex rounded-md border border-audit-amber/30
+              bg-audit-amber/5 px-2.5 py-1 text-sm font-semibold
+              text-audit-amber
             ">
               Fictional demonstration data
             </p>
@@ -135,9 +118,7 @@ export default async function ProductDashboardPage({ searchParams }: { searchPar
         grid gap-6
         lg:grid-cols-2
       ">
-        <div className="
-          rounded-md border border-audit-border bg-white shadow-audit
-        ">
+        <div className="sl-panel">
           <div className="border-b border-audit-border px-5 py-4">
             <h2 className="text-xl font-semibold">Findings needing your attention</h2>
             <p className="mt-1 text-sm text-audit-muted">
@@ -157,7 +138,7 @@ export default async function ProductDashboardPage({ searchParams }: { searchPar
                       {finding.is_demo ? " (demo)" : ""}
                     </span>
                   </div>
-                  <p className="mt-1 text-sm/6 text-zinc-700">
+                  <p className="mt-1 text-sm/6 text-audit-body">
                     {message?.message_text ?? finding.reasoning}
                   </p>
                   {project ? (
@@ -182,9 +163,7 @@ export default async function ProductDashboardPage({ searchParams }: { searchPar
         </div>
 
         <div className="space-y-6">
-          <div className="
-            rounded-md border border-audit-border bg-white shadow-audit
-          ">
+          <div className="sl-panel">
             <div className="border-b border-audit-border px-5 py-4">
               <h2 className="text-xl font-semibold">Recent decisions</h2>
             </div>
@@ -198,7 +177,7 @@ export default async function ProductDashboardPage({ searchParams }: { searchPar
                       <span className="font-semibold">{event.event_type}</span>
                       <span className="text-audit-muted">{formatTimestamp(event.created_at)}</span>
                     </div>
-                    <p className="mt-1 text-zinc-700">
+                    <p className="mt-1 text-audit-body">
                       {project?.client_name ?? "Unknown client"}
                       {event.amount_cents !== null ? ` - ${formatCents(event.amount_cents)}` : ""}
                       {event.is_demo ? " (demo)" : ""}
@@ -211,9 +190,7 @@ export default async function ProductDashboardPage({ searchParams }: { searchPar
             </ul>
           </div>
 
-          <div className="
-            rounded-md border border-audit-border bg-white shadow-audit
-          ">
+          <div className="sl-panel">
             <div className="
               flex items-center justify-between border-b border-audit-border
               px-5 py-4
@@ -235,7 +212,7 @@ export default async function ProductDashboardPage({ searchParams }: { searchPar
                       <span className="font-semibold">{event.event_type}</span>
                       <span className="text-audit-muted">{formatTimestamp(event.created_at)}</span>
                     </div>
-                    <p className="mt-1 text-zinc-700">
+                    <p className="mt-1 text-audit-body">
                       {project?.client_name ?? "Unknown client"} - by {event.actor}
                       {event.is_demo ? " (demo)" : ""}
                     </p>
@@ -249,9 +226,7 @@ export default async function ProductDashboardPage({ searchParams }: { searchPar
         </div>
       </section>
 
-      <section className="
-        rounded-md border border-audit-border bg-white shadow-audit
-      ">
+      <section className="sl-panel">
         <div className="border-b border-audit-border px-5 py-4">
           <h2 className="text-xl font-semibold">Revenue by project</h2>
           <p className="mt-1 text-sm text-audit-muted">
@@ -283,8 +258,9 @@ export default async function ProductDashboardPage({ searchParams }: { searchPar
                       {project.client_name}
                       {project.is_demo ? (
                         <span className="
-                          ml-2 rounded-sm border border-zinc-300 bg-zinc-100
-                          px-1.5 py-0.5 text-xs font-semibold text-zinc-700
+                          ml-2 rounded-sm border border-audit-border
+                          bg-audit-soft px-1.5 py-0.5 text-xs font-semibold
+                          text-audit-body
                         ">
                           Demo
                         </span>
@@ -317,9 +293,7 @@ export default async function ProductDashboardPage({ searchParams }: { searchPar
         </div>
       </section>
 
-      <section className="
-        rounded-md border border-audit-border bg-white shadow-audit
-      ">
+      <section className="sl-panel">
         <div className="border-b border-audit-border px-5 py-4">
           <h2 className="text-xl font-semibold">Revenue by client</h2>
         </div>
@@ -347,8 +321,9 @@ export default async function ProductDashboardPage({ searchParams }: { searchPar
                       {row.client_name}
                       {row.is_demo ? (
                         <span className="
-                          ml-2 rounded-sm border border-zinc-300 bg-zinc-100
-                          px-1.5 py-0.5 text-xs font-semibold text-zinc-700
+                          ml-2 rounded-sm border border-audit-border
+                          bg-audit-soft px-1.5 py-0.5 text-xs font-semibold
+                          text-audit-body
                         ">
                           Demo
                         </span>
@@ -371,6 +346,6 @@ export default async function ProductDashboardPage({ searchParams }: { searchPar
           </table>
         </div>
       </section>
-    </div>
+    </Page>
   );
 }

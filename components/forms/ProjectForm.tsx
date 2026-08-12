@@ -44,7 +44,8 @@ export function ProjectForm() {
 
   return (
     <form onSubmit={onSubmit} className="
-      grid gap-5 rounded-md border border-audit-border bg-white p-6 shadow-audit
+      sl-panel grid gap-5 p-5
+      sm:p-6
     ">
       <div className="
         grid gap-4
@@ -52,24 +53,18 @@ export function ProjectForm() {
       ">
         <label className="block">
           <span className="text-sm font-medium">Client name</span>
-          <input name="client_name" className="
-            mt-2 w-full rounded-md border border-audit-border px-3 py-2
-          " required />
+          <input name="client_name" className="sl-field mt-2" required />
         </label>
         <label className="block">
           <span className="text-sm font-medium">Project name</span>
-          <input name="project_name" className="
-            mt-2 w-full rounded-md border border-audit-border px-3 py-2
-          " required />
+          <input name="project_name" className="sl-field mt-2" required />
         </label>
         <label className="block">
           <span className="text-sm font-medium">Hourly or blended rate</span>
           <input
             name="hourly_rate"
             inputMode="decimal"
-            className="
-              mt-2 w-full rounded-md border border-audit-border px-3 py-2
-            "
+            className="sl-field mt-2"
             required
           />
         </label>
@@ -78,9 +73,7 @@ export function ProjectForm() {
           <input
             name="project_value"
             inputMode="decimal"
-            className="
-              mt-2 w-full rounded-md border border-audit-border px-3 py-2
-            "
+            className="sl-field mt-2"
           />
         </label>
       </div>
@@ -90,27 +83,19 @@ export function ProjectForm() {
         <textarea
           name="sow_text"
           rows={10}
-          className="
-            mt-2 w-full rounded-md border border-audit-border px-3 py-2
-          "
+          className="sl-field mt-2"
           required
         />
       </label>
 
       {error ? <div className="
-        rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700
+        rounded-md border border-critical/25 bg-critical/5 p-3 text-sm
+        text-critical
       ">{error}</div> : null}
 
-      <button
-        type="submit"
-        disabled={isSubmitting}
-        className="
-          inline-flex h-11 items-center justify-center rounded-md bg-ink px-4
-          text-sm font-semibold text-white
-          hover:bg-zinc-800
-          disabled:cursor-not-allowed disabled:opacity-60
-        "
-      >
+      <button type="submit" disabled={isSubmitting} className="
+        sl-button-primary
+      ">
         {isSubmitting ? "Creating project..." : "Create project"}
       </button>
     </form>

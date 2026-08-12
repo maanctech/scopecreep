@@ -48,8 +48,8 @@ export function LeadStatusForm({ leadId, status }: { leadId: string; status: Lea
           <option key={item}>{item}</option>
         ))}
       </select>
-      {success ? <div className="text-xs text-emerald-700">{success}</div> : null}
-      {error ? <div className="text-xs text-red-700">{error}</div> : null}
+      {success ? <div className="text-xs text-signal">{success}</div> : null}
+      {error ? <div className="text-xs text-critical">{error}</div> : null}
     </div>
   );
 }

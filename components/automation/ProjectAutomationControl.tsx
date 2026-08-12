@@ -17,7 +17,8 @@ export function ProjectAutomationControl({
   );
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const active = automation?.status === "Active";
+  const enabled = automation?.desired_state === "Enabled";
+  const needsAttention = automation?.health_status === "Needs Attention";
 
   async function update(enabled: boolean) {
     setBusy(true);
@@ -55,16 +56,20 @@ export function ProjectAutomationControl({
         <div>
           <p className="text-sm font-medium text-audit-muted">Private monitoring worker</p>
           <h2 className="mt-1 text-xl font-semibold">Project monitoring</h2>
-          <p className="mt-2 max-w-2xl text-sm/6 text-zinc-700">
+          <p className="mt-2 max-w-2xl text-sm/6 text-audit-body">
             Synchronizes tested sources and prepares internal findings. It never contacts
             clients or makes billing decisions.
           </p>
         </div>
         <span className="
-          rounded-sm border border-zinc-300 bg-white px-2 py-1 text-xs
+          rounded-sm border border-audit-border bg-white px-2 py-1 text-xs
           font-semibold
         ">
-          {automation?.running ? "Running" : automation?.status || "Not enabled"}
+          {automation?.running
+            ? "Running"
+            : automation
+              ? `${automation.desired_state} / ${automation.health_status}`
+              : "Not enabled"}
         </span>
       </div>
       <div className="mt-5 flex flex-wrap items-end gap-3">
@@ -73,9 +78,9 @@ export function ProjectAutomationControl({
           <select
             value={intervalMinutes}
             onChange={(event) => setIntervalMinutes(Number(event.target.value))}
-            disabled={busy || active}
+            disabled={busy || enabled}
             className="
-              ml-2 min-h-11 rounded-md border border-zinc-400 bg-white px-3
+              ml-2 min-h-11 rounded-md border border-audit-border bg-white px-3
             "
           >
             <option value={15}>15 minutes</option>
@@ -85,38 +90,51 @@ export function ProjectAutomationControl({
         </label>
         <button
           type="button"
-          onClick={() => void update(!active)}
+          onClick={() => void update(needsAttention ? true : !enabled)}
           disabled={busy}
-          className="
-            inline-flex min-h-11 items-center gap-2 rounded-md bg-ink px-4
-            text-sm font-semibold text-white
-            disabled:opacity-50
-          "
+          className={needsAttention || !enabled ? "sl-button-primary" : `
+            sl-button-secondary
+          `}
         >
           {busy ? (
             <RefreshCw className="size-4 animate-spin" aria-hidden="true" />
-          ) : active ? (
+          ) : enabled && !needsAttention ? (
             <Pause className="size-4" aria-hidden="true" />
           ) : (
             <Play className="size-4" aria-hidden="true" />
           )}
-          {active ? "Pause monitoring" : "Enable monitoring"}
+          {needsAttention
+            ? "Retry monitoring"
+            : enabled
+              ? "Pause monitoring"
+              : "Enable monitoring"}
         </button>
+        {enabled && needsAttention ? (
+          <button
+            type="button"
+            onClick={() => void update(false)}
+            disabled={busy}
+            className="sl-button-secondary"
+          >
+            <Pause className="size-4" aria-hidden="true" />
+            Pause monitoring
+          </button>
+        ) : null}
       </div>
-      {automation?.next_run_at && active ? (
-        <p className="mt-3 text-xs text-zinc-600">
+      {automation?.next_run_at && enabled && !needsAttention ? (
+        <p className="mt-3 text-xs text-audit-muted">
           Next scheduled check: {new Date(automation.next_run_at).toLocaleString()}
         </p>
       ) : null}
       {automation?.last_error ? (
         <p className="
-          mt-3 rounded-sm border border-amber-200 bg-amber-50 p-3 text-sm
-          text-amber-950
+          mt-3 rounded-sm border border-audit-amber/30 bg-audit-amber/5 p-3
+          text-sm text-audit-amber
         ">
           {automation.last_error}
         </p>
       ) : null}
-      {message ? <p className="mt-3 text-sm text-zinc-700" role="status">{message}</p> : null}
+      {message ? <p className="mt-3 text-sm text-audit-body" role="status">{message}</p> : null}
     </section>
   );
 }

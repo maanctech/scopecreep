@@ -50,7 +50,8 @@ export function OnboardingForm() {
 
   return (
     <form onSubmit={onSubmit} className="
-      grid gap-5 rounded-md border border-audit-border bg-white p-6 shadow-audit
+      sl-panel grid gap-5 p-5
+      sm:p-6
     ">
       <div className="
         grid gap-4
@@ -61,9 +62,7 @@ export function OnboardingForm() {
           sm:col-span-1
         ">
           <span className="text-sm font-medium">Client name</span>
-          <input name="client_name" maxLength={160} className="
-            mt-2 w-full rounded-md border border-audit-border px-3 py-2
-          " required />
+          <input name="client_name" maxLength={160} className="sl-field mt-2" required />
         </label>
         <label className="block">
           <span className="text-sm font-medium">Hourly or blended rate</span>
@@ -73,9 +72,7 @@ export function OnboardingForm() {
             inputMode="decimal"
             min="0.01"
             step="0.01"
-            className="
-              mt-2 w-full rounded-md border border-audit-border px-3 py-2
-            "
+            className="sl-field mt-2"
             required
           />
         </label>
@@ -87,9 +84,7 @@ export function OnboardingForm() {
             inputMode="decimal"
             min="0"
             step="0.01"
-            className="
-              mt-2 w-full rounded-md border border-audit-border px-3 py-2
-            "
+            className="sl-field mt-2"
           />
         </label>
       </div>
@@ -100,9 +95,7 @@ export function OnboardingForm() {
           name="sow_text"
           rows={8}
           maxLength={MAX_SOW_LENGTH}
-          className="
-            mt-2 w-full rounded-md border border-audit-border px-3 py-2
-          "
+          className="sl-field mt-2"
           required
         />
       </label>
@@ -113,9 +106,7 @@ export function OnboardingForm() {
           name="message_export_text"
           rows={8}
           maxLength={MAX_MESSAGE_LENGTH * 6}
-          className="
-            mt-2 w-full rounded-md border border-audit-border px-3 py-2
-          "
+          className="sl-field mt-2"
           required
         />
       </label>
@@ -126,28 +117,20 @@ export function OnboardingForm() {
           name="suspected_scope_creep_notes"
           rows={4}
           maxLength={2000}
-          className="
-            mt-2 w-full rounded-md border border-audit-border px-3 py-2
-          "
+          className="sl-field mt-2"
         />
       </label>
 
       <div aria-live="polite">
         {error ? <div className="
-          rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700
+          rounded-md border border-critical/25 bg-critical/5 p-3 text-sm
+          text-critical
         ">{error}</div> : null}
       </div>
 
-      <button
-        type="submit"
-        disabled={isSubmitting}
-        className="
-          inline-flex h-11 items-center justify-center rounded-md bg-ink px-4
-          text-sm font-semibold text-white
-          hover:bg-zinc-800
-          disabled:cursor-not-allowed disabled:opacity-60
-        "
-      >
+      <button type="submit" disabled={isSubmitting} className="
+        sl-button-primary w-full
+      ">
         {isSubmitting ? "Saving intake..." : "Create audit workspace"}
       </button>
     </form>

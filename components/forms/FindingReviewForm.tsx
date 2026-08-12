@@ -222,10 +222,10 @@ export function FindingReviewForm({ finding }: { finding: ScopeFinding }) {
               disabled={isSubmitting}
               onClick={() => submitAction(action)}
               className="
-                rounded-md border border-audit-border bg-white px-4 py-3
+                rounded-sm border border-audit-border bg-white px-4 py-3
                 text-left
                 hover:bg-audit-soft
-                focus:ring-2 focus:ring-ink focus:outline-hidden
+                focus:ring-2 focus:ring-signal focus:outline-hidden
                 disabled:cursor-not-allowed disabled:opacity-60
               "
             >
@@ -242,7 +242,7 @@ export function FindingReviewForm({ finding }: { finding: ScopeFinding }) {
       </div>
 
       <form onSubmit={saveDetails} className="
-        space-y-4 rounded-md border border-audit-border bg-audit-soft p-4
+        space-y-4 border-y border-audit-border bg-white p-4
       ">
         <h4 className="text-base font-semibold">Your review details</h4>
         <div className="
@@ -258,10 +258,7 @@ export function FindingReviewForm({ finding }: { finding: ScopeFinding }) {
               value={approvedHours}
               onChange={(event) => setApprovedHours(event.target.value)}
               disabled={!amountsEditable || isSubmitting}
-              className="
-                mt-2 w-full rounded-md border border-audit-border px-3 py-2
-                disabled:bg-zinc-100
-              "
+              className="sl-field mt-2"
             />
           </label>
           <label className="block">
@@ -273,10 +270,7 @@ export function FindingReviewForm({ finding }: { finding: ScopeFinding }) {
               value={approvedDollars}
               onChange={(event) => setApprovedDollars(event.target.value)}
               disabled={!amountsEditable || isSubmitting}
-              className="
-                mt-2 w-full rounded-md border border-audit-border px-3 py-2
-                disabled:bg-zinc-100
-              "
+              className="sl-field mt-2"
             />
           </label>
         </div>
@@ -304,9 +298,7 @@ export function FindingReviewForm({ finding }: { finding: ScopeFinding }) {
             value={explanation}
             onChange={(event) => setExplanation(event.target.value)}
             disabled={isSubmitting}
-            className="
-              mt-2 w-full rounded-md border border-audit-border px-3 py-2
-            "
+            className="sl-field mt-2"
           />
         </label>
         <label className="block">
@@ -316,21 +308,14 @@ export function FindingReviewForm({ finding }: { finding: ScopeFinding }) {
             value={note}
             onChange={(event) => setNote(event.target.value)}
             disabled={isSubmitting}
-            className="
-              mt-2 w-full rounded-md border border-audit-border px-3 py-2
-            "
+            className="sl-field mt-2"
           />
         </label>
 
         <button
           type="submit"
           disabled={isSubmitting}
-          className="
-            inline-flex h-11 items-center justify-center rounded-md bg-ink px-5
-            text-sm font-semibold text-white
-            hover:bg-zinc-800
-            disabled:cursor-not-allowed disabled:opacity-60
-          "
+          className="sl-button-primary"
         >
           {isSubmitting ? "Saving..." : "Save review details"}
         </button>
@@ -339,15 +324,16 @@ export function FindingReviewForm({ finding }: { finding: ScopeFinding }) {
       <div aria-live="polite" role="status">
         {success ? (
           <div className="
-            rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm
-            text-emerald-800
+            rounded-md border border-signal/25 bg-signal/5 p-3 text-sm
+            text-signal
           ">
             {success}
           </div>
         ) : null}
         {error ? (
           <div className="
-            rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700
+            rounded-md border border-critical/25 bg-critical/5 p-3 text-sm
+            text-critical
           ">
             {error} {error.includes("changed since") ? "Reload the page to see the latest version." : ""}
           </div>

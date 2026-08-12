@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { BillingSummary } from "@/components/billing/BillingSummary";
 import { Disclaimer } from "@/components/ui/Disclaimer";
+import { Page, PageHeader, SectionHeader } from "@/components/ui/Page";
 import { formatCents } from "@/lib/domain/money";
 import { computeRevenueTotals } from "@/lib/domain/revenueTotals";
 import { getBillingEvents, getFindings } from "@/lib/store";
@@ -71,35 +72,21 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
   );
 
   return (
-    <div className="space-y-8">
-      <section className="
-        flex flex-col gap-4 border-b border-audit-border pb-7
-        lg:flex-row lg:items-end lg:justify-between
-      ">
-        <div>
-          <h1 className="text-3xl font-semibold">Billing history</h1>
-          <p className="mt-3 max-w-2xl text-base/7 text-zinc-700">
-            A permanent record of every billing decision and change. Events can never be edited or
-            deleted. This tracker never charges clients or sends invoices.
-          </p>
-        </div>
-        <a
-          href="/api/billing-events?format=csv"
-          className="
-            inline-flex h-11 items-center rounded-md border border-audit-border
-            bg-white px-4 text-sm font-semibold
-            hover:bg-audit-soft
-          "
-        >
-          Download CSV
-        </a>
-      </section>
+    <Page>
+      <PageHeader
+        eyebrow="Append-only financial record"
+        title="Billing history"
+        description="Every professional decision and financial transition remains auditable. ScopeLedger never charges clients, sends invoices, or marks an external payment automatically."
+        actions={<a href="/api/billing-events?format=csv" className="
+          sl-button-secondary
+        ">Download CSV</a>}
+      />
 
       <Disclaimer />
 
       {realFindings.length ? (
         <section className="space-y-4">
-          <h2 className="text-xl font-semibold">Your live totals</h2>
+          <SectionHeader title="Your live totals" description="These buckets represent distinct workflow states and are never added together." />
           <BillingSummary totals={computeRevenueTotals(realFindings)} />
         </section>
       ) : null}
@@ -109,8 +96,9 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
           <div>
             <h2 className="text-xl font-semibold">Demo totals</h2>
             <p className="
-              mt-1 inline-flex rounded-md border border-amber-300 bg-amber-50
-              px-2.5 py-1 text-sm font-semibold text-amber-900
+              mt-1 inline-flex rounded-md border border-audit-amber/30
+              bg-audit-amber/5 px-2.5 py-1 text-sm font-semibold
+              text-audit-amber
             ">
               Fictional demonstration data
             </p>
@@ -122,8 +110,7 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
       <form
         method="GET"
         className="
-          grid gap-4 rounded-md border border-audit-border bg-white p-5
-          shadow-audit
+          sl-panel grid gap-4 p-5
           sm:grid-cols-2
           lg:grid-cols-3
         "
@@ -133,9 +120,7 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
           <select
             name="client"
             defaultValue={filters.client ?? ""}
-            className="
-              mt-2 w-full rounded-md border border-audit-border px-3 py-2
-            "
+            className="sl-field mt-2"
           >
             <option value="">All clients</option>
             {clients.map((client) => (
@@ -148,9 +133,7 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
           <select
             name="project"
             defaultValue={filters.project ?? ""}
-            className="
-              mt-2 w-full rounded-md border border-audit-border px-3 py-2
-            "
+            className="sl-field mt-2"
           >
             <option value="">All projects</option>
             {projects.map((project) => (
@@ -165,9 +148,7 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
           <select
             name="type"
             defaultValue={filters.type ?? ""}
-            className="
-              mt-2 w-full rounded-md border border-audit-border px-3 py-2
-            "
+            className="sl-field mt-2"
           >
             <option value="">All event types</option>
             {BILLING_EVENT_TYPES.map((item) => (
@@ -180,9 +161,7 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
           <select
             name="status"
             defaultValue={filters.status ?? ""}
-            className="
-              mt-2 w-full rounded-md border border-audit-border px-3 py-2
-            "
+            className="sl-field mt-2"
           >
             <option value="">All statuses</option>
             {WORKFLOW_STATUSES.map((item) => (
@@ -196,9 +175,7 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
             type="date"
             name="from"
             defaultValue={filters.from ?? ""}
-            className="
-              mt-2 w-full rounded-md border border-audit-border px-3 py-2
-            "
+            className="sl-field mt-2"
           />
         </label>
         <label className="block">
@@ -207,38 +184,26 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
             type="date"
             name="to"
             defaultValue={filters.to ?? ""}
-            className="
-              mt-2 w-full rounded-md border border-audit-border px-3 py-2
-            "
+            className="sl-field mt-2"
           />
         </label>
         <div className="flex items-end gap-3">
           <button
             type="submit"
-            className="
-              inline-flex h-11 items-center rounded-md bg-ink px-5 text-sm
-              font-semibold text-white
-              hover:bg-zinc-800
-            "
+            className="sl-button-primary"
           >
             Apply filters
           </button>
           <Link
             href="/app/billing"
-            className="
-              inline-flex h-11 items-center rounded-md border
-              border-audit-border px-4 text-sm font-semibold
-              hover:bg-audit-soft
-            "
+            className="sl-button-secondary"
           >
             Clear
           </Link>
         </div>
       </form>
 
-      <section className="
-        rounded-md border border-audit-border bg-white shadow-audit
-      ">
+      <section className="sl-panel">
         <div className="border-b border-audit-border px-5 py-4">
           <h2 className="text-xl font-semibold">
             {rows.length} event{rows.length === 1 ? "" : "s"}
@@ -272,8 +237,9 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
                       {event.event_type}
                       {event.is_demo ? (
                         <span className="
-                          ml-2 rounded-sm border border-zinc-300 bg-zinc-100
-                          px-1.5 py-0.5 text-xs font-semibold text-zinc-700
+                          ml-2 rounded-sm border border-audit-border
+                          bg-audit-soft px-1.5 py-0.5 text-xs font-semibold
+                          text-audit-body
                         ">
                           Demo
                         </span>
@@ -291,7 +257,9 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
                         "Unavailable"
                       )}
                     </td>
-                    <td className="px-5 py-4">
+                    <td data-financial-value className="
+                      px-5 py-4 font-semibold text-approved
+                    ">
                       {event.amount_cents === null ? "-" : formatCents(event.amount_cents)}
                     </td>
                     <td className="px-5 py-4">{event.actor}</td>
@@ -309,6 +277,6 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
           </table>
         </div>
       </section>
-    </div>
+    </Page>
   );
 }

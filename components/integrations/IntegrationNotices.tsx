@@ -13,7 +13,7 @@ export function IntegrationNotices({
         <div
           role="alert"
           className="
-            rounded-md border border-red-300 bg-red-50 p-4 text-red-900
+            rounded-md border border-critical/25 bg-critical/5 p-4 text-critical
           "
         >
           {notice.error}
@@ -23,8 +23,7 @@ export function IntegrationNotices({
         <div
           role="status"
           className="
-            rounded-md border border-emerald-300 bg-emerald-50 p-4
-            text-emerald-900
+            rounded-md border border-signal/25 bg-signal/5 p-4 text-signal
           "
         >
           {notice.success}
@@ -32,10 +31,10 @@ export function IntegrationNotices({
       ) : null}
       {oneTimeSecret ? (
         <section className="
-          rounded-md border-2 border-amber-400 bg-amber-50 p-5
+          rounded-md border-2 border-audit-amber/30 bg-audit-amber/5 p-5
         ">
           <h2 className="text-lg font-semibold">One-time webhook secret</h2>
-          <p className="mt-2 text-sm text-amber-950">
+          <p className="mt-2 text-sm text-audit-amber">
             This value will not be shown again. Store it in the sending
             system&apos;s secret manager.
           </p>

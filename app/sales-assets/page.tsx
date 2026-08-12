@@ -1,4 +1,5 @@
 import { getSalesTemplates } from "@/lib/store";
+import { Page, PageHeader } from "@/components/ui/Page";
 
 export const dynamic = "force-dynamic";
 
@@ -6,23 +7,15 @@ export default async function SalesAssetsPage() {
   const templates = await getSalesTemplates();
 
   return (
-    <div className="space-y-8">
-      <section className="border-b border-audit-border pb-7">
-        <h1 className="text-3xl font-semibold">Sales assets</h1>
-        <p className="mt-3 max-w-2xl text-sm/6 text-zinc-700">
-          Stored founder scripts and templates for selling the audit, revealing findings,
-          and closing monthly monitoring.
-        </p>
-      </section>
+    <Page>
+      <PageHeader eyebrow="Founder operations" title="Sales assets" description="Private scripts and templates for qualifying an audit, revealing evidence, and proposing professional-controlled monitoring." />
 
       <div className="
         grid gap-5
         lg:grid-cols-2
       ">
         {templates.map((template) => (
-          <article key={template.id} className="
-            rounded-md border border-audit-border bg-white p-5 shadow-audit
-          ">
+          <article key={template.id} className="sl-panel p-5">
             <div className="
               text-xs font-semibold tracking-[0.14em] text-audit-muted uppercase
             ">
@@ -31,13 +24,13 @@ export default async function SalesAssetsPage() {
             <h2 className="mt-2 text-xl font-semibold">{template.title}</h2>
             <pre className="
               mt-4 rounded-md border border-audit-border bg-audit-soft p-4
-              text-sm/6 whitespace-pre-wrap text-zinc-800
+              text-sm/6 whitespace-pre-wrap text-ink
             ">
               {template.body}
             </pre>
           </article>
         ))}
       </div>
-    </div>
+    </Page>
   );
 }

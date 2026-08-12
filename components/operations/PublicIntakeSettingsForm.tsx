@@ -40,17 +40,15 @@ export function PublicIntakeSettingsForm({ initialEnabled }: { initialEnabled: b
   }
 
   const buttonTone = enabled
-    ? "border-red-300 text-red-800"
-    : "border-ink bg-ink text-white";
+    ? "border-critical/25 text-critical"
+    : "border-signal bg-signal text-white";
 
   return (
-    <div className="
-      rounded-md border border-audit-border bg-white p-5 shadow-audit
-    ">
+    <div className="sl-panel p-5">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h2 className="text-xl font-semibold">Public audit intake</h2>
-          <p className="mt-2 max-w-2xl text-sm/6 text-zinc-700">
+          <p className="mt-2 max-w-2xl text-sm/6 text-audit-body">
             Controls whether the public request form accepts leads and confidential audit material.
             Submission credentials expire after 24 hours and can be used once.
           </p>
@@ -74,8 +72,8 @@ export function PublicIntakeSettingsForm({ initialEnabled }: { initialEnabled: b
         <div role="status" aria-live="polite" className={`
           mt-4 rounded-md border p-3 text-sm
           ${message.kind === "success" ? `
-            border-emerald-300 bg-emerald-50 text-emerald-900
-          ` : `border-red-300 bg-red-50 text-red-900`}
+            border-signal/25 bg-signal/5 text-signal
+          ` : `border-critical/25 bg-critical/5 text-critical`}
         `}>
           {message.text}
         </div>

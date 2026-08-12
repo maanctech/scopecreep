@@ -1,15 +1,11 @@
 import { ProjectForm } from "@/components/forms/ProjectForm";
+import { Page, PageHeader } from "@/components/ui/Page";
 
 export default function NewProjectPage() {
   return (
-    <div className="mx-auto max-w-5xl space-y-8">
-      <section className="border-b border-audit-border pb-6">
-        <h1 className="text-3xl font-semibold">Create client project</h1>
-        <p className="mt-3 max-w-2xl text-sm/6 text-zinc-700">
-          Paste the SOW text first. Message analysis runs from the project workspace.
-        </p>
-      </section>
+    <Page className="mx-auto max-w-5xl">
+      <PageHeader eyebrow="New engagement" title="Create client project" description="Add the commercial terms and governing SOW first. The boundary map must receive professional approval before any request can be analyzed." />
       <ProjectForm />
-    </div>
+    </Page>
   );
 }

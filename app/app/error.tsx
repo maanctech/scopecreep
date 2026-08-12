@@ -8,13 +8,16 @@ export default function AppError({
   reset: () => void;
 }) {
   return (
-    <div className="rounded-md border border-red-200 bg-red-50 p-8" role="alert">
-      <h1 className="text-xl font-semibold text-red-900">Something went wrong</h1>
-      <p className="mt-2 max-w-2xl text-base/7 text-red-800">
+    <div className="
+      mx-auto max-w-3xl border-y border-critical/25 bg-critical/5 p-6
+      sm:p-8
+    " role="alert">
+      <h1 className="text-xl font-semibold text-critical">Something went wrong</h1>
+      <p className="mt-2 max-w-2xl text-base/7 text-critical">
         {error.message ||
           "The workspace could not be loaded. Your data was not changed by this error."}
       </p>
-      <p className="mt-2 max-w-2xl text-sm/6 text-red-800">
+      <p className="mt-2 max-w-2xl text-sm/6 text-critical">
         Try again once. If the problem continues, ask the installation administrator to review
         System diagnostics and server logs. Do not re-enter or regenerate client data until the
         storage connection is confirmed healthy.
@@ -22,11 +25,7 @@ export default function AppError({
       <button
         type="button"
         onClick={reset}
-        className="
-          mt-4 inline-flex h-11 items-center rounded-md bg-ink px-5 text-sm
-          font-semibold text-white
-          hover:bg-zinc-800
-        "
+        className="sl-button-danger mt-5 border-critical bg-critical text-white"
       >
         Try again
       </button>

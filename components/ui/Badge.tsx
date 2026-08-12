@@ -1,17 +1,17 @@
 import type { Classification } from "@/lib/types";
 
 const tones: Record<Classification, string> = {
-  "In Scope": "border-emerald-200 bg-emerald-50 text-emerald-800",
-  "Possibly In Scope": "border-amber-200 bg-amber-50 text-amber-800",
-  "Out of Scope": "border-red-200 bg-red-50 text-red-800",
-  "Needs Human Review": "border-zinc-300 bg-zinc-100 text-zinc-800"
+  "In Scope": "border-approved/30 bg-approved/5 text-approved",
+  "Possibly In Scope": "border-audit-amber/30 bg-audit-amber/5 text-audit-amber",
+  "Out of Scope": "border-audit-amber/40 bg-audit-amber/8 text-audit-amber",
+  "Needs Human Review": "border-audit-border bg-audit-soft text-audit-muted"
 };
 
 export function Badge({ classification }: { classification: Classification }) {
   return (
     <span
       className={`
-        inline-flex items-center rounded-md border px-2.5 py-1 text-xs
+        sl-metadata inline-flex items-center rounded-sm border px-2.5 py-1
         font-semibold
         ${tones[classification]}
       `}

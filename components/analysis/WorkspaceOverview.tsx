@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/Page";
 
 type ApprovedContext = {
   sowVersionId: string;
@@ -19,31 +20,18 @@ export function WorkspaceOverview({
 }) {
   return (
     <>
-      <section className="border-b border-audit-border pb-7">
-        <p className="text-sm font-medium text-audit-muted">
-          Controlled scope comparison
-        </p>
-        <h1 className="mt-2 text-3xl font-semibold">Analyze communications</h1>
-        <p className="mt-3 max-w-3xl text-base/7 text-zinc-700">
-          Select only the client communications you want compared with the
-          approved agreement. AI creates private draft findings; it never makes
-          a billing decision or contacts a client.
-        </p>
-        <Link
-          href={`/app/projects/${projectId}`}
-          className="
-            mt-4 inline-flex min-h-11 items-center text-sm font-semibold
-            underline
-          "
-        >
-          Return to project
-        </Link>
-      </section>
+      <PageHeader
+        eyebrow="Controlled scope comparison"
+        title="Analyze communications"
+        description="Select only the client communications you want compared with the approved agreement. AI creates private draft findings; it never makes a billing decision or contacts a client."
+        actions={<Link href={`/app/projects/${projectId}`} className="
+          sl-button-secondary
+        ">Return to project</Link>}
+      />
 
       {approvedContext ? (
         <div className="
-          rounded-md border border-emerald-300 bg-emerald-50 p-4 text-sm
-          text-emerald-950
+          rounded-md border border-signal/25 bg-signal/5 p-4 text-sm text-signal
         ">
           Approved boundary map ready with{" "}
           {approvedContext.boundaryItemCount} evidence-linked items. Every job
@@ -53,7 +41,8 @@ export function WorkspaceOverview({
         <div
           role="alert"
           className="
-            rounded-md border border-amber-300 bg-amber-50 p-5 text-amber-950
+            rounded-md border border-audit-amber/30 bg-audit-amber/5 p-5
+            text-audit-amber
           "
         >
           <p className="font-semibold">Agreement approval required</p>
@@ -74,7 +63,7 @@ export function WorkspaceOverview({
         <div
           role="alert"
           className="
-            rounded-md border border-red-300 bg-red-50 p-4 text-red-900
+            rounded-md border border-critical/25 bg-critical/5 p-4 text-critical
           "
         >
           {notice.error}
@@ -84,8 +73,7 @@ export function WorkspaceOverview({
         <div
           role="status"
           className="
-            rounded-md border border-emerald-300 bg-emerald-50 p-4
-            text-emerald-900
+            rounded-md border border-signal/25 bg-signal/5 p-4 text-signal
           "
         >
           {notice.success}

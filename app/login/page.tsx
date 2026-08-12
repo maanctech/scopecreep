@@ -15,12 +15,12 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
 
   return (
     <section className="
-      mx-auto max-w-md rounded-md border border-audit-border bg-white p-6
-      shadow-audit
+      sl-panel mx-auto my-10 max-w-md p-6
+      sm:my-16 sm:p-8
     ">
-      <p className="text-sm font-semibold text-audit-muted uppercase">ScopeLedger</p>
-      <h1 className="mt-2 text-2xl font-semibold">Professional sign in</h1>
-      <p className="mt-2 text-sm text-audit-muted">Access is restricted to your internal revenue team.</p>
+      <p className="sl-eyebrow">Secure workspace</p>
+      <h1 className="mt-2 text-2xl font-semibold tracking-tight">Professional sign in</h1>
+      <p className="mt-2 text-sm/6 text-audit-muted">Access is restricted to authorized members of your internal revenue team.</p>
       <div className="mt-6"><LoginForm nextPath={next} /></div>
       <p className="mt-6 text-xs text-audit-muted">Forgot your password? A server administrator can generate a 30-minute reset link with the documented reset command.</p>
       <Link className="

@@ -110,9 +110,7 @@ export function CommunicationImportForm({
   }
 
   return (
-    <section className="
-      rounded-md border border-audit-border bg-white p-6 shadow-audit
-    ">
+    <section className="sl-panel p-6">
       <h2 className="text-xl font-semibold">1. Choose and preview</h2>
       <form onSubmit={submit} className="mt-5 grid gap-4">
         <label>
@@ -166,10 +164,7 @@ export function CommunicationImportForm({
         </label>
         <button
           disabled={busy}
-          className="
-            h-11 rounded-md bg-ink px-5 text-sm font-semibold text-white
-            disabled:opacity-60
-          "
+            className="sl-button-primary"
         >
           {busy ? "Reading import..." : "Preview import"}
         </button>
@@ -178,8 +173,8 @@ export function CommunicationImportForm({
         <div
           role="alert"
           className="
-            mt-4 rounded-md border border-red-300 bg-red-50 p-4 text-sm
-            text-red-900
+            mt-4 rounded-md border border-critical/25 bg-critical/5 p-4 text-sm
+            text-critical
           "
         >
           {notice.error}
@@ -189,8 +184,8 @@ export function CommunicationImportForm({
         <div
           role="status"
           className="
-            mt-4 rounded-md border border-emerald-300 bg-emerald-50 p-4 text-sm
-            text-emerald-900
+            mt-4 rounded-md border border-signal/25 bg-signal/5 p-4 text-sm
+            text-signal
           "
         >
           {notice.success}
@@ -201,12 +196,12 @@ export function CommunicationImportForm({
           <h2 className="text-xl font-semibold">
             2. Confirm recognized messages
           </h2>
-          <p className="mt-2 text-sm text-zinc-700">
+          <p className="mt-2 text-sm text-audit-body">
             {preview.messages.length} valid messages recognized. Review this
             sample before saving.
           </p>
           {preview.warnings.length ? (
-            <ul className="mt-3 list-disc pl-5 text-sm text-amber-900">
+            <ul className="mt-3 list-disc pl-5 text-sm text-audit-amber">
               {preview.warnings.slice(0, 10).map((warning) => (
                 <li key={warning}>{warning}</li>
               ))}
@@ -226,7 +221,7 @@ export function CommunicationImportForm({
                     message.senderEmail ||
                     "Sender not provided"}
                 </div>
-                <p className="mt-2 text-sm whitespace-pre-wrap text-zinc-700">
+                <p className="mt-2 text-sm whitespace-pre-wrap text-audit-body">
                   {message.text.slice(0, 500)}
                 </p>
               </article>
@@ -236,16 +231,13 @@ export function CommunicationImportForm({
             type="button"
             onClick={confirmImport}
             disabled={busy}
-            className="
-              mt-4 h-11 rounded-md bg-ink px-5 text-sm font-semibold text-white
-              disabled:opacity-60
-            "
+            className="sl-button-primary mt-4"
           >
             {busy
               ? "Importing..."
               : `Import ${preview.messages.length} messages`}
           </button>
-          <p className="mt-3 text-sm text-zinc-600">
+          <p className="mt-3 text-sm text-audit-muted">
             This saves private source records only. ScopeLedger will not analyze
             or send anything automatically.
           </p>

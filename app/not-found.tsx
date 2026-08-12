@@ -11,7 +11,7 @@ export default async function NotFound() {
     <div className="mx-auto max-w-2xl space-y-6 py-16">
       <p className="text-sm font-semibold text-audit-muted">404</p>
       <h1 className="text-3xl font-semibold">This page does not exist.</h1>
-      <p className="text-sm/6 text-zinc-700">
+      <p className="text-sm/6 text-audit-body">
         Check the address, or return to the workspace and navigate from there.
       </p>
       <Link

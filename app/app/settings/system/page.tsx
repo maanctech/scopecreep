@@ -1,11 +1,12 @@
 import Link from "next/link";
-import { Activity, Download, ShieldCheck } from "lucide-react";
+import { Download, ShieldCheck } from "lucide-react";
 import { requirePagePermission } from "@/lib/auth/current";
 import { auditLog, systemDiagnostics } from "@/lib/operations/diagnostics";
 import { listBackups } from "@/lib/backups/service";
 import { BackupPanel } from "@/components/operations/BackupPanel";
 import { hasPermission } from "@/lib/auth/authorization";
 import { PublicIntakeSettingsForm } from "@/components/operations/PublicIntakeSettingsForm";
+import { Page, PageHeader } from "@/components/ui/Page";
 import { getPublicIntakeSetting } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
@@ -24,58 +25,52 @@ export default async function SystemSettingsPage() {
   );
 
   return (
-    <div className="space-y-8">
-      <section className="border-b border-audit-border pb-7">
-        <div className="
-          flex items-center gap-2 text-sm font-medium text-audit-muted
-        ">
-          <Activity className="size-4" aria-hidden="true" /> System operations
-        </div>
-        <h1 className="mt-2 text-3xl font-semibold">Diagnostics and audit log</h1>
-        <p className="mt-3 max-w-3xl text-base/7 text-zinc-700">
-          Review local service health, migrations, job failures, integration state, and append-only operational events. Support exports redact sensitive business content and credentials.
-        </p>
-        <Link
-          href="/api/diagnostics/support-bundle"
-          className="
-            mt-5 inline-flex h-11 items-center gap-2 rounded-md border
-            border-ink px-4 text-sm font-semibold
-            hover:bg-audit-soft
-          "
-        >
-          <Download className="size-4" aria-hidden="true" /> Download redacted support bundle
-        </Link>
-      </section>
+    <Page>
+      <PageHeader
+        eyebrow="System operations"
+        title="Diagnostics and audit log"
+        description="Review application, worker, migration, integration, and backup state. Support exports redact business content and credentials, but operators must inspect them before sharing."
+        actions={<Link href="/api/diagnostics/support-bundle" className="
+          sl-button-secondary
+        "><Download className="size-4" aria-hidden="true" /> Download support bundle</Link>}
+      />
 
       {hasPermission(auth.role, "settings:write") ? (
         <PublicIntakeSettingsForm initialEnabled={publicIntakeEnabled} />
       ) : null}
 
-      <section className="
-        grid gap-4
-        sm:grid-cols-2
-        lg:grid-cols-4
-      ">
-        <div className="rounded-md border border-audit-border p-5"><div className="
-          text-sm text-audit-muted
-        ">Application</div><div className="
-          mt-2 text-xl font-semibold capitalize
-        ">{diagnostics.application.status}</div><p className="mt-1 text-sm">v{diagnostics.application.version}</p></div>
-        <div className="rounded-md border border-audit-border p-5"><div className="
-          text-sm text-audit-muted
-        ">Database</div><div className="mt-2 text-xl font-semibold capitalize">{diagnostics.application.database}</div><p className="
-          mt-1 text-sm
-        ">{diagnostics.application.latencyMs} ms check</p></div>
-        <div className="rounded-md border border-audit-border p-5"><div className="
-          text-sm text-audit-muted
-        ">Migrations</div><div className="mt-2 text-xl font-semibold">{diagnostics.migrations.applied}/{diagnostics.migrations.expected}</div><p className="
-          mt-1 text-sm
-        ">{diagnostics.migrations.pending.length ? `${diagnostics.migrations.pending.length} pending` : "Current"}</p></div>
-        <div className="rounded-md border border-audit-border p-5"><div className="
-          text-sm text-audit-muted
-        ">Failed jobs</div><div className="mt-2 text-xl font-semibold">{failedJobs.reduce((sum, row) => sum + Number(row.count), 0)}</div><p className="
-          mt-1 text-sm
-        ">Analysis and ingestion</p></div>
+      <section className="border-y border-ink bg-bright-paper" aria-label="System status register">
+        <div className="
+          grid divide-y divide-audit-border
+          sm:grid-cols-2 sm:divide-x sm:divide-y-0
+          lg:grid-cols-5
+        ">
+          <div className="p-4"><div className="sl-metadata text-audit-muted">SYS-01 / APPLICATION</div><div className="
+            mt-3 text-lg font-semibold capitalize
+          ">{diagnostics.application.status}</div><p className="mt-1 text-sm">v{diagnostics.application.version}</p></div>
+          <div className="p-4"><div className="sl-metadata text-audit-muted">SYS-02 / DATABASE</div><div className="
+            mt-3 text-lg font-semibold capitalize
+          ">{diagnostics.application.database}</div><p className="mt-1 text-sm">{diagnostics.application.latencyMs} ms check</p></div>
+          <div className="p-4"><div className="sl-metadata text-audit-muted">SYS-03 / WORKER</div><div className="
+            mt-3 text-lg font-semibold capitalize
+          ">{diagnostics.monitoringWorker.status}</div><p className="
+            mt-1 text-sm
+          ">
+            {diagnostics.monitoringWorker.lastSeenAt
+              ? `Last seen ${new Date(diagnostics.monitoringWorker.lastSeenAt).toLocaleString()}`
+              : "No heartbeat recorded"}
+          </p></div>
+          <div className="p-4"><div className="sl-metadata text-audit-muted">SYS-04 / MIGRATIONS</div><div className="
+            mt-3 text-lg font-semibold
+          ">{diagnostics.migrations.applied}/{diagnostics.migrations.expected}</div><p className="
+            mt-1 text-sm
+          ">{diagnostics.migrations.pending.length ? `${diagnostics.migrations.pending.length} pending` : "Current"}</p></div>
+          <div className="p-4"><div className="sl-metadata text-critical">SYS-05 / FAILED JOBS</div><div className="
+            mt-3 text-lg font-semibold
+          ">{failedJobs.reduce((sum, row) => sum + Number(row.count), 0)}</div><p className="
+            mt-1 text-sm
+          ">Analysis and ingestion</p></div>
+        </div>
       </section>
 
       <section className="
@@ -85,17 +80,16 @@ export default async function SystemSettingsPage() {
         <div>
           <h2 className="text-xl font-semibold">Configuration checks</h2>
           <div className="
-            mt-4 divide-y divide-audit-border rounded-md border
-            border-audit-border
+            mt-4 divide-y divide-audit-border border-y border-audit-border
           ">
             {diagnostics.configuration.map((check) => (
               <div key={check.name} className="flex gap-3 p-4">
                 <ShieldCheck className={`
                   mt-0.5 size-5
-                  ${check.ok ? `text-emerald-700` : `text-amber-700`}
+                  ${check.ok ? `text-signal` : `text-audit-amber`}
                 `} aria-hidden="true" />
                 <div><div className="font-semibold">{check.name}</div><p className="
-                  mt-1 text-sm text-zinc-700
+                  mt-1 text-sm text-audit-body
                 ">{check.message}</p></div>
               </div>
             ))}
@@ -103,9 +97,9 @@ export default async function SystemSettingsPage() {
         </div>
         <div>
           <h2 className="text-xl font-semibold">AI provider</h2>
-          <div className="mt-4 rounded-md border border-audit-border p-5">
+          <div className="mt-4 border-y border-audit-border bg-bright-paper p-5">
             <div className="text-lg font-semibold capitalize">{diagnostics.ai.provider}</div>
-            <p className="mt-2 text-sm text-zinc-700">{diagnostics.ai.message}</p>
+            <p className="mt-2 text-sm text-audit-body">{diagnostics.ai.message}</p>
             <dl className="
               mt-4 grid gap-3
               sm:grid-cols-2
@@ -120,13 +114,11 @@ export default async function SystemSettingsPage() {
 
       <section>
         <h2 className="text-xl font-semibold">Installation backups</h2>
-        <p className="mt-2 max-w-3xl text-sm/6 text-zinc-700">
+        <p className="mt-2 max-w-3xl text-sm/6 text-audit-body">
           A complete backup contains a PostgreSQL dump, encrypted integration-secret records, required local documents, migration metadata, and SHA-256 checksums. Restore is deliberately command-line only and requires explicit confirmation.
         </p>
         <div className="mt-4"><BackupPanel canCreate={auth.isSystemAdmin && hasPermission(auth.role, "backups:write")} /></div>
-        <div className="
-          mt-4 overflow-x-auto rounded-md border border-audit-border
-        ">
+        <div className="mt-4 overflow-x-auto border-y border-audit-border">
           <table className="min-w-full text-left text-sm">
             <caption className="sr-only">Installation backup history</caption>
             <thead className="bg-audit-soft"><tr><th className="p-3">Created</th><th className="
@@ -143,7 +135,7 @@ export default async function SystemSettingsPage() {
                 ">{backup.byte_size == null ? "-" : `${(backup.byte_size / 1024 / 1024).toFixed(1)} MB`}</td><td className="
                   max-w-md p-3 font-mono text-xs break-all
                 ">{backup.storage_path || backup.error_message || "In progress"}</td></tr>
-              )) : <tr><td colSpan={5} className="p-6 text-zinc-600">No installation backups have been recorded.</td></tr>}
+              )) : <tr><td colSpan={5} className="p-6 text-audit-muted">No installation backups have been recorded.</td></tr>}
             </tbody>
           </table>
         </div>
@@ -151,10 +143,8 @@ export default async function SystemSettingsPage() {
 
       <section>
         <h2 className="text-xl font-semibold">Append-only audit log</h2>
-        <p className="mt-2 text-sm text-zinc-700">Recent organization-scoped events. Sensitive metadata is redacted before display.</p>
-        <div className="
-          mt-4 overflow-x-auto rounded-md border border-audit-border
-        ">
+        <p className="mt-2 text-sm text-audit-body">Recent organization-scoped events. Sensitive metadata is redacted before display.</p>
+        <div className="mt-4 overflow-x-auto border-y border-audit-border">
           <table className="min-w-full text-left text-sm">
             <caption className="sr-only">Recent append-only audit events</caption>
             <thead className="bg-audit-soft"><tr><th className="p-3">Time</th><th className="
@@ -167,11 +157,11 @@ export default async function SystemSettingsPage() {
                 ">{event.action}</td><td className="p-3">{event.resourceType}</td><td className="
                   p-3 font-mono text-xs
                 ">{event.resourceId || "-"}</td></tr>
-              )) : <tr><td colSpan={4} className="p-6 text-zinc-600">No audit events have been recorded yet.</td></tr>}
+              )) : <tr><td colSpan={4} className="p-6 text-audit-muted">No audit events have been recorded yet.</td></tr>}
             </tbody>
           </table>
         </div>
       </section>
-    </div>
+    </Page>
   );
 }

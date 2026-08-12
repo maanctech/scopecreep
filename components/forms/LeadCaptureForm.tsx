@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-const businessTypes = ["Agency", "Software shop", "Consultancy", "Law firm", "Other service firm"];
 const teamSizes = ["1-5", "6-10", "11-25", "26-50", "51-100", "100+"];
 
 export function LeadCaptureForm() {
@@ -22,11 +21,11 @@ export function LeadCaptureForm() {
       email: String(form.get("email") || ""),
       company: String(form.get("company") || ""),
       website: String(form.get("website") || ""),
-      business_type: String(form.get("business_type") || ""),
+      business_type: "Agency",
       team_size: String(form.get("team_size") || ""),
-      average_project_value: String(form.get("average_project_value") || ""),
-      hourly_rate: String(form.get("hourly_rate") || ""),
-      pain_point: String(form.get("pain_point") || ""),
+      average_project_value: "",
+      hourly_rate: "",
+      pain_point: "Not collected in the public qualification form.",
       consent_to_contact: form.get("consent_to_contact") === "on"
     };
 
@@ -55,7 +54,8 @@ export function LeadCaptureForm() {
 
   return (
     <form onSubmit={onSubmit} className="
-      grid gap-5 rounded-md border border-audit-border bg-white p-6 shadow-audit
+      sl-panel grid gap-5 p-5
+      sm:p-6
     ">
       <div className="
         grid gap-4
@@ -64,118 +64,58 @@ export function LeadCaptureForm() {
         <label className="block">
           <span className="text-sm font-medium">Name</span>
           <input name="name" autoComplete="name" maxLength={120} className="
-            mt-2 w-full rounded-md border border-audit-border px-3 py-2
+            sl-field mt-2
           " required />
         </label>
         <label className="block">
-          <span className="text-sm font-medium">Email</span>
+          <span className="text-sm font-medium">Work email</span>
           <input
             name="email"
             type="email"
             autoComplete="email"
             maxLength={200}
-            className="
-              mt-2 w-full rounded-md border border-audit-border px-3 py-2
-            "
+            className="sl-field mt-2"
             required
           />
         </label>
         <label className="block">
           <span className="text-sm font-medium">Company</span>
           <input name="company" autoComplete="organization" maxLength={160} className="
-            mt-2 w-full rounded-md border border-audit-border px-3 py-2
+            sl-field mt-2
           " required />
         </label>
         <label className="block">
           <span className="text-sm font-medium">Website</span>
           <input name="website" type="url" autoComplete="url" maxLength={240} placeholder="https://" className="
-            mt-2 w-full rounded-md border border-audit-border px-3 py-2
-          " />
+            sl-field mt-2
+          " required />
         </label>
         <label className="block">
-          <span className="text-sm font-medium">Type of business</span>
-          <select name="business_type" className="
-            mt-2 w-full rounded-md border border-audit-border px-3 py-2
-          " required>
-            {businessTypes.map((type) => (
-              <option key={type}>{type}</option>
-            ))}
-          </select>
-        </label>
-        <label className="block">
-          <span className="text-sm font-medium">Team size</span>
-          <select name="team_size" className="
-            mt-2 w-full rounded-md border border-audit-border px-3 py-2
-          " required>
+          <span className="text-sm font-medium">Agency size</span>
+          <select name="team_size" className="sl-field mt-2" required defaultValue="">
+            <option value="" disabled>Select agency size</option>
             {teamSizes.map((size) => (
               <option key={size}>{size}</option>
             ))}
           </select>
         </label>
-        <label className="block">
-          <span className="text-sm font-medium">Average project value</span>
-          <input
-            name="average_project_value"
-            type="number"
-            inputMode="decimal"
-            min="0"
-            step="0.01"
-            className="
-              mt-2 w-full rounded-md border border-audit-border px-3 py-2
-            "
-            placeholder="45000"
-          />
-        </label>
-        <label className="block">
-          <span className="text-sm font-medium">Hourly or blended rate</span>
-          <input
-            name="hourly_rate"
-            type="number"
-            inputMode="decimal"
-            min="0.01"
-            step="0.01"
-            className="
-              mt-2 w-full rounded-md border border-audit-border px-3 py-2
-            "
-            placeholder="150"
-          />
-        </label>
       </div>
 
-      <label className="block">
-        <span className="text-sm font-medium">Biggest scope creep pain point</span>
-        <textarea
-          name="pain_point"
-          rows={5}
-          maxLength={2000}
-          className="
-            mt-2 w-full rounded-md border border-audit-border px-3 py-2
-          "
-          required
-        />
-      </label>
-
-      <label className="flex items-start gap-3 text-sm text-zinc-700">
+      <label className="flex items-start gap-3 text-sm text-audit-body">
         <input name="consent_to_contact" type="checkbox" className="mt-1 size-4" required />
         <span>I agree to be contacted about the free scope creep revenue leakage audit.</span>
       </label>
 
       <div aria-live="polite">
         {error ? <div className="
-          rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700
+          rounded-md border border-critical/25 bg-critical/5 p-3 text-sm
+          text-critical
         ">{error}</div> : null}
       </div>
 
-      <button
-        type="submit"
-        disabled={isSubmitting}
-        className="
-          inline-flex h-11 items-center justify-center rounded-md bg-ink px-4
-          text-sm font-semibold text-white
-          hover:bg-zinc-800
-          disabled:cursor-not-allowed disabled:opacity-60
-        "
-      >
+      <button type="submit" disabled={isSubmitting} className="
+        sl-button-primary w-full
+      ">
         {isSubmitting ? "Saving request..." : "Request free audit"}
       </button>
     </form>
