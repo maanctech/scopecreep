@@ -85,6 +85,12 @@ export async function getBillingEvents(): Promise<BillingEventWithContext[]> {
   return jsonStore.getBillingEvents();
 }
 
+export async function getProjectFindingEvents(projectId: string): Promise<Map<string, BillingEvent[]>> {
+  if (shouldUsePostgresStorage()) return postgresStore.getProjectFindingEvents(projectId);
+
+  return jsonStore.getProjectFindingEvents(projectId);
+}
+
 export async function saveMessageWithFinding(input: {
   project_id: string;
   source: MessageSource;

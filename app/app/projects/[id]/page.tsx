@@ -7,7 +7,7 @@ import { findingDisplayLabel } from "@/lib/domain/findingTransitions";
 import { formatDollars } from "@/lib/domain/money";
 import { computeRevenueTotals } from "@/lib/domain/revenueTotals";
 import { BillingSummary } from "@/components/billing/BillingSummary";
-import { getBillingEvents, getProjectDetail } from "@/lib/store";
+import { getProjectDetail, getProjectFindingEvents } from "@/lib/store";
 import type { ScopeFinding } from "@/lib/types";
 import { currentAuthContext } from "@/lib/auth/current";
 import { hasPermission } from "@/lib/auth/authorization";
@@ -53,7 +53,7 @@ export default async function ProjectPage({ params, searchParams }: ProjectPageP
 
   if (!detail) notFound();
 
-  const allEvents = await getBillingEvents();
+  const eventsByFinding = await getProjectFindingEvents(id);
   const findings = detail.messages
     .map((row) => row.finding)
     .filter((finding): finding is ScopeFinding => Boolean(finding));
@@ -187,13 +187,7 @@ export default async function ProjectPage({ params, searchParams }: ProjectPageP
               <FindingCard
                 key={row.message.id}
                 row={row}
-                events={
-                  row.finding
-                    ? allEvents
-                        .filter((item) => item.event.scope_finding_id === row.finding!.id)
-                        .map((item) => item.event)
-                    : []
-                }
+                events={row.finding ? eventsByFinding.get(row.finding.id) ?? [] : []}
                 canReview={canReview}
               />
             ))

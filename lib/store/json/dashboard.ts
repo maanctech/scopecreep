@@ -147,6 +147,19 @@ export async function getFindingDetail(findingId: string): Promise<
   };
 }
 
+export async function getProjectFindingEvents(projectId: string): Promise<Map<string, BillingEvent[]>> {
+  const store = await readLocalStore();
+  const byFinding = new Map<string, BillingEvent[]>();
+
+  for (const event of sortEventsNewestFirst(store.billingEvents)) {
+    if (event.project_id !== projectId || !event.scope_finding_id) continue;
+
+    byFinding.set(event.scope_finding_id, [...byFinding.get(event.scope_finding_id) ?? [], event]);
+  }
+
+  return byFinding;
+}
+
 export async function getBillingEvents(): Promise<BillingEventWithContext[]> {
   const store = await readLocalStore();
 
