@@ -41,7 +41,17 @@ export type FindingBucket =
   | "rejected"
   | "none";
 
-export function findingBucket(finding: ScopeFinding): FindingBucket {
+/**
+ * Only these fields decide a bucket or a total. Naming them lets the store load
+ * six columns for a dashboard instead of every column of every finding, without
+ * a second copy of the rules living in SQL.
+ */
+export type RevenueRelevantFinding = Pick<
+  ScopeFinding,
+  "classification" | "estimated_revenue" | "billing_decision" | "workflow_status" | "approved_amount_cents" | "is_demo"
+>;
+
+export function findingBucket(finding: RevenueRelevantFinding): FindingBucket {
   switch (finding.billing_decision) {
     case "Undecided":
       return finding.classification === "In Scope" ? "none" : "needs_review";
@@ -97,7 +107,7 @@ export function emptyRevenueTotals(): RevenueTotals {
   };
 }
 
-export function computeRevenueTotals(findings: ScopeFinding[]): RevenueTotals {
+export function computeRevenueTotals(findings: RevenueRelevantFinding[]): RevenueTotals {
   const totals = emptyRevenueTotals();
 
   for (const finding of findings) {
@@ -146,7 +156,7 @@ export function computeRevenueTotals(findings: ScopeFinding[]): RevenueTotals {
  * Fictional demo records and future real records are totaled separately and
  * never merged, per the Phase 1 requirements.
  */
-export function computeSplitRevenueTotals(findings: ScopeFinding[]): {
+export function computeSplitRevenueTotals(findings: RevenueRelevantFinding[]): {
   demo: RevenueTotals;
   real: RevenueTotals;
 } {

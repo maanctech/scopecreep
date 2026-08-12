@@ -1,5 +1,12 @@
 export { createLead, updateLeadStatus, createAuditRequest, createProject } from "@/lib/store/postgres/intake";
-export { getAppDashboard, getProjectDetail, getFindings, getFindingDetail, getBillingEvents } from "@/lib/store/postgres/dashboard";
+export {
+  getAppDashboard,
+  getProjectDetail,
+  getFindings,
+  getFindingDetail,
+  getBillingEvents,
+  getProjectFindingEvents
+} from "@/lib/store/postgres/dashboard";
 export { saveMessageWithFinding, updateFindingDetails, performFindingAction } from "@/lib/store/postgres/findings";
 export {
   readAuditReport,

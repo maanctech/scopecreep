@@ -3,7 +3,7 @@ import type { PoolClient } from "pg";
 import { transaction } from "@/lib/db/client";
 import { cents, publicOrganizationId, withStoreContext, type DbRow } from "@/lib/store/postgres/client";
 import { withTenant } from "@/lib/db/tenantContext";
-import { findOrCreateCompany } from "@/lib/store/postgres/projections";
+import { findOrCreateCompany } from "@/lib/store/postgres/companies";
 import { mapAuditRequest, mapLead, mapProject } from "@/lib/store/postgres/mappers";
 import { splitSowSections } from "@/lib/sow/extraction";
 import { NotFoundError } from "@/lib/storeErrors";

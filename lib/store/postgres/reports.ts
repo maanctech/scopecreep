@@ -1,7 +1,18 @@
 import { createHash, randomUUID } from "node:crypto";
 import { query, transaction } from "@/lib/db/client";
 import { cents, withStoreContext, type DbRow } from "@/lib/store/postgres/client";
-import { projectSummary, rowsForProject, snapshot } from "@/lib/store/postgres/projections";
+import {
+  loadAuditRequests,
+  loadCompanies,
+  loadDashboardFindings,
+  loadLeads,
+  loadProject,
+  loadProjectRows,
+  loadProjects,
+  loadReportForProject,
+  loadSalesTemplates
+} from "@/lib/store/postgres/loaders";
+import { summariseProjects } from "@/lib/store/postgres/summaries";
 import { mapReport } from "@/lib/store/postgres/mappers";
 import { generateFindingsCsv, generateReportDocument } from "@/lib/reports/generator";
 import { NotFoundError } from "@/lib/storeErrors";
@@ -9,23 +20,26 @@ import type { BusinessDashboard, Report, ReportType } from "@/lib/types";
 
 export async function readAuditReport(projectId: string) {
   return withStoreContext(async (context) => {
-    const data = await snapshot(context.organizationId);
-    const project = data.projects.find((row) => row.id === projectId);
+    const project = await loadProject(context.organizationId, projectId);
 
     if (!project) return null;
 
-    return { project, report: data.reports.find((row) => row.project_id === projectId) ?? null, messages: rowsForProject(projectId, data) };
+    const [report, messages] = await Promise.all([
+      loadReportForProject(context.organizationId, projectId),
+      loadProjectRows(context.organizationId, projectId)
+    ]);
+
+    return { project, report, messages };
   });
 }
 
 export async function generateAuditReport(projectId: string, reportType: ReportType = "Internal Scope Audit") {
   return withStoreContext(async (context) => {
-    const data = await snapshot(context.organizationId);
-    const project = data.projects.find((row) => row.id === projectId);
+    const project = await loadProject(context.organizationId, projectId);
 
     if (!project) throw new NotFoundError("Project not found.");
 
-    const rows = rowsForProject(projectId, data);
+    const rows = await loadProjectRows(context.organizationId, projectId);
     const analyzed = rows.filter((row) => row.finding);
     const total = analyzed.reduce((sum, row) => sum + (row.finding && row.finding.classification !== "In Scope" ? row.finding.estimated_revenue : 0), 0);
     const out = analyzed.filter((row) => row.finding?.classification === "Out of Scope").length;
@@ -143,19 +157,24 @@ export async function getReportVersion(projectId: string, versionId: string) {
 
 export async function exportFindingsCsv(projectId: string) {
   return withStoreContext(async (context) => {
-    const data = await snapshot(context.organizationId);
-    const project = data.projects.find((row) => row.id === projectId);
+    const project = await loadProject(context.organizationId, projectId);
 
     if (!project) throw new NotFoundError("Project not found.");
 
-    return generateFindingsCsv(project, rowsForProject(projectId, data));
+    return generateFindingsCsv(project, await loadProjectRows(context.organizationId, projectId));
   });
 }
 
 export async function getBusinessDashboard(): Promise<BusinessDashboard> {
   return withStoreContext(async (context) => {
-    const data = await snapshot(context.organizationId);
-    const projects = data.projects.map((project) => projectSummary(project, data));
+    const [projectRows, findings, leads, auditRequests, companies] = await Promise.all([
+      loadProjects(context.organizationId),
+      loadDashboardFindings(context.organizationId),
+      loadLeads(context.organizationId),
+      loadAuditRequests(context.organizationId),
+      loadCompanies(context.organizationId)
+    ]);
+    const projects = summariseProjects(projectRows, findings);
     const leakage = new Map<string, number>();
 
     projects.forEach((project) => {
@@ -163,13 +182,13 @@ export async function getBusinessDashboard(): Promise<BusinessDashboard> {
     });
 
     return {
-      leads: data.leads,
-      auditRequests: data.auditRequests,
+      leads,
+      auditRequests,
       projects,
-      companies: data.companies.map((company) => ({ ...company, estimated_leakage: leakage.get(company.id) ?? 0 }))
+      companies: companies.map((company) => ({ ...company, estimated_leakage: leakage.get(company.id) ?? 0 }))
         .sort((a, b) => b.estimated_leakage - a.estimated_leakage),
       totals: {
-        leads: data.leads.length, audit_requests: data.auditRequests.length, projects: projects.length,
+        leads: leads.length, audit_requests: auditRequests.length, projects: projects.length,
         potential_recovered_revenue: projects.reduce((sum, project) => sum + project.potential_recovered_revenue, 0),
         out_of_scope_count: projects.reduce((sum, project) => sum + project.out_of_scope_count, 0)
       }
@@ -180,6 +199,6 @@ export async function getBusinessDashboard(): Promise<BusinessDashboard> {
 export async function getSalesTemplates() {
   return withStoreContext(async (context) => {
 
-    return (await snapshot(context.organizationId)).salesTemplates;
+    return loadSalesTemplates(context.organizationId);
   });
 }
