@@ -16,7 +16,7 @@ operates the service. None of it is customer-facing. The customer installs nothi
 
 - [Self-Hosted Installation](../legacy/docker/installation.md) - the retired Docker/PostgreSQL install path, kept and still tested.
 - [Administrator Guide](admin-guide.md) - first-run and ongoing administrative operations.
-- [Backup and Restore](backup-and-restore.md) - what an installation backup archive contains and how to restore one.
+- [Backup and Restore](backup-and-restore.md) - where durability comes from now that ScopeLedger operates the database and the document store.
 - [Diagnostics and Support Bundles](diagnostics.md) - reading Settings > System health and generating redacted support bundles.
 - [Migration and Update Guide](migration-guide.md) - what to do before and after updating an installation.
 - [Model Selection Guide](model-selection.md) - how to validate an analysis model before real use.

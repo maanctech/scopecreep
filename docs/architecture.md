@@ -6,8 +6,8 @@ ScopeLedger is a Next.js application for professional-controlled scope and reven
 
 1. The browser renders public lead pages and authenticated professional workspaces.
 2. Next.js route handlers validate requests, authenticate sessions, enforce organization roles, and call domain services.
-3. Domain services own SOW approval, communication ingestion, analysis jobs, finding transitions, reporting, and backup orchestration.
-4. PostgreSQL is the durable commercial store. Private source documents are held under `SCOPELEDGER_DOCUMENT_DIR`.
+3. Domain services own SOW approval, communication ingestion, analysis jobs, finding transitions, and reporting.
+4. PostgreSQL is the durable commercial store. Uploaded SOW originals are held in a private Vercel Blob store and served only through an authenticated route.
 5. AI providers implement one structured contract. Anthropic is the default and OpenAI is the alternative; both are third parties.
 6. Connector credentials are encrypted with `SCOPELEDGER_MASTER_KEY` before database storage.
 

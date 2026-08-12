@@ -1,17 +1,15 @@
 # Known Limitations
 
-Last updated: 2026-08-11. Branch: `backend-refactor`.
+Last updated: 2026-08-12. Branch: `backend-refactor`.
 
 ## Blocking a Hosted Launch
 
-- **Installation backup is not tenant-scoped and must not ship as-is.** `POST /api/backups` is reachable by any organization's system administrator, `is_system_admin` is a per-user column set during first-user setup, and `createInstallationBackup` runs `pg_dump` over the whole database under `withSystemAccess`. In a hosted multi-tenant deployment that hands one customer every other customer's data. `restoreInstallationBackup` is worse: it runs `pg_restore --clean` against the entire database, so one customer's restore destroys everyone's. This was correct for a single-tenant self-hosted installation and is a breach path under hosting. Remove it from customer reach and replace it with tenant-scoped export before any customer is onboarded.
-- **The startup safety checks have no home on serverless.** `config:check` and `rls:check` run in the retired container entrypoint and refuse to boot an unsafe configuration. A serverless deployment has no boot step, so they must move to CI or deploy-time or the guarantee is silently lost.
+- **The row-level-security check in CI has never run.** `.github/workflows/ci.yml` provisions PostgreSQL 17, applies migrations as the schema owner, creates the unprivileged application role, and runs `rls:check` as that role. It is written but unverified: this machine has neither PostgreSQL nor a running Docker daemon, so the job has only ever been read, not executed. The configuration half is done and was run — `npm run build` now refuses a production deployment whose configuration would not survive, verified by running it with and without `VERCEL_ENV=production`.
 - **The scheduled drain has never run on Vercel.** `/api/cron/analysis-jobs` and its ten-minute schedule in `vercel.json` are covered by tests against a real database, but no deployment has invoked them. Vercel's Hobby plan also limits cron frequency, so the schedule may need raising or the plan changing.
 
 ## Deployment
 
 - The Docker image has never been built. Its assets are covered by `tests/installation.test.ts`, but no image exists and Compose has never started.
-- Backups shell out to `pg_dump`, `pg_restore`, and `tar`, and documents are written to a local directory. None of that works on serverless without replacing the storage layer and the backup strategy.
 - Rate limits are process-local and must be supplemented at the edge for a multi-instance deployment.
 
 ## Product
@@ -20,7 +18,7 @@ Last updated: 2026-08-11. Branch: `backend-refactor`.
 - Image-only PDFs are not OCR'd. Paste text or provide a text-based PDF, TXT, or DOCX.
 - Public lead and audit submissions are not idempotent across independent HTTP retries; an obvious duplicate intake may need merging by hand.
 - Organization switching and browser-based member management are not implemented.
-- Per-firm data export does not exist. The privacy page says so; do not promise it in a sales conversation.
+- Per-firm data export does not exist. The privacy page says so; do not promise it in a sales conversation. It is the replacement the retired installation backup pretended to be, and it is not built.
 - There is no client login, approval link, notification, automatic email, automatic change order, invoice integration, payment collection, or accounting integration.
 - AI estimates can be wrong. Every scope and billing decision requires professional evidence review.
 
@@ -32,7 +30,7 @@ Last updated: 2026-08-11. Branch: `backend-refactor`.
 
 ## Current Test Evidence
 
-- 342 automated tests pass on PGlite. The 327 predating analysis job recovery also pass on real PostgreSQL 17.6; the recovery suite has only been run on PGlite so far.
+- 360 automated tests pass on PGlite. The 327 predating analysis job recovery also pass on real PostgreSQL 17.6; the recovery, document storage, deployment configuration, and serverless boundary suites have only been run on PGlite so far.
 - Type checking, ESLint, and the production build pass.
 - Tenant isolation is exercised against a connection role holding neither SUPERUSER nor BYPASSRLS, so the assertions test policies rather than privilege.
 - Route handler authentication and authorization are swept from disk, so a new route is covered without being enrolled by hand.
@@ -40,4 +38,4 @@ Last updated: 2026-08-11. Branch: `backend-refactor`.
 
 ## Exact Next Objective
 
-Remove installation backup from customer reach, then make analysis jobs resumable with a stale-job sweeper. Neither depends on the deployment target being settled.
+Run the CI tenant-boundary job once against real PostgreSQL and fix whatever it finds, then build the tenant-scoped export. After that, the read path: `lib/store/postgres/projections.ts` loads every row of nine tables on every page and joins them in JavaScript, which measured 12 seconds per page load at 38,400 records.

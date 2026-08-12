@@ -17,10 +17,10 @@ Apply migrations, open `/setup`, and create the first owner. Setup disables itse
 
 Owner and Admin can perform system and organization administration. Reviewer can operate the professional review workflow. Read Only can inspect permitted records without mutation. Use the least privilege appropriate to the operator.
 
-## Backup Discipline
+## Durability
 
-Create regular verified backups, copy them off-host, and keep `SCOPELEDGER_MASTER_KEY` separately. Run a restore drill before private-beta customer use. See [Backup and Restore](backup-and-restore.md).
+ScopeLedger operates the database and the document store. Recovery is a provider action, not an application command, and there is no backup for an administrator to run. Keep `SCOPELEDGER_MASTER_KEY` in the deployment secret store and out of any database copy. See [Backup and Restore](backup-and-restore.md).
 
 ## Incident Response
 
-If credentials or a host may be compromised, stop external access, revoke sessions and provider tokens, preserve logs and an encrypted backup, rotate affected secrets, and inspect the redacted support bundle. Do not share SOWs, messages, `.env` files, database dumps, or unreviewed logs with support.
+If credentials or a host may be compromised, stop external access, revoke sessions and provider tokens, preserve logs, rotate affected secrets, and inspect the redacted support bundle. Do not share SOWs, messages, environment files, database dumps, or unreviewed logs with support.

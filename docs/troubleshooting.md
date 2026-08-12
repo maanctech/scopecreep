@@ -20,10 +20,10 @@ Preview manual imports and inspect the visible rejected-row reasons. For provide
 
 Inspect AI status and the analysis job. Verify an approved SOW boundary map exists, retry only after resolving the visible provider or validation error, and do not create duplicate manual requests. Provider failure safely yields human review, not recoverable revenue.
 
-## Backup or Restore Fails
+## An Uploaded SOW Original Will Not Download
 
-Confirm compatible `pg_dump` and `pg_restore` tools, document-directory access, free disk space, and archive checksums. Restore only while the application is stopped. See [Backup and Restore](backup-and-restore.md).
+The route answers 404 when the version has no stored original, which is normal for a version that was pasted rather than uploaded. If an uploaded one is missing, confirm `BLOB_READ_WRITE_TOKEN` points at the store the file was written to. See [Backup and Restore](backup-and-restore.md).
 
 ## Support Bundle
 
-Generate a redacted bundle from System settings. Inspect it before sharing. Never attach `.env`, backup archives, SOW originals, imported messages, or database dumps to a support request.
+Generate a redacted bundle from System settings. Inspect it before sharing. Never attach environment files, SOW originals, imported messages, or database dumps to a support request.
