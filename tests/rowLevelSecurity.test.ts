@@ -119,7 +119,8 @@ const EXPECTED_POLICY_BY_TABLE = new Map<string, string>([
   ...[
     "analysis_jobs", "audit_logs", "audit_requests", "backup_records", "billing_events",
     "client_messages", "communication_attachments", "communication_connections",
-    "communication_sources", "communication_threads", "companies", "encrypted_secrets",
+    "communication_sources", "communication_threads", "companies", "data_exports",
+    "encrypted_secrets",
     "ingestion_jobs", "lead_status_history", "leads", "oauth_authorization_requests",
     "organization_memberships", "organization_settings", "projects", "report_versions",
     "reports", "sales_templates", "scope_boundary_items", "scope_boundary_maps",

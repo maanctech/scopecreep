@@ -3,5 +3,11 @@
     "Running",
     "Succeeded",
     "Failed"
+  ],
+  "exportStatuses": [
+    "Queued",
+    "Running",
+    "Succeeded",
+    "Failed"
   ]
 }

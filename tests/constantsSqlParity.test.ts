@@ -34,7 +34,8 @@ const SQL_BACKED_ENUMERATIONS: Array<{ source: string; key: string; targets: Col
     key: "jobStatuses",
     targets: [{ table: "analysis_jobs", column: "status" }, { table: "ingestion_jobs", column: "status" }]
   },
-  { source: "operations", key: "backupStatuses", targets: [{ table: "backup_records", column: "status" }] }
+  { source: "operations", key: "backupStatuses", targets: [{ table: "backup_records", column: "status" }] },
+  { source: "operations", key: "exportStatuses", targets: [{ table: "data_exports", column: "status" }] }
 ];
 
 function readJsonEnumeration(source: string, key: string) {

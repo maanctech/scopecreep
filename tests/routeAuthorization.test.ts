@@ -109,6 +109,23 @@ describe("a signed-in role without the permission is refused", () => {
     expect(response.status).toBe(403);
   });
 
+  it("refuses Read Only the whole-organization export, which is every record the firm holds", async () => {
+    const { POST } = await import("@/app/api/exports/route");
+    const response = await POST(signedInRequest("exports", "POST", {}));
+
+    expect(response.status).toBe(403);
+  });
+
+  it("refuses Read Only the download of a whole-organization export", async () => {
+    const { GET } = await import("@/app/api/exports/[id]/download/route");
+    const response = await GET(
+      signedInRequest("exports/00000000-0000-4000-8000-000000000001/download", "GET"),
+      params({ id: "00000000-0000-4000-8000-000000000001" })
+    );
+
+    expect(response.status).toBe(403);
+  });
+
   it("refuses Read Only an integration write", async () => {
     const { POST } = await import("@/app/api/integrations/route");
     const response = await POST(signedInRequest("integrations", "POST", { provider: "Slack" }));

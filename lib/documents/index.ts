@@ -4,6 +4,7 @@ import * as memoryStore from "@/lib/documents/memory";
 import type { OriginalToStore, StoredOriginal } from "@/lib/documents/types";
 
 export const SOW_ORIGINAL_PREFIX = "sow/";
+export const EXPORT_ARCHIVE_PREFIX = "exports/";
 
 /**
  * Blob operations are loaded on demand so the test runtime never pulls in a
@@ -45,4 +46,22 @@ export async function deleteSowOriginal(pathname: string) {
   const store = await backend();
 
   await store.remove(pathname);
+}
+
+export function exportArchivePathname(organizationId: string, exportId: string) {
+  return `${EXPORT_ARCHIVE_PREFIX}${organizationId}/${exportId}.json`;
+}
+
+export async function storeExportArchive(organizationId: string, exportId: string, bytes: Buffer) {
+  const store = await backend();
+
+  return store.put(exportArchivePathname(organizationId, exportId), bytes, "application/json");
+}
+
+export async function readExportArchive(pathname: string): Promise<StoredOriginal | null> {
+  if (!pathname.startsWith(EXPORT_ARCHIVE_PREFIX)) return null;
+
+  const store = await backend();
+
+  return store.read(pathname);
 }

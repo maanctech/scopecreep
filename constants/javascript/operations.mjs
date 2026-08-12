@@ -5,3 +5,10 @@ export const BACKUP_STATUSES = [
   "Succeeded",
   "Failed"
 ];
+
+export const EXPORT_STATUSES = [
+  "Queued",
+  "Running",
+  "Succeeded",
+  "Failed"
+];
