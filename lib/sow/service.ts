@@ -1,8 +1,8 @@
 import { createHash, randomUUID } from "node:crypto";
-import { mkdir, rename, rm, writeFile } from "node:fs/promises";
-import path from "node:path";
 import { withAuthenticatedTenant } from "@/lib/auth/scope";
 import { query, transaction } from "@/lib/db/client";
+import { deleteSowOriginal, readSowOriginal, storeSowOriginal } from "@/lib/documents";
+import { logEvent } from "@/lib/observability/logger";
 import { analyzeSowForReview } from "@/lib/sow/analysis";
 import { splitSowSections, type ExtractedSow } from "@/lib/sow/extraction";
 import type { BoundaryItem, BoundaryType, RiskItem, SowSection, SowVersion, SowWorkspace } from "@/lib/sow/types";
@@ -60,16 +60,14 @@ export async function createSowVersion(input: { projectId: string; text: string;
     let storagePath: string | null = null;
 
     if (input.extracted && input.fileBuffer) {
-      const root = path.resolve(process.env.SCOPELEDGER_DOCUMENT_DIR || path.join(process.cwd(), "data", "documents"));
-      const directory = path.join(root, auth.organizationId, input.projectId);
-
-      await mkdir(directory, { recursive: true, mode: 0o700 });
-      const finalPath = path.join(directory, `${versionId}-${input.extracted.safeFilename}`);
-      const temporaryPath = `${finalPath}.tmp-${randomUUID()}`;
-
-      await writeFile(temporaryPath, input.fileBuffer, { mode: 0o600 });
-      await rename(temporaryPath, finalPath);
-      storagePath = path.relative(root, finalPath);
+      storagePath = await storeSowOriginal({
+        organizationId: auth.organizationId,
+        projectId: input.projectId,
+        versionId,
+        filename: input.extracted.safeFilename,
+        mediaType: input.extracted.mediaType,
+        bytes: input.fileBuffer
+      });
     }
 
     try {
@@ -99,13 +97,42 @@ export async function createSowVersion(input: { projectId: string; text: string;
       });
     } catch (error) {
       if (storagePath) {
-        const root = path.resolve(process.env.SCOPELEDGER_DOCUMENT_DIR || path.join(process.cwd(), "data", "documents"));
-
-        await rm(path.join(root, storagePath), { force: true }).catch(() => undefined);
+        await deleteSowOriginal(storagePath).catch(() => logEvent("warn", "sow.original.orphaned", { versionId }));
       }
 
       throw error;
     }
+  });
+}
+
+/**
+ * The original never leaves through a storage URL. The row that names it is
+ * read under the acting tenant first, so the database decides who may read the
+ * file and the blob store is only ever asked for a path that check produced.
+ */
+export async function getSowOriginal(projectId: string, versionId: string) {
+  return withAuthenticatedTenant(async (auth) => {
+    const versions = await query<Row>(
+      `SELECT v.storage_path, v.source_filename, v.media_type
+       FROM sow_versions v
+       JOIN sow_documents d ON d.id = v.sow_document_id AND d.organization_id = v.organization_id
+       WHERE v.id = $1 AND v.organization_id = $2 AND d.project_id = $3`,
+      [versionId, auth.organizationId, projectId]
+    );
+    const version = versions.rows[0];
+
+    if (!version?.storage_path) return null;
+
+    const stored = await readSowOriginal(String(version.storage_path));
+
+    if (!stored) return null;
+
+    return {
+      stream: stored.stream,
+      byteSize: stored.byteSize,
+      mediaType: version.media_type ? String(version.media_type) : stored.mediaType,
+      filename: version.source_filename ? String(version.source_filename) : "statement-of-work"
+    };
   });
 }
 

@@ -2,7 +2,9 @@ import path from "node:path";
 import mammoth from "mammoth";
 import { extractText } from "unpdf";
 import { MAX_EXTRACTED_CHARACTERS, MAX_SOW_FILE_BYTES } from "@/constants/typescript/sow";
+import { safeDocumentFilename } from "@/lib/documents/filename";
 
+export { safeDocumentFilename };
 export { MAX_EXTRACTED_CHARACTERS, MAX_SOW_FILE_BYTES };
 
 const ALLOWED_EXTENSIONS = new Set([".txt", ".docx", ".pdf"]);
@@ -35,14 +37,6 @@ export type ExtractedSow = {
   mediaType: string;
   warning: string | null;
 };
-
-export function safeDocumentFilename(filename: string) {
-  const base = path.basename(filename).replace(/[^a-zA-Z0-9._ -]/g, "_").trim();
-
-  if (!base || base === "." || base === "..") throw new Error("The document filename is invalid.");
-
-  return base.slice(0, 180);
-}
 
 function cleanText(value: string) {
   return value.replace(/\0/g, "").replace(/\r\n/g, "\n").trim();
