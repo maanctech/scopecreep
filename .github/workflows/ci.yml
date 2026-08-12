@@ -23,3 +23,49 @@ jobs:
       - run: npm run lint
 
       - run: npm test
+
+  # The tenant boundary is a property of the database and the role the
+  # application connects as, not of anything the suite above can see. It used
+  # to be checked by the container entrypoint, which no longer runs anywhere.
+  tenant-boundary:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: schema-owner-password
+          POSTGRES_DB: scopeledger
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+        ports:
+          - 5432:5432
+    env:
+      SCOPELEDGER_DB_APP_USER: scopeledger_app
+      SCOPELEDGER_DB_APP_PASSWORD: application-role-password
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Apply migrations as the schema owner
+        run: npm run db:migrate
+        env:
+          DATABASE_URL: postgresql://postgres:schema-owner-password@127.0.0.1:5432/scopeledger
+
+      - name: Provision the unprivileged application role
+        run: npm run db:ensure-app-role
+        env:
+          DATABASE_URL: postgresql://postgres:schema-owner-password@127.0.0.1:5432/scopeledger
+
+      - name: Check row-level security as the application connects
+        run: npm run rls:check
+        env:
+          DATABASE_URL: postgresql://scopeledger_app:application-role-password@127.0.0.1:5432/scopeledger

@@ -1,7 +1,6 @@
-import path from "node:path";
 import { CATALOG_PROVIDER_NAMES, PROVIDER_CATALOG, isCatalogProvider, missingEnvironmentFor } from "@/lib/ai/catalog";
 
-type RuntimeEnvironment = Record<string, string | undefined>;
+export type RuntimeEnvironment = Record<string, string | undefined>;
 
 /**
  * Test-only code paths disable authentication and origin checks, so a stray
@@ -143,14 +142,8 @@ export function validateProductionConfiguration(env: RuntimeEnvironment = proces
     }
   }
 
-  const documents = path.resolve(env.SCOPELEDGER_DOCUMENT_DIR?.trim() || path.join(process.cwd(), "data", "documents"));
-  const backups = path.resolve(env.SCOPELEDGER_BACKUP_DIR?.trim() || path.join(process.cwd(), "backups"));
-
-  if (
-    documents === backups || documents.startsWith(`${backups}${path.sep}`) ||
-    backups.startsWith(`${documents}${path.sep}`)
-  ) {
-    errors.push("SCOPELEDGER_DOCUMENT_DIR and SCOPELEDGER_BACKUP_DIR must not overlap.");
+  if (!env.BLOB_READ_WRITE_TOKEN?.trim()) {
+    errors.push("BLOB_READ_WRITE_TOKEN is required; without it an uploaded SOW original has nowhere to go.");
   }
 
   return errors;
