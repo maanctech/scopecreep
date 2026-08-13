@@ -26,11 +26,3 @@ export const PERMISSIONS = [
   "settings:read",
   "settings:write"
 ];
-
-export const SESSION_COOKIE_NAME = "scopeledger_session";
-
-export const SESSION_DURATION_MS = 43200000;
-
-export const SESSION_IDLE_TIMEOUT = "4 hours";
-
-export const MIN_PASSWORD_LENGTH = 12;

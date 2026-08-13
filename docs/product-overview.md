@@ -42,12 +42,11 @@
 - `/app/projects/[id]/report` - Markdown audit report view (read-only; generation is an explicit button).
 - `/admin` - Founder/admin dashboard.
 - `/sales-assets` - Sales templates and scripts.
-- `/login` - Professional sign-in.
-- `/setup` - One-time first-owner setup after database migration.
-- `/account` - Current organization, role, sign-out, and password change.
+- `/sign-in`, `/sign-up` - Clerk-hosted identity. Clerk owns credentials; this application never stores one.
+- `/choose-organization` - Firm picker for someone signed in with no active organization.
+- `/account` - Current organization, role, and sign-out.
 - `/app/settings/ai` - Current AI provider, selected model, installed model inventory, and health status.
 - `/app/settings/system` - Health, migrations, AI and job diagnostics, configuration checks, backups, and redacted audit activity.
-- `/reset-password` - One-time password reset completion.
 
 ## API Routes
 
@@ -73,11 +72,7 @@
 - `GET /api/billing-events` - Read all billing events; `?format=csv` returns a CSV export.
 - `GET /api/projects/[id]/report` - Read the latest saved report. Read-only: it never creates or regenerates a report.
 - `POST /api/projects/[id]/report` - Explicitly generate a new report snapshot. Older reports are kept as history.
-- `POST /api/auth/setup` - Create the first organization owner; disabled after setup.
-- `POST /api/auth/login` - Authenticate and issue a secure session cookie.
-- `POST /api/auth/logout` - Revoke the current session.
-- `POST /api/auth/change-password` - Change the signed-in user's password and revoke other sessions.
-- `POST /api/auth/reset-password` - Consume a one-time administrator-generated reset token.
+- `POST /api/webhooks/clerk` - Signature-verified Clerk events. Follows renames, role changes, and removals; never deletes a firm's records.
 - `GET /api/ai/health` - Authenticated provider/model health and discovery result.
 - `GET /api/health` - Minimal public application/database health check.
 - `GET /api/diagnostics` - Authenticated organization-scoped operational diagnostics.

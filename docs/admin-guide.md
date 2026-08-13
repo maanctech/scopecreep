@@ -2,15 +2,15 @@
 
 ## First Run
 
-Apply migrations, open `/setup`, and create the first owner. Setup disables itself after the first user exists. Verify AI status before importing customer material.
+Apply migrations, then sign up at `/sign-up` and create the firm's organization. Whoever creates it holds the Owner role. Verify AI status before importing customer material.
 
 ## Routine Administration
 
 - Use `/app/settings/system` for health, migration state, job failures, configuration checks, backups, and redacted audit activity.
 - Use `/app/settings/ai` to verify provider reachability and the selected model.
 - Use `/admin` for lead status, audit requests, projects, and leakage summaries.
-- Provision additional users with `npm run db:create-user`; there is no browser member manager.
-- Generate one-time password reset links with `npm run db:password-reset`.
+- Invite colleagues from the organization switcher in the header, or from the Clerk dashboard. Roles map as Owner, Admin, Reviewer, and Read Only; an unrecognised Clerk role is treated as Read Only.
+- Password resets and two-factor devices are handled by Clerk. This application holds no credential to reset.
 - Review failed ingestion and analysis jobs before retrying. Idempotency controls prevent normal retries from duplicating imported messages or billing events.
 
 ## Access Roles

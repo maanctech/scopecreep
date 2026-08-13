@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { SESSION_COOKIE_NAME } from "@/lib/auth/sessionConfig";
+import { CLERK_SESSION_COOKIE_NAME } from "@/lib/auth/clerkCookie";
+import { frontendApiOrigin } from "@/lib/auth/clerkFrontendApi";
 
 /**
  * Built per request because the nonce must be unpredictable and single-use.
@@ -11,15 +12,22 @@ import { SESSION_COOKIE_NAME } from "@/lib/auth/sessionConfig";
  * attributes that carry no nonce, and injected CSS cannot execute — the
  * exposure it leaves is far smaller than the breakage removing it causes.
  */
+const CLERK_PROTECTION = "https://*.protect.clerk.com";
+const TURNSTILE = "https://challenges.cloudflare.com";
+
 function contentSecurityPolicy(nonce: string) {
   const isDevelopment = process.env.NODE_ENV !== "production";
+  const frontendApi = frontendApiOrigin(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
+  const clerkHosts = [frontendApi, CLERK_PROTECTION].filter(Boolean).join(" ");
   const directives = [
     "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isDevelopment ? " 'unsafe-eval'" : ""}`,
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' ${clerkHosts} ${TURNSTILE}${isDevelopment ? " 'unsafe-eval'" : ""}`,
     "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: blob:",
+    "img-src 'self' data: blob: https://img.clerk.com",
     "font-src 'self' data:",
-    "connect-src 'self'",
+    `connect-src 'self' ${clerkHosts}`,
+    "worker-src 'self' blob:",
+    `frame-src 'self' ${CLERK_PROTECTION} ${TURNSTILE}`,
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",
@@ -60,11 +68,11 @@ export function proxy(request: NextRequest) {
     (path) => request.nextUrl.pathname === path || request.nextUrl.pathname.startsWith(`${path}/`)
   );
 
-  if (protectedPage && !request.cookies.has(SESSION_COOKIE_NAME)) {
-    const login = new URL("/login", request.url);
+  if (protectedPage && !request.cookies.has(CLERK_SESSION_COOKIE_NAME)) {
+    const signIn = new URL("/sign-in", request.url);
 
-    login.searchParams.set("next", request.nextUrl.pathname);
-    const response = NextResponse.redirect(login);
+    signIn.searchParams.set("redirect_url", request.nextUrl.pathname);
+    const response = NextResponse.redirect(signIn);
 
     return applyRuntimeHeaders(response, correlationId, policy);
   }

@@ -1,5 +1,6 @@
 "use client";
 
+import { OrganizationSwitcher, UserButton } from "@clerk/nextjs";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -44,7 +45,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
     { href: "/#pricing", label: "Pricing", icon: Receipt },
     { href: "/#security", label: "Security", icon: ShieldCheck },
     { href: "/request-audit", label: "Request Audit", icon: ClipboardList },
-    { href: "/login", label: "Professional Sign In", icon: LockKeyhole },
+    { href: "/sign-in", label: "Professional Sign In", icon: LockKeyhole },
   ];
   const navItems = internal ? internalNav : publicNav;
 
@@ -88,6 +89,12 @@ export function Shell({ children }: { children: React.ReactNode }) {
                 </Link>
               );
             })}
+            {internal ? (
+              <>
+                <OrganizationSwitcher hidePersonal afterSelectOrganizationUrl="/app" />
+                <UserButton />
+              </>
+            ) : null}
           </nav>
         </div>
       </header>

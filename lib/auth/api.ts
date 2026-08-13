@@ -2,21 +2,12 @@ import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 import { AuthorizationError, assertPermission } from "@/lib/auth/authorization";
 import { isTestRuntime } from "@/lib/config/runtime";
-import { getAuthContext } from "@/lib/auth/service";
+import { authContextForSession } from "@/lib/auth/clerkProvisioning";
+import { requestToken, sessionFromToken } from "@/lib/auth/clerkSession";
 import { assertSameOrigin, checkRateLimit, InvalidOriginError, RateLimitError } from "@/lib/auth/security";
 import type { AuthContext, Permission } from "@/lib/auth/types";
-import { SESSION_COOKIE_NAME } from "@/lib/auth/current";
 
 export class AuthenticationError extends Error {}
-
-function cookieValue(header: string | null, name: string) {
-  const item = header
-    ?.split(";")
-    .map((part) => part.trim())
-    .find((part) => part.startsWith(`${name}=`));
-
-  return item ? decodeURIComponent(item.slice(name.length + 1)) : null;
-}
 
 export async function requireApiPermission(
   request: Request,
@@ -26,7 +17,7 @@ export async function requireApiPermission(
 
   if (isTestRuntime()) return null;
 
-  const token = cookieValue(request.headers.get("cookie"), SESSION_COOKIE_NAME);
+  const token = requestToken(request);
 
   if (!["GET", "HEAD", "OPTIONS"].includes(request.method.toUpperCase())) {
     const path = new URL(request.url).pathname;
@@ -37,7 +28,8 @@ export async function requireApiPermission(
     checkRateLimit(`protected:${principal}:${path}`, 120, 60_000);
   }
 
-  const context = token ? await getAuthContext(token) : null;
+  const session = await sessionFromToken(token);
+  const context = session ? await authContextForSession(session) : null;
 
   if (!context) throw new AuthenticationError("Sign in to continue.");
 

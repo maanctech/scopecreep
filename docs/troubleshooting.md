@@ -6,7 +6,7 @@ Run `npm run config:check` and correct every reported production configuration e
 
 ## Sign-In or Setup Fails
 
-Confirm migrations completed and the browser is using the exact `APP_URL` origin. `/setup` works only before the first user exists. Use the documented administrator reset command rather than editing password rows.
+Confirm migrations completed and the browser is using the exact `APP_URL` origin. Credentials live in Clerk, so a sign-in problem is diagnosed in the Clerk dashboard, never by editing rows here.
 
 ## The AI Provider Is Unavailable
 

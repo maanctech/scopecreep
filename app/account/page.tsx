@@ -1,4 +1,3 @@
-import { ChangePasswordForm } from "@/components/forms/AuthForms";
 import { LogoutButton } from "@/components/forms/LogoutButton";
 import { requirePagePermission } from "@/lib/auth/current";
 
@@ -33,9 +32,11 @@ export default async function AccountPage() {
       <section className="
         rounded-md border border-audit-border bg-white p-6 shadow-audit
       ">
-        <h2 className="text-xl font-semibold">Change password</h2>
-        <p className="mt-2 text-sm text-audit-muted">Changing your password signs out every other active session.</p>
-        <div className="mt-5"><ChangePasswordForm /></div>
+        <h2 className="text-xl font-semibold">Sign-in and security</h2>
+        <p className="mt-2 text-sm text-audit-muted">
+          Your password, two-factor devices, and active sessions are managed from the account menu in
+          the header.
+        </p>
       </section>
     </div>
   );

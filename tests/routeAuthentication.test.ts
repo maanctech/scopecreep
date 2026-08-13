@@ -34,14 +34,11 @@ const routeModules = import.meta.glob("../app/api/**/route.ts") as Record<string
  */
 const PUBLIC_ROUTES = new Set([
   "audit-requests",
-  "auth/login",
-  "auth/logout",
-  "auth/reset-password",
-  "auth/setup",
   "health",
   "integrations/oauth/[provider]/callback",
   "leads",
-  "webhooks/[connectionId]"
+  "webhooks/[connectionId]",
+  "webhooks/clerk"
 ]);
 
 const HTTP_METHODS = ["GET", "POST", "PATCH", "PUT", "DELETE"] as const;
@@ -104,11 +101,11 @@ describe("every organization-scoped route handler authenticates before it acts",
    * is the change worth noticing, so the size is stated here and a renamed or
    * deleted route cannot leave a stale entry silently excusing nothing.
    */
-  it("keeps the public allowlist to nine routes that still exist", () => {
+  it("keeps the public allowlist to six routes that still exist", () => {
     const onDisk = new Set(Object.keys(routeModules).map(routeName));
 
     expect([...PUBLIC_ROUTES].filter((name) => !onDisk.has(name))).toEqual([]);
-    expect(PUBLIC_ROUTES.size).toBe(9);
+    expect(PUBLIC_ROUTES.size).toBe(6);
   });
 
   it.each(protectedRoutes)("%s rejects an anonymous caller on every method it exports", async (modulePath) => {

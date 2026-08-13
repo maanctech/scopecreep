@@ -1,7 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { buildDemoStore } from "@/lib/demo";
 import { validateProductionConfiguration } from "@/lib/config/runtime";
-import { shouldUseSecureSessionCookie } from "@/lib/auth/sessionConfig";
 import { redactLogMetadata } from "@/lib/observability/logger";
 import { buildSupportBundle } from "@/lib/operations/diagnostics";
 import { generateFindingsCsv, generateReportDocument } from "@/lib/reports/generator";
@@ -170,14 +169,6 @@ describe("production configuration and log safety", () => {
       "AI_MAX_ATTEMPTS must be a positive integer.",
       "ALLOW_INSECURE_IMAP must be true or false."
     ]));
-  });
-
-  it("uses secure cookies for HTTPS and permits explicit loopback HTTP setup", () => {
-    vi.stubEnv("NODE_ENV", "production");
-    vi.stubEnv("APP_URL", "https://scopeledger.example");
-    expect(shouldUseSecureSessionCookie()).toBe(true);
-    vi.stubEnv("APP_URL", "http://127.0.0.1:3000");
-    expect(shouldUseSecureSessionCookie()).toBe(false);
   });
 
   it("redacts nested credentials and sensitive business text", () => {

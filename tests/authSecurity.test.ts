@@ -1,26 +1,10 @@
 import { NextRequest } from "next/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { hasPermission } from "@/lib/auth/authorization";
-import { hashPassword, validatePassword, verifyPassword } from "@/lib/auth/password";
 import { assertSameOrigin, InvalidOriginError } from "@/lib/auth/security";
 import { proxy } from "@/proxy";
 
 afterEach(() => vi.unstubAllEnvs());
-
-describe("password security", () => {
-  it("rejects weak passwords", () => {
-    expect(() => validatePassword("short")).toThrow(/at least 12/);
-    expect(() => validatePassword("alllowercase1234")).toThrow(/uppercase/);
-  });
-
-  it("hashes and verifies strong passwords with Argon2id", async () => {
-    const encoded = await hashPassword("CorrectHorse7Battery");
-
-    expect(encoded).toMatch(/^\$argon2id\$/);
-    await expect(verifyPassword(encoded, "CorrectHorse7Battery")).resolves.toBe(true);
-    await expect(verifyPassword(encoded, "WrongPassword7Here")).resolves.toBe(false);
-  });
-});
 
 describe("organization authorization", () => {
   it("keeps read-only users from changing billing decisions", () => {
@@ -74,5 +58,45 @@ describe("runtime transport headers", () => {
     const response = proxy(new NextRequest("http://127.0.0.1:3000/api/health"));
 
     expect(response.headers.has("strict-transport-security")).toBe(false);
+  });
+});
+
+/**
+ * A policy that blocks the sign-in widget's own network calls locks every
+ * customer out, and the browser reports it only in its console. These name the
+ * hosts Clerk documents as required so a tightening pass cannot quietly drop
+ * one.
+ */
+describe("browser policy for the hosted sign-in widget", () => {
+  const publishableKey = `pk_test_${Buffer.from("chief-mole-42.clerk.accounts.dev$").toString("base64")}`;
+
+  function policyOf() {
+    vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", publishableKey);
+
+    return proxy(new NextRequest("https://scopeledger.example/sign-in")).headers.get(
+      "content-security-policy"
+    ) ?? "";
+  }
+
+  it("lets the page reach the frontend API the publishable key points at", () => {
+    expect(policyOf()).toContain("connect-src 'self' https://chief-mole-42.clerk.accounts.dev");
+  });
+
+  it("lets the bot-protection challenge load and run", () => {
+    const policy = policyOf();
+
+    expect(policy).toContain("frame-src 'self' https://*.protect.clerk.com https://challenges.cloudflare.com");
+    expect(policy).toContain("worker-src 'self' blob:");
+  });
+
+  it("lets profile images load from Clerk's image host", () => {
+    expect(policyOf()).toContain("https://img.clerk.com");
+  });
+
+  it("still refuses to be framed and still forbids plugins", () => {
+    const policy = policyOf();
+
+    expect(policy).toContain("frame-ancestors 'none'");
+    expect(policy).toContain("object-src 'none'");
   });
 });

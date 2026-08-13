@@ -1,8 +1,11 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { query } from "@/lib/db/client";
 import { withSystemAccess } from "@/lib/db/tenantContext";
-import { createSession } from "@/lib/auth/service";
-import { SESSION_COOKIE_NAME } from "@/lib/auth/sessionConfig";
+import {
+  CLERK_SESSION_COOKIE_NAME,
+  resetClaimsVerifierForTesting,
+  setClaimsVerifierForTesting
+} from "@/lib/auth/clerkSession";
 import { startTestDatabase, stopTestDatabase, type TestDatabase } from "./support/testDatabase";
 
 /**
@@ -17,20 +20,29 @@ const ORGANIZATION = "70000000-0000-4000-8000-000000000001";
 const READ_ONLY_USER = "70000000-0000-4000-8000-000000000011";
 const PROJECT = "70000000-0000-4000-8000-000000000021";
 
+const READ_ONLY_TOKEN = "read-only.session.token";
+const READ_ONLY_CLAIMS = {
+  sub: "user_rae",
+  sid: "sess_rae",
+  exp: 1_800_000_000,
+  email: "rae@example.com",
+  o: { id: "org_ledger", rol: "viewer", slg: "ledger-partners" }
+};
+
 let database: TestDatabase;
-let readOnlyCookie: string;
+const readOnlyCookie = `${CLERK_SESSION_COOKIE_NAME}=${READ_ONLY_TOKEN}`;
 
 beforeAll(async () => {
   database = await startTestDatabase();
 
   await withSystemAccess(async () => {
-    await query("INSERT INTO organizations (id, name, slug) VALUES ($1,$2,$3)", [
-      ORGANIZATION, "Ledger Partners", "ledger-partners"
+    await query("INSERT INTO organizations (id, name, slug, clerk_organization_id) VALUES ($1,$2,$3,$4)", [
+      ORGANIZATION, "Ledger Partners", "ledger-partners", READ_ONLY_CLAIMS.o.id
     ]);
     await query(
-      `INSERT INTO users (id, email, normalized_email, password_hash, display_name)
+      `INSERT INTO users (id, email, normalized_email, display_name, clerk_user_id)
        VALUES ($1,$2,$3,$4,$5)`,
-      [READ_ONLY_USER, "rae@example.com", "rae@example.com", "not-a-real-hash", "Rae Nakamura"]
+      [READ_ONLY_USER, "rae@example.com", "rae@example.com", "Rae Nakamura", READ_ONLY_CLAIMS.sub]
     );
     await query(
       "INSERT INTO organization_memberships (organization_id, user_id, role) VALUES ($1,$2,'Read Only')",
@@ -43,14 +55,17 @@ beforeAll(async () => {
     );
   });
 
-  const session = await createSession({ userId: READ_ONLY_USER });
+  setClaimsVerifierForTesting(async (token) => {
+    if (token !== READ_ONLY_TOKEN) throw new Error("token-not-issued-here");
 
-  readOnlyCookie = `${SESSION_COOKIE_NAME}=${encodeURIComponent(session.token)}`;
+    return READ_ONLY_CLAIMS;
+  });
   delete process.env.VITEST;
 });
 
 afterAll(async () => {
   process.env.VITEST = vitestMarker;
+  resetClaimsVerifierForTesting();
   await stopTestDatabase(database);
 });
 

@@ -26,12 +26,13 @@ Copy the environment template and set at least `DATABASE_URL` and `SCOPELEDGER_M
 cp .env.example .env.local
 ```
 
-Apply database migrations, then create the first owner (or do this later at `/setup`):
+Apply database migrations. `DATABASE_URL` is an unprivileged role that cannot create tables, so migrations use the owner connection in `DATABASE_MIGRATION_URL`:
 
 ```bash
 npm run db:migrate
-npm run db:create-admin
 ```
+
+Then sign up at `/sign-up` to create the first firm; whoever creates it holds the Owner role.
 
 Start the dev server (Next.js on Turbopack):
 
