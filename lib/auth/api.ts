@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 import { AuthorizationError, assertPermission } from "@/lib/auth/authorization";
 import { isTestRuntime } from "@/lib/config/runtime";
-import { authContextForSession } from "@/lib/auth/clerkProvisioning";
+import { authContextForSession, EmailAlreadyClaimedError } from "@/lib/auth/clerkProvisioning";
 import { requestToken, sessionFromToken } from "@/lib/auth/clerkSession";
 import { assertSameOrigin, InvalidOriginError, RateLimitError } from "@/lib/auth/security";
 import { enforceRateLimit } from "@/lib/auth/rateLimit";
@@ -54,6 +54,18 @@ export function authErrorResponse(error: unknown) {
 
   if (error instanceof RateLimitError) {
     return NextResponse.json({ error: error.message }, { status: 429 });
+  }
+
+  /**
+   * Not 500: the request is well formed and the caller is who they say they
+   * are. Two accounts claim one address, and only a person can decide which of
+   * them should keep it.
+   */
+  if (error instanceof EmailAlreadyClaimedError) {
+    return NextResponse.json(
+      { error: "An account already exists for this email address. Contact your administrator to link it." },
+      { status: 409 }
+    );
   }
 
   return null;

@@ -1,7 +1,7 @@
 import { cache } from "react";
 import { redirect } from "next/navigation";
 import { hasPermission } from "@/lib/auth/authorization";
-import { authContextForSession } from "@/lib/auth/clerkProvisioning";
+import { authContextForSession, EmailAlreadyClaimedError } from "@/lib/auth/clerkProvisioning";
 import { cookieSession } from "@/lib/auth/clerkSession";
 import type { AuthContext, Permission } from "@/lib/auth/types";
 
@@ -28,7 +28,15 @@ export async function requirePagePermission(permission: Permission) {
 
   if (!session) redirect("/sign-in");
 
-  const context = await currentAuthContext();
+  let context: AuthContext | null;
+
+  try {
+    context = await currentAuthContext();
+  } catch (error) {
+    if (!(error instanceof EmailAlreadyClaimedError)) throw error;
+
+    redirect("/sign-in?problem=account-exists");
+  }
 
   if (!context) redirect("/choose-organization");
 
