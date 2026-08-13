@@ -16,7 +16,7 @@ ScopeLedger is a hosted, multi-tenant, professional-only revenue review system. 
 - Argon2id password hashing and hashed random session tokens.
 - HttpOnly, SameSite session cookies and session revocation.
 - Owner, Admin, Reviewer, and Read Only authorization checks on pages and APIs.
-- Same-origin checks and bounded in-memory mutation rate limits.
+- Same-origin checks, and mutation rate limits counted in shared storage so the limit does not multiply by the number of running instances.
 - Zod validation for mutation bodies and strict structured AI-output validation.
 - Security response headers, correlation IDs, structured redacted logs, and no stack traces in API responses.
 - Append-only billing events and audit logs enforced in PostgreSQL.

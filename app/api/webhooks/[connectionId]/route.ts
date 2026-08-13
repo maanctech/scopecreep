@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { checkRateLimit, RateLimitError } from "@/lib/auth/security";
+import { RateLimitError } from "@/lib/auth/security";
+import { enforceRateLimit } from "@/lib/auth/rateLimit";
 import { requestIp } from "@/lib/auth/api";
 import { receiveWebhook } from "@/lib/ingestion/webhook";
 
@@ -8,7 +9,7 @@ export async function POST(
   { params }: { params: Promise<{ connectionId: string }> },
 ) {
   try {
-    checkRateLimit(`webhook:${requestIp(request)}`, 120, 60_000);
+    await enforceRateLimit(`webhook:${requestIp(request)}`, 120, 60_000);
     const contentLength = Number(request.headers.get("content-length") || 0);
 
     if (Number.isFinite(contentLength) && contentLength > 1_000_000) {

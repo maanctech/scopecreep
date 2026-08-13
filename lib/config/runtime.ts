@@ -11,6 +11,19 @@ export function isTestRuntime(env: RuntimeEnvironment = process.env) {
   return env.NODE_ENV === "test" && Boolean(env.VITEST);
 }
 
+/**
+ * `Redis.fromEnv` reads either pair, the KV_ names being what the Vercel
+ * marketplace injects. A gate recognising only one of them would report an
+ * installation as unprotected while the client it guards connected perfectly
+ * well.
+ */
+export function isDistributedLimiterConfigured(env: RuntimeEnvironment = process.env) {
+  const url = env.UPSTASH_REDIS_REST_URL?.trim() || env.KV_REST_API_URL?.trim();
+  const token = env.UPSTASH_REDIS_REST_TOKEN?.trim() || env.KV_REST_API_TOKEN?.trim();
+
+  return Boolean(url && token);
+}
+
 function isLoopback(hostname: string) {
   return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "[::1]";
 }
@@ -144,6 +157,10 @@ export function validateProductionConfiguration(env: RuntimeEnvironment = proces
 
   if (!env.BLOB_READ_WRITE_TOKEN?.trim()) {
     errors.push("BLOB_READ_WRITE_TOKEN is required; without it an uploaded SOW original has nowhere to go.");
+  }
+
+  if (!isDistributedLimiterConfigured(env)) {
+    errors.push("UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN are required; without them each running instance counts rate limits on its own and the limit an attacker meets is multiplied by however many are warm.");
   }
 
   return errors;

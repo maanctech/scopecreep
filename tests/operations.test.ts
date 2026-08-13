@@ -70,7 +70,9 @@ describe("production configuration and log safety", () => {
     APP_URL: "http://127.0.0.1:3000",
     SCOPELEDGER_MASTER_KEY: Buffer.alloc(32).toString("base64"),
     CRON_SECRET: SCHEDULE_SECRET,
-    BLOB_READ_WRITE_TOKEN: "vercel_blob_rw_test_only"
+    BLOB_READ_WRITE_TOKEN: "vercel_blob_rw_test_only",
+    UPSTASH_REDIS_REST_URL: "https://example.upstash.io",
+    UPSTASH_REDIS_REST_TOKEN: "test-only-token"
   };
 
   it("requires the API key of whichever cloud provider is selected", () => {
@@ -118,6 +120,30 @@ describe("production configuration and log safety", () => {
     ).toContain("CRON_SECRET must be at least 32 characters.");
   });
 
+  /**
+   * The two unauthenticated endpoints have nothing but this limit protecting
+   * them, and a limit each instance counts on its own is the configured one
+   * multiplied by however many are warm.
+   */
+  it("refuses to start without the shared counter the public endpoints are limited by", () => {
+    const { UPSTASH_REDIS_REST_URL: _url, UPSTASH_REDIS_REST_TOKEN: _token, ...withoutCounter } = validInstallation;
+
+    expect(validateProductionConfiguration({ ...withoutCounter, ANTHROPIC_API_KEY: "test-only-key" })).toContain(
+      "UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN are required; without them each running instance counts rate limits on its own and the limit an attacker meets is multiplied by however many are warm."
+    );
+  });
+
+  it("starts for a deployment provisioned through the Vercel marketplace", () => {
+    const { UPSTASH_REDIS_REST_URL: _url, UPSTASH_REDIS_REST_TOKEN: _token, ...withoutCounter } = validInstallation;
+
+    expect(validateProductionConfiguration({
+      ...withoutCounter,
+      KV_REST_API_URL: "https://example.upstash.io",
+      KV_REST_API_TOKEN: "test-only-token",
+      ANTHROPIC_API_KEY: "test-only-key"
+    })).toEqual([]);
+  });
+
   it("rejects a provider that is not in the catalog", () => {
     expect(validateProductionConfiguration({ ...validInstallation, AI_PROVIDER: "gemini" })).toContain(
       "AI_PROVIDER must be one of anthropic, openai."
@@ -135,6 +161,8 @@ describe("production configuration and log safety", () => {
         SCOPELEDGER_MASTER_KEY: Buffer.alloc(32).toString("base64"),
         CRON_SECRET: SCHEDULE_SECRET,
         BLOB_READ_WRITE_TOKEN: "vercel_blob_rw_test_only",
+        UPSTASH_REDIS_REST_URL: "https://example.upstash.io",
+        UPSTASH_REDIS_REST_TOKEN: "test-only-token",
         ANTHROPIC_API_KEY: "test-only-key"
       })
     ).toEqual([]);

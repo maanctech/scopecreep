@@ -4,7 +4,8 @@ import { AuthorizationError, assertPermission } from "@/lib/auth/authorization";
 import { isTestRuntime } from "@/lib/config/runtime";
 import { authContextForSession } from "@/lib/auth/clerkProvisioning";
 import { requestToken, sessionFromToken } from "@/lib/auth/clerkSession";
-import { assertSameOrigin, checkRateLimit, InvalidOriginError, RateLimitError } from "@/lib/auth/security";
+import { assertSameOrigin, InvalidOriginError, RateLimitError } from "@/lib/auth/security";
+import { enforceRateLimit } from "@/lib/auth/rateLimit";
 import type { AuthContext, Permission } from "@/lib/auth/types";
 
 export class AuthenticationError extends Error {}
@@ -25,7 +26,7 @@ export async function requireApiPermission(
       ? createHash("sha256").update(token).digest("hex").slice(0, 24)
       : requestIp(request);
 
-    checkRateLimit(`protected:${principal}:${path}`, 120, 60_000);
+    await enforceRateLimit(`protected:${principal}:${path}`, 120, 60_000);
   }
 
   const session = await sessionFromToken(token);

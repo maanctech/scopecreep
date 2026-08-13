@@ -3,7 +3,8 @@ import { z } from "zod";
 import { MAX_HOURLY_RATE } from "@/lib/limits";
 import { createLead } from "@/lib/store";
 import { authErrorResponse, requestIp } from "@/lib/auth/api";
-import { assertSameOrigin, checkRateLimit } from "@/lib/auth/security";
+import { assertSameOrigin } from "@/lib/auth/security";
+import { enforceRateLimit } from "@/lib/auth/rateLimit";
 
 export const runtime = "nodejs";
 
@@ -53,7 +54,7 @@ function validationMessage(error: z.ZodError) {
 export async function POST(request: Request) {
   try {
     assertSameOrigin(request);
-    checkRateLimit(`lead-capture:${requestIp(request)}`, 8, 60 * 60 * 1000);
+    await enforceRateLimit(`lead-capture:${requestIp(request)}`, 8, 60 * 60 * 1000);
     let json: unknown;
 
     try {

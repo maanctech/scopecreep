@@ -4,7 +4,8 @@ import { MAX_HOURLY_RATE, MAX_MESSAGE_LENGTH, MAX_SOW_LENGTH } from "@/lib/limit
 import { createAuditRequest } from "@/lib/store";
 import { NotFoundError } from "@/lib/storeErrors";
 import { authErrorResponse, requestIp } from "@/lib/auth/api";
-import { assertSameOrigin, checkRateLimit } from "@/lib/auth/security";
+import { assertSameOrigin } from "@/lib/auth/security";
+import { enforceRateLimit } from "@/lib/auth/rateLimit";
 
 export const runtime = "nodejs";
 
@@ -42,7 +43,7 @@ function validationMessage(error: z.ZodError) {
 export async function POST(request: Request) {
   try {
     assertSameOrigin(request);
-    checkRateLimit(`audit-request:${requestIp(request)}`, 6, 60 * 60 * 1000);
+    await enforceRateLimit(`audit-request:${requestIp(request)}`, 6, 60 * 60 * 1000);
     let json: unknown;
 
     try {

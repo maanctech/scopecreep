@@ -8,6 +8,8 @@ const COMPLETE_PRODUCTION_ENVIRONMENT = {
   SCOPELEDGER_MASTER_KEY: Buffer.alloc(32).toString("base64"),
   CRON_SECRET: "a-scheduled-secret-of-at-least-32-characters",
   BLOB_READ_WRITE_TOKEN: "vercel_blob_rw_test_only",
+  UPSTASH_REDIS_REST_URL: "https://example.upstash.io",
+  UPSTASH_REDIS_REST_TOKEN: "test-only-token",
   ANTHROPIC_API_KEY: "test-only-key"
 };
 
