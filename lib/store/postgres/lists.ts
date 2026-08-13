@@ -1,7 +1,8 @@
 import { query } from "@/lib/db/client";
-import type { DbRow } from "@/lib/store/postgres/client";
+import { dollars, type DbRow } from "@/lib/store/postgres/client";
 import { mapEvent, mapFinding } from "@/lib/store/postgres/mappers";
 import type { BillingEventFilters, FindingFilters, ProjectOption } from "@/lib/store/filters";
+import type { RevenueGroup } from "@/lib/domain/revenueTotals";
 import { decodeCursor, isUuid, pageSize, toPage, type Page, type PageRequest } from "@/lib/store/pagination";
 import type { BillingEvent, ScopeFinding } from "@/lib/types";
 
@@ -135,5 +136,34 @@ export async function loadProjectOptions(organizationId: string): Promise<Projec
     id: String(row.id),
     project_name: String(row.project_name),
     client_name: String(row.client_name)
+  }));
+}
+
+/**
+ * One row per combination of the columns that decide a revenue bucket. The
+ * rules themselves stay in the domain module: this only reduces the number of
+ * rows they have to be applied to, from every finding a firm has recorded to
+ * the few dozen distinct combinations those findings fall into.
+ */
+export async function loadRevenueGroups(organizationId: string): Promise<RevenueGroup[]> {
+  const rows = await query<DbRow>(
+    `SELECT classification, billing_decision, workflow_status, is_demo,
+            count(*)::int AS finding_count,
+            COALESCE(sum(estimated_revenue_cents), 0)::bigint AS estimated_revenue_cents,
+            COALESCE(sum(approved_amount_cents), 0)::bigint AS approved_amount_cents
+     FROM scope_findings
+     WHERE organization_id = $1
+     GROUP BY classification, billing_decision, workflow_status, is_demo`,
+    [organizationId]
+  );
+
+  return rows.rows.map((row) => ({
+    classification: row.classification as ScopeFinding["classification"],
+    billing_decision: row.billing_decision as ScopeFinding["billing_decision"],
+    workflow_status: row.workflow_status as ScopeFinding["workflow_status"],
+    is_demo: Boolean(row.is_demo),
+    finding_count: Number(row.finding_count),
+    estimated_revenue: dollars(row.estimated_revenue_cents),
+    approved_amount_cents: Number(row.approved_amount_cents)
   }));
 }

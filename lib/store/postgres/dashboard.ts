@@ -14,9 +14,13 @@ import {
   loadProjectsByIds,
   type DashboardFinding
 } from "@/lib/store/postgres/loaders";
-import { loadEventsPage, loadFindingsPage, loadProjectOptions } from "@/lib/store/postgres/lists";
+import { loadEventsPage, loadFindingsPage, loadProjectOptions, loadRevenueGroups } from "@/lib/store/postgres/lists";
 import { summariseProjects } from "@/lib/store/postgres/summaries";
-import { computeRevenueTotals, computeSplitRevenueTotals, emptyRevenueTotals } from "@/lib/domain/revenueTotals";
+import {
+  computeRevenueTotals,
+  computeSplitRevenueTotalsFromGroups,
+  emptyRevenueTotals
+} from "@/lib/domain/revenueTotals";
 import type { BillingEventFilters, FilterOptions, FindingFilters } from "@/lib/store/filters";
 import type { Page, PageRequest } from "@/lib/store/pagination";
 import type { AppDashboard } from "@/lib/store/json";
@@ -185,12 +189,12 @@ export async function getFilterOptions(): Promise<FilterOptions> {
 
 export async function getRevenueSplit() {
   return withStoreContext(async (context) => {
-    const findings = await loadDashboardFindings(context.organizationId);
+    const groups = await loadRevenueGroups(context.organizationId);
 
     return {
-      ...computeSplitRevenueTotals(findings),
-      hasDemoFindings: findings.some((finding) => finding.is_demo),
-      hasRealFindings: findings.some((finding) => !finding.is_demo)
+      ...computeSplitRevenueTotalsFromGroups(groups),
+      hasDemoFindings: groups.some((group) => group.is_demo),
+      hasRealFindings: groups.some((group) => !group.is_demo)
     };
   });
 }

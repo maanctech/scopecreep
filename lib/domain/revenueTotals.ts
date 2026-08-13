@@ -51,7 +51,13 @@ export type RevenueRelevantFinding = Pick<
   "classification" | "estimated_revenue" | "billing_decision" | "workflow_status" | "approved_amount_cents" | "is_demo"
 >;
 
-export function findingBucket(finding: RevenueRelevantFinding): FindingBucket {
+/**
+ * Only the decision and the status choose a bucket. Naming that separately lets
+ * a grouped total reuse the rules rather than restate them.
+ */
+export type BucketDeciding = Pick<ScopeFinding, "classification" | "billing_decision" | "workflow_status">;
+
+export function findingBucket(finding: BucketDeciding): FindingBucket {
   switch (finding.billing_decision) {
     case "Undecided":
       return finding.classification === "In Scope" ? "none" : "needs_review";
@@ -163,5 +169,71 @@ export function computeSplitRevenueTotals(findings: RevenueRelevantFinding[]): {
   return {
     demo: computeRevenueTotals(findings.filter((finding) => finding.is_demo)),
     real: computeRevenueTotals(findings.filter((finding) => !finding.is_demo))
+  };
+}
+
+/**
+ * One row per distinct combination of the columns that decide a bucket, with
+ * the members already counted and summed. A firm with tens of thousands of
+ * findings still produces a few dozen of these, so the totals for a page can be
+ * built without carrying every finding out of the database.
+ */
+export type RevenueGroup = BucketDeciding & {
+  is_demo: boolean;
+  finding_count: number;
+  estimated_revenue: number;
+  approved_amount_cents: number;
+};
+
+export function computeRevenueTotalsFromGroups(groups: RevenueGroup[]): RevenueTotals {
+  const totals = emptyRevenueTotals();
+
+  for (const group of groups) {
+    if (group.classification !== "In Scope") {
+      totals.potential_dollars += group.estimated_revenue;
+    }
+
+    switch (findingBucket(group)) {
+      case "needs_review":
+        totals.needs_review_count += group.finding_count;
+        totals.needs_review_dollars += group.estimated_revenue;
+        break;
+      case "discussing":
+        totals.discussing_count += group.finding_count;
+        totals.discussing_dollars += group.estimated_revenue;
+        break;
+      case "billable":
+        totals.billable_cents += group.approved_amount_cents;
+        break;
+      case "invoiced":
+        totals.invoiced_cents += group.approved_amount_cents;
+        break;
+      case "paid":
+        totals.paid_cents += group.approved_amount_cents;
+        break;
+      case "retainer":
+        totals.retainer_cents += group.approved_amount_cents;
+        break;
+      case "absorbed":
+        totals.absorbed_dollars += group.estimated_revenue;
+        break;
+      case "rejected":
+        totals.rejected_dollars += group.estimated_revenue;
+        break;
+      case "none":
+        break;
+    }
+  }
+
+  return totals;
+}
+
+export function computeSplitRevenueTotalsFromGroups(groups: RevenueGroup[]): {
+  demo: RevenueTotals;
+  real: RevenueTotals;
+} {
+  return {
+    demo: computeRevenueTotalsFromGroups(groups.filter((group) => group.is_demo)),
+    real: computeRevenueTotalsFromGroups(groups.filter((group) => !group.is_demo))
   };
 }
