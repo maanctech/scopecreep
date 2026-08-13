@@ -11,8 +11,7 @@ import { query } from "@/lib/db/client";
  */
 export const WITHHELD_FROM_EXPORT = new Map<string, string>([
   ["encrypted_secrets", "ciphertext under ScopeLedger's master key: useless to the firm and a target inside a downloaded file"],
-  ["oauth_authorization_requests", "in-flight PKCE verifiers for connections still being authorised"],
-  ["user_sessions", "live session token hashes; a downloaded copy of one is a credential"]
+  ["oauth_authorization_requests", "in-flight PKCE verifiers for connections still being authorised"]
 ]);
 
 export async function organizationScopedTables() {

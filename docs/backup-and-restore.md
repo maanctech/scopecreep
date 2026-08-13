@@ -16,9 +16,9 @@ Their own records, as a single JSON file. `POST /api/exports` produces one and t
 
 It is a tenant-scoped read, not a database dump: every table carrying `organization_id`, queried under that organization's tenant scope, with no shell command anywhere. Tables join it because they carry that column, not because anyone listed them, so a table added later is included without being enrolled by hand.
 
-Three are withheld deliberately, each with its reason recorded in `lib/exports/tables.ts` and repeated in the file's own manifest: `encrypted_secrets` (ciphertext under ScopeLedger's master key, useless to the firm and a target inside a downloaded file), `oauth_authorization_requests` (in-flight PKCE verifiers), and `user_sessions` (live session token hashes, which a downloaded copy would turn into a credential). A test fails when an organization-scoped table arrives that nobody has decided about.
+Two are withheld deliberately, each with its reason recorded in `lib/exports/tables.ts` and repeated in the file's own manifest: `encrypted_secrets` (ciphertext under ScopeLedger's master key, useless to the firm and a target inside a downloaded file) and `oauth_authorization_requests` (in-flight PKCE verifiers). A test fails when an organization-scoped table arrives that nobody has decided about.
 
-The firm's own people are added explicitly, since `users` carries no `organization_id` and the sweep cannot reach it. The password hash is not among the columns selected.
+The firm's own people are added explicitly, since `users` carries no `organization_id` and the sweep cannot reach it. What identifies them to Clerk is selected; nothing that would authenticate as them is, because this application holds no such thing.
 
 Uploaded SOW originals are not inside the file. Each is downloaded from its own version while the account is active.
 

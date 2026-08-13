@@ -73,10 +73,10 @@ beforeAll(async () => {
       [ORGANIZATION_A, "Aperture Consulting", "aperture-consulting", ORGANIZATION_B, "Beacon Studio", "beacon-studio"]
     );
     await query(
-      `INSERT INTO users (id, email, normalized_email, password_hash, display_name)
-       VALUES ($1,$2,$3,$4,$5), ($6,$7,$8,$9,$10)`,
-      [USER_A, "alice@example.com", "alice@example.com", "not-a-real-hash", "Alice Rivera",
-       USER_B, "bob@example.com", "bob@example.com", "not-a-real-hash", "Bob Chen"]
+      `INSERT INTO users (id, email, normalized_email, display_name)
+       VALUES ($1,$2,$3,$4), ($5,$6,$7,$8)`,
+      [USER_A, "alice@example.com", "alice@example.com", "Alice Rivera",
+       USER_B, "bob@example.com", "bob@example.com", "Bob Chen"]
     );
     await query(
       "INSERT INTO organization_settings (organization_id, settings) VALUES ($1, $2::jsonb)",

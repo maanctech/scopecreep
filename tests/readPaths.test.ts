@@ -108,9 +108,9 @@ beforeAll(async () => {
       [ORGANIZATION, "Meridian Partners", "meridian-partners", OTHER_ORGANIZATION, "Rival Group", "rival-group"]
     );
     await query(
-      "INSERT INTO users (id,email,normalized_email,password_hash,display_name) VALUES ($1,$2,$3,$4,$5), ($6,$7,$8,$9,$10)",
-      [USER, "mara@example.com", "mara@example.com", "not-a-real-hash", "Mara Iqbal",
-       OTHER_USER, "rival@example.com", "rival@example.com", "not-a-real-hash", "Rival Owner"]
+      "INSERT INTO users (id,email,normalized_email,display_name) VALUES ($1,$2,$3,$4), ($5,$6,$7,$8)",
+      [USER, "mara@example.com", "mara@example.com", "Mara Iqbal",
+       OTHER_USER, "rival@example.com", "rival@example.com", "Rival Owner"]
     );
     await query(
       "INSERT INTO organization_memberships (organization_id,user_id,role) VALUES ($1,$2,'Owner'), ($3,$4,'Owner')",

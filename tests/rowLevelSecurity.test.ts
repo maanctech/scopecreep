@@ -110,7 +110,6 @@ const TENANT = "( SELECT tenant_id() AS tenant_id)";
 
 const ORGANIZATION_COLUMN_POLICY = `(${SYSTEM_ACCESS} OR (organization_id = ${TENANT}))`;
 const OWN_IDENTIFIER_POLICY = `(${SYSTEM_ACCESS} OR (id = ${TENANT}))`;
-const SYSTEM_ACCESS_ONLY_POLICY = `(${SYSTEM_ACCESS} OR false)`;
 const MEMBERSHIP_POLICY =
   `(${SYSTEM_ACCESS} OR (EXISTS ( SELECT 1 FROM organization_memberships m ` +
   `WHERE ((m.user_id = users.id) AND (m.organization_id = ${TENANT})))))`;
@@ -126,10 +125,9 @@ const EXPECTED_POLICY_BY_TABLE = new Map<string, string>([
     "reports", "sales_templates", "scope_boundary_items", "scope_boundary_maps",
     "scope_finding_history", "scope_findings", "sow_documents", "sow_risk_items",
     "sow_risk_reviews", "sow_sections", "sow_versions", "sync_checkpoints",
-    "user_sessions", "webhook_deliveries"
+    "webhook_deliveries"
   ].map((table): [string, string] => [table, ORGANIZATION_COLUMN_POLICY]),
   ["organizations", OWN_IDENTIFIER_POLICY],
-  ["password_reset_tokens", SYSTEM_ACCESS_ONLY_POLICY],
   ["users", MEMBERSHIP_POLICY]
 ]);
 

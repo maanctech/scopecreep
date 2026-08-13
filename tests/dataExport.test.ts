@@ -57,9 +57,9 @@ beforeAll(async () => {
       [ORGANIZATION_A, "Harbour Consulting", "harbour-consulting", ORGANIZATION_B, "Kestrel Works", "kestrel-works"]
     );
     await query(
-      "INSERT INTO users (id, email, normalized_email, password_hash, display_name) VALUES ($1,$2,$3,$4,$5), ($6,$7,$8,$9,$10)",
-      [USER_A, "hana@example.com", "hana@example.com", "not-a-real-hash", "Hana Ortiz",
-       USER_B, "kai@example.com", "kai@example.com", "not-a-real-hash", "Kai Lindqvist"]
+      "INSERT INTO users (id, email, normalized_email, display_name) VALUES ($1,$2,$3,$4), ($5,$6,$7,$8)",
+      [USER_A, "hana@example.com", "hana@example.com", "Hana Ortiz",
+       USER_B, "kai@example.com", "kai@example.com", "Kai Lindqvist"]
     );
     await query(
       "INSERT INTO organization_memberships (organization_id, user_id, role) VALUES ($1,$2,'Owner'), ($3,$4,'Owner')",
@@ -89,12 +89,6 @@ beforeAll(async () => {
         `INSERT INTO encrypted_secrets (id, organization_id, connection_id, name, ciphertext, initialization_vector, auth_tag)
          VALUES ($1,$2,$3,'access_token','ciphertext-that-must-never-be-exported','iv-value','auth-tag-value')`,
         [randomUUID(), connection.organization_id, connection.id]
-      );
-      await query(
-        `INSERT INTO user_sessions (id, user_id, organization_id, token_hash, expires_at)
-         VALUES ($1,$2,$3,$4,now() + interval '1 day')`,
-        [randomUUID(), connection.organization_id === ORGANIZATION_A ? USER_A : USER_B, connection.organization_id,
-         `session-token-hash-that-must-never-be-exported-${connection.id}`]
       );
     }
   });
@@ -139,7 +133,6 @@ describe("a firm can take its own records with it", () => {
     expect(payload.members.map((member) => member.email)).toEqual(["hana@example.com"]);
     expect(payload.members[0].display_name).toBe("Hana Ortiz");
     expect(payload.members[0].role).toBe("Owner");
-    expect(Object.keys(payload.members[0])).not.toContain("password_hash");
   });
 
   it("carries no credential material a downloaded copy would turn into a key", async () => {
@@ -203,8 +196,8 @@ describe("the withheld list", () => {
   it("accounts for every organization-scoped table, so a new one cannot arrive unreviewed", async () => {
     const present = await withTenant(ORGANIZATION_A, organizationScopedTables);
 
-    expect(present).toHaveLength(35);
+    expect(present).toHaveLength(34);
     expect([...WITHHELD_FROM_EXPORT.keys()].sort())
-      .toEqual(["encrypted_secrets", "oauth_authorization_requests", "user_sessions"]);
+      .toEqual(["encrypted_secrets", "oauth_authorization_requests"]);
   });
 });

@@ -13,9 +13,8 @@ ScopeLedger is a hosted, multi-tenant, professional-only revenue review system. 
 
 ## Current Controls
 
-- Argon2id password hashing and hashed random session tokens.
-- HttpOnly, SameSite session cookies and session revocation.
-- Owner, Admin, Reviewer, and Read Only authorization checks on pages and APIs.
+- Clerk holds credentials and issues sessions. This application stores no password and no session token, and verifies the session token Clerk sets on every request rather than keeping a session of its own.
+- Owner, Admin, Reviewer, and Read Only authorization checks on pages and APIs, mapped from the caller's Clerk organization role and defaulting to Read Only for any role not recognised.
 - Same-origin checks, and mutation rate limits counted in shared storage so the limit does not multiply by the number of running instances.
 - Zod validation for mutation bodies and strict structured AI-output validation.
 - Security response headers, correlation IDs, structured redacted logs, and no stack traces in API responses.
