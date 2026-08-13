@@ -24,6 +24,11 @@ jobs:
 
       - run: npm test
 
+      # Type checking does not compile the application, so a client/server
+      # boundary that only Turbopack rejects would otherwise be discovered by a
+      # failed deployment rather than by a failed check.
+      - run: npm run build
+
   # The tenant boundary is a property of the database and the role the
   # application connects as, not of anything the suite above can see. It used
   # to be checked by the container entrypoint, which no longer runs anywhere.
