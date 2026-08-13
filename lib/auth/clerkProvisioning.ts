@@ -106,6 +106,37 @@ async function recordMembership(organizationId: string, userId: string, role: Or
   );
 }
 
+type KnownTenant = {
+  organization_id: string;
+  organization_name: string;
+  user_id: string;
+  email: string;
+  display_name: string;
+  is_system_admin: boolean;
+  role: string | null;
+};
+
+async function knownTenant(session: ClerkSession) {
+  const found = await query<KnownTenant>(
+    `SELECT organizations.id AS organization_id,
+            organizations.name AS organization_name,
+            users.id AS user_id,
+            users.email,
+            users.display_name,
+            users.is_system_admin,
+            organization_memberships.role
+     FROM organizations
+     JOIN users ON users.clerk_user_id = $2
+     LEFT JOIN organization_memberships
+            ON organization_memberships.organization_id = organizations.id
+           AND organization_memberships.user_id = users.id
+     WHERE organizations.clerk_organization_id = $1`,
+    [session.clerkOrganizationId, session.clerkUserId]
+  );
+
+  return found.rows[0] ?? null;
+}
+
 /**
  * Clerk is the record of who someone is; these tables are the record of what
  * their firm owns. Rows are written the first time a session presents an
@@ -113,6 +144,10 @@ async function recordMembership(organizationId: string, userId: string, role: Or
  * because the webhook and the user's first request race and the user usually
  * wins. Row-level security still keys on the local organization id, so a Clerk
  * identifier never reaches a policy.
+ *
+ * Every page a signed-in person opens comes through here, so the settled case
+ * is one query and no write at all. Creating and correcting rows costs more,
+ * and happens on a first sign-in or a role change rather than on every request.
  */
 export async function authContextForSession(
   session: ClerkSession,
@@ -123,6 +158,22 @@ export async function authContextForSession(
   const role = organizationRoleFor(session.clerkOrganizationRole);
 
   return withSystemAccess(async () => {
+    const known = await knownTenant(session);
+
+    if (known && known.role === role) {
+      return {
+        sessionId: session.sessionId,
+        userId: known.user_id,
+        organizationId: known.organization_id,
+        organizationName: known.organization_name,
+        email: known.email,
+        displayName: known.display_name,
+        role,
+        isSystemAdmin: known.is_system_admin,
+        expiresAt: session.expiresAt
+      };
+    }
+
     const organization = await organizationFor(session.clerkOrganizationId!, directory);
     const user = await userFor(session, directory);
 

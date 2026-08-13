@@ -40,6 +40,17 @@ function sessionFor(overrides: Partial<ClerkSession> = {}): ClerkSession {
   };
 }
 
+function membershipVersion(organizationId: string) {
+  return withSystemAccess(async () => {
+    const result = await query<{ version: string }>(
+      "SELECT xmin::text AS version FROM organization_memberships WHERE organization_id = $1",
+      [organizationId]
+    );
+
+    return result.rows[0].version;
+  });
+}
+
 function countOf(table: string, column: string, value: string) {
   return withSystemAccess(async () => {
     const result = await query<{ total: string }>(`SELECT count(*)::text AS total FROM ${table} WHERE ${column} = $1`, [value]);
@@ -85,6 +96,20 @@ describe("resolving a Clerk session to a tenant", () => {
     );
 
     expect(stored.rows).toEqual([{ role: "Reviewer" }]);
+  });
+
+  /**
+   * Every page a signed-in person opens resolves their session, so a write on
+   * that path is a write on every request. `xmin` is the transaction that last
+   * wrote the row, which changes if and only if the row was written again.
+   */
+  it("does not rewrite the membership when nothing about it has changed", async () => {
+    const first = await authContextForSession(sessionFor(), MERIDIAN);
+    const before = await membershipVersion(first!.organizationId);
+
+    await authContextForSession(sessionFor({ sessionId: "sess_repeat" }), MERIDIAN);
+
+    expect(await membershipVersion(first!.organizationId)).toBe(before);
   });
 
   it("refuses a session with no active organization rather than guessing one", async () => {
