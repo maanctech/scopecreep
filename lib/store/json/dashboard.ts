@@ -6,7 +6,20 @@ import {
   withEventContext,
   withFindingContext
 } from "@/lib/store/json/projections";
-import { computeRevenueTotals, emptyRevenueTotals, type RevenueTotals } from "@/lib/domain/revenueTotals";
+import {
+  computeRevenueTotals,
+  computeSplitRevenueTotals,
+  emptyRevenueTotals,
+  type RevenueTotals
+} from "@/lib/domain/revenueTotals";
+import {
+  matchesBillingEventFilters,
+  matchesFindingFilters,
+  type BillingEventFilters,
+  type FilterOptions,
+  type FindingFilters
+} from "@/lib/store/filters";
+import { sliceAfterCursor, type Page, type PageRequest } from "@/lib/store/pagination";
 import type {
   BillingEvent,
   BillingEventWithContext,
@@ -129,6 +142,51 @@ export async function getFindings(): Promise<FindingWithContext[]> {
     .slice()
     .sort((a, b) => b.created_at.localeCompare(a.created_at))
     .map((finding) => withFindingContext(finding, store));
+}
+
+export async function listFindings(
+  filters: FindingFilters,
+  request: PageRequest = {}
+): Promise<Page<FindingWithContext>> {
+  const rows = await getFindings();
+
+  return sliceAfterCursor(
+    rows.filter((row) => matchesFindingFilters(row, filters)),
+    (row) => ({ createdAt: row.finding.created_at, id: row.finding.id }),
+    request
+  );
+}
+
+export async function listBillingEvents(
+  filters: BillingEventFilters,
+  request: PageRequest = {}
+): Promise<Page<BillingEventWithContext>> {
+  const rows = await getBillingEvents();
+
+  return sliceAfterCursor(
+    rows.filter((row) => matchesBillingEventFilters(row, filters)),
+    (row) => ({ createdAt: row.event.created_at, id: row.event.id }),
+    request
+  );
+}
+
+export async function getFilterOptions(): Promise<FilterOptions> {
+  const store = await readLocalStore();
+  const projects = store.projects
+    .map((project) => ({ id: project.id, project_name: project.project_name, client_name: project.client_name }))
+    .sort((a, b) => a.client_name.localeCompare(b.client_name) || a.project_name.localeCompare(b.project_name));
+
+  return { clients: [...new Set(projects.map((project) => project.client_name))], projects };
+}
+
+export async function getRevenueSplit() {
+  const store = await readLocalStore();
+
+  return {
+    ...computeSplitRevenueTotals(store.scopeFindings),
+    hasDemoFindings: store.scopeFindings.some((finding) => finding.is_demo),
+    hasRealFindings: store.scopeFindings.some((finding) => !finding.is_demo)
+  };
 }
 
 export async function getFindingDetail(findingId: string): Promise<

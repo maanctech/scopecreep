@@ -3,6 +3,8 @@ import * as postgresStore from "@/lib/store/postgres";
 import { shouldUsePostgresStorage } from "@/lib/runtimeStorage";
 import type { LeadInput, AuditRequestInput, ProjectInput, AppDashboard } from "@/lib/store/json";
 import type { FindingActionName } from "@/lib/domain/findingTransitions";
+import type { BillingEventFilters, FilterOptions, FindingFilters } from "@/lib/store/filters";
+import type { Page, PageRequest } from "@/lib/store/pagination";
 import type {
   AnalysisInput,
   BillingEvent,
@@ -77,6 +79,36 @@ export async function getFindingDetail(findingId: string): Promise<
   if (shouldUsePostgresStorage()) return postgresStore.getFindingDetail(findingId);
 
   return jsonStore.getFindingDetail(findingId);
+}
+
+export async function listFindings(
+  filters: FindingFilters,
+  request: PageRequest = {}
+): Promise<Page<FindingWithContext>> {
+  if (shouldUsePostgresStorage()) return postgresStore.listFindings(filters, request);
+
+  return jsonStore.listFindings(filters, request);
+}
+
+export async function listBillingEvents(
+  filters: BillingEventFilters,
+  request: PageRequest = {}
+): Promise<Page<BillingEventWithContext>> {
+  if (shouldUsePostgresStorage()) return postgresStore.listBillingEvents(filters, request);
+
+  return jsonStore.listBillingEvents(filters, request);
+}
+
+export async function getFilterOptions(): Promise<FilterOptions> {
+  if (shouldUsePostgresStorage()) return postgresStore.getFilterOptions();
+
+  return jsonStore.getFilterOptions();
+}
+
+export async function getRevenueSplit() {
+  if (shouldUsePostgresStorage()) return postgresStore.getRevenueSplit();
+
+  return jsonStore.getRevenueSplit();
 }
 
 export async function getBillingEvents(): Promise<BillingEventWithContext[]> {

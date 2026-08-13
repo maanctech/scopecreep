@@ -1,69 +1,23 @@
 import Link from "next/link";
 import { Disclaimer } from "@/components/ui/Disclaimer";
+import { PageNavigation } from "@/components/ui/PageNavigation";
 import { findingDisplayLabel } from "@/lib/domain/findingTransitions";
 import { formatCents, formatDollars } from "@/lib/domain/money";
-import { getFindings } from "@/lib/store";
-import {
-  BILLING_DECISIONS,
-  CLASSIFICATIONS,
-  WORKFLOW_STATUSES,
-  type FindingWithContext
-} from "@/lib/types";
+import { getFilterOptions, listFindings } from "@/lib/store";
+import type { FindingFilters } from "@/lib/store/filters";
+import { BILLING_DECISIONS, CLASSIFICATIONS, WORKFLOW_STATUSES } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
 type FindingsPageProps = {
-  searchParams: Promise<{
-    client?: string;
-    project?: string;
-    classification?: string;
-    decision?: string;
-    status?: string;
-    from?: string;
-    to?: string;
-  }>;
+  searchParams: Promise<FindingFilters & { cursor?: string }>;
 };
 
-function matchesFilters(
-  row: FindingWithContext,
-  filters: Awaited<FindingsPageProps["searchParams"]>
-) {
-  const { finding, project } = row;
-
-  if (filters.client && project?.client_name !== filters.client) return false;
-
-  if (filters.project && project?.id !== filters.project) return false;
-
-  if (filters.classification && finding.classification !== filters.classification) return false;
-
-  if (filters.decision && finding.billing_decision !== filters.decision) return false;
-
-  if (filters.status && finding.workflow_status !== filters.status) return false;
-
-  const createdDate = finding.created_at.slice(0, 10);
-
-  if (filters.from && createdDate < filters.from) return false;
-
-  if (filters.to && createdDate > filters.to) return false;
-
-  return true;
-}
-
 export default async function FindingsPage({ searchParams }: FindingsPageProps) {
-  const filters = await searchParams;
-  const allFindings = await getFindings();
-  const rows = allFindings.filter((row) => matchesFilters(row, filters));
-
-  const clients = Array.from(
-    new Set(allFindings.map((row) => row.project?.client_name).filter(Boolean))
-  ) as string[];
-  const projects = Array.from(
-    new Map(
-      allFindings
-        .filter((row) => row.project)
-        .map((row) => [row.project!.id, row.project!])
-    ).values()
-  );
+  const { cursor, ...filters } = await searchParams;
+  const [page, options] = await Promise.all([listFindings(filters, { cursor }), getFilterOptions()]);
+  const rows = page.rows;
+  const { clients, projects } = options;
 
   return (
     <div className="space-y-8">
@@ -214,7 +168,7 @@ export default async function FindingsPage({ searchParams }: FindingsPageProps) 
       ">
         <div className="border-b border-audit-border px-5 py-4">
           <h2 className="text-xl font-semibold">
-            {rows.length} finding{rows.length === 1 ? "" : "s"}
+            {rows.length} finding{rows.length === 1 ? "" : "s"} on this page
           </h2>
         </div>
         <div className="overflow-x-auto">
@@ -287,6 +241,12 @@ export default async function FindingsPage({ searchParams }: FindingsPageProps) 
             </tbody>
           </table>
         </div>
+        <PageNavigation
+          basePath="/app/findings"
+          filters={filters}
+          cursor={cursor}
+          nextCursor={page.nextCursor}
+        />
       </section>
     </div>
   );

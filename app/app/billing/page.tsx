@@ -1,50 +1,17 @@
 import Link from "next/link";
 import { BillingSummary } from "@/components/billing/BillingSummary";
 import { Disclaimer } from "@/components/ui/Disclaimer";
+import { PageNavigation } from "@/components/ui/PageNavigation";
 import { formatCents } from "@/lib/domain/money";
-import { computeRevenueTotals } from "@/lib/domain/revenueTotals";
-import { getBillingEvents, getFindings } from "@/lib/store";
-import {
-  BILLING_EVENT_TYPES,
-  WORKFLOW_STATUSES,
-  type BillingEventWithContext
-} from "@/lib/types";
+import { getFilterOptions, getRevenueSplit, listBillingEvents } from "@/lib/store";
+import type { BillingEventFilters } from "@/lib/store/filters";
+import { BILLING_EVENT_TYPES, WORKFLOW_STATUSES } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
 type BillingPageProps = {
-  searchParams: Promise<{
-    client?: string;
-    project?: string;
-    type?: string;
-    status?: string;
-    from?: string;
-    to?: string;
-  }>;
+  searchParams: Promise<BillingEventFilters & { cursor?: string }>;
 };
-
-function matchesFilters(
-  row: BillingEventWithContext,
-  filters: Awaited<BillingPageProps["searchParams"]>
-) {
-  const { event, project } = row;
-
-  if (filters.client && project?.client_name !== filters.client) return false;
-
-  if (filters.project && project?.id !== filters.project) return false;
-
-  if (filters.type && event.event_type !== filters.type) return false;
-
-  if (filters.status && event.new_status !== filters.status) return false;
-
-  const createdDate = event.created_at.slice(0, 10);
-
-  if (filters.from && createdDate < filters.from) return false;
-
-  if (filters.to && createdDate > filters.to) return false;
-
-  return true;
-}
 
 function formatTimestamp(value: string) {
   return new Date(value).toLocaleString("en-US", {
@@ -54,21 +21,14 @@ function formatTimestamp(value: string) {
 }
 
 export default async function BillingPage({ searchParams }: BillingPageProps) {
-  const filters = await searchParams;
-  const [allEvents, allFindings] = await Promise.all([getBillingEvents(), getFindings()]);
-  const rows = allEvents.filter((row) => matchesFilters(row, filters));
-
-  const demoFindings = allFindings.filter((row) => row.finding.is_demo).map((row) => row.finding);
-  const realFindings = allFindings.filter((row) => !row.finding.is_demo).map((row) => row.finding);
-
-  const clients = Array.from(
-    new Set(allEvents.map((row) => row.project?.client_name).filter(Boolean))
-  ) as string[];
-  const projects = Array.from(
-    new Map(
-      allEvents.filter((row) => row.project).map((row) => [row.project!.id, row.project!])
-    ).values()
-  );
+  const { cursor, ...filters } = await searchParams;
+  const [page, options, revenue] = await Promise.all([
+    listBillingEvents(filters, { cursor }),
+    getFilterOptions(),
+    getRevenueSplit()
+  ]);
+  const rows = page.rows;
+  const { clients, projects } = options;
 
   return (
     <div className="space-y-8">
@@ -97,14 +57,14 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
 
       <Disclaimer />
 
-      {realFindings.length ? (
+      {revenue.hasRealFindings ? (
         <section className="space-y-4">
           <h2 className="text-xl font-semibold">Your live totals</h2>
-          <BillingSummary totals={computeRevenueTotals(realFindings)} />
+          <BillingSummary totals={revenue.real} />
         </section>
       ) : null}
 
-      {demoFindings.length ? (
+      {revenue.hasDemoFindings ? (
         <section className="space-y-4">
           <div>
             <h2 className="text-xl font-semibold">Demo totals</h2>
@@ -115,7 +75,7 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
               Fictional demonstration data
             </p>
           </div>
-          <BillingSummary totals={computeRevenueTotals(demoFindings)} />
+          <BillingSummary totals={revenue.demo} />
         </section>
       ) : null}
 
@@ -241,7 +201,7 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
       ">
         <div className="border-b border-audit-border px-5 py-4">
           <h2 className="text-xl font-semibold">
-            {rows.length} event{rows.length === 1 ? "" : "s"}
+            {rows.length} event{rows.length === 1 ? "" : "s"} on this page
           </h2>
         </div>
         <div className="overflow-x-auto">
@@ -308,6 +268,12 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
             </tbody>
           </table>
         </div>
+        <PageNavigation
+          basePath="/app/billing"
+          filters={filters}
+          cursor={cursor}
+          nextCursor={page.nextCursor}
+        />
       </section>
     </div>
   );

@@ -14,10 +14,13 @@ import {
   loadProjectsByIds,
   type DashboardFinding
 } from "@/lib/store/postgres/loaders";
+import { loadEventsPage, loadFindingsPage, loadProjectOptions } from "@/lib/store/postgres/lists";
 import { summariseProjects } from "@/lib/store/postgres/summaries";
-import { computeRevenueTotals, emptyRevenueTotals } from "@/lib/domain/revenueTotals";
+import { computeRevenueTotals, computeSplitRevenueTotals, emptyRevenueTotals } from "@/lib/domain/revenueTotals";
+import type { BillingEventFilters, FilterOptions, FindingFilters } from "@/lib/store/filters";
+import type { Page, PageRequest } from "@/lib/store/pagination";
 import type { AppDashboard } from "@/lib/store/json";
-import type { BillingEvent, FindingWithContext, ProjectDetail } from "@/lib/types";
+import type { BillingEvent, BillingEventWithContext, FindingWithContext, ProjectDetail } from "@/lib/types";
 
 const decisionEvents: BillingEvent["event_type"][] = ["Approved Internally", "Included In Retainer", "Discussing With Client", "Absorbed", "Rejected", "Reopened", "Decision Updated"];
 
@@ -133,6 +136,62 @@ export async function getFindings(): Promise<FindingWithContext[]> {
       message: messages.get(finding.client_message_id) ?? null,
       project: projects.get(finding.project_id) ?? null
     }));
+  });
+}
+
+export async function listFindings(
+  filters: FindingFilters,
+  request: PageRequest = {}
+): Promise<Page<FindingWithContext>> {
+  return withStoreContext(async (context) => {
+    const page = await loadFindingsPage(context.organizationId, filters, request);
+    const { messages, projects } = await withContext(context.organizationId, page.rows);
+
+    return {
+      rows: page.rows.map((finding) => ({
+        finding,
+        message: messages.get(finding.client_message_id) ?? null,
+        project: projects.get(finding.project_id) ?? null
+      })),
+      nextCursor: page.nextCursor
+    };
+  });
+}
+
+export async function listBillingEvents(
+  filters: BillingEventFilters,
+  request: PageRequest = {}
+): Promise<Page<BillingEventWithContext>> {
+  return withStoreContext(async (context) => {
+    const page = await loadEventsPage(context.organizationId, filters, request);
+    const contextByEvent = await eventContext(context.organizationId, page.rows);
+
+    return { rows: page.rows.map((event) => contextByEvent.get(event.id)!), nextCursor: page.nextCursor };
+  });
+}
+
+/**
+ * The filter dropdowns used to be built from whatever the page had already
+ * loaded, which is one of the reasons it had to load everything. A firm's
+ * projects are few and are the real list of choices.
+ */
+export async function getFilterOptions(): Promise<FilterOptions> {
+  return withStoreContext(async (context) => {
+    const projects = await loadProjectOptions(context.organizationId);
+
+    return { clients: [...new Set(projects.map((project) => project.client_name))], projects };
+  });
+}
+
+export async function getRevenueSplit() {
+  return withStoreContext(async (context) => {
+    const findings = await loadDashboardFindings(context.organizationId);
+
+    return {
+      ...computeSplitRevenueTotals(findings),
+      hasDemoFindings: findings.some((finding) => finding.is_demo),
+      hasRealFindings: findings.some((finding) => !finding.is_demo)
+    };
   });
 }
 
