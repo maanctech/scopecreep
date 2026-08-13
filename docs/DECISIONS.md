@@ -16,6 +16,7 @@ Last updated: 2026-08-10 after commit `d0cb078`. Branch: `backend-refactor`.
 - Organization scoping is enforced at store/API and database relationship boundaries, with role checks before protected actions.
 - Public intake is enabled only when exactly one organization opts in; zero or multiple eligible organizations fail closed.
 - SOW originals and attachments use a private document directory. A complete operational backup must cover PostgreSQL and documents.
+  - **Superseded.** Serverless hosting has no local directory to write to. Originals go to a private object store, and recovery is the provider's point-in-time restore plus the tenant-scoped export rather than an archive covering both.
 - The master encryption key remains outside PostgreSQL and backups. Losing it makes connector credentials unrecoverable.
 - Ordered SQL migrations are checksum-protected and never rewritten after release.
 

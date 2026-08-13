@@ -40,6 +40,37 @@ describe("same-origin mutation defense", () => {
       )
     ).toThrow(InvalidOriginError);
   });
+
+  /**
+   * A browser omits the origin on a same-origin navigation, which is how a
+   * download link reaches a route that answers with a file.
+   */
+  it("accepts a read that carries no origin, as a download link does", () => {
+    expect(() =>
+      assertSameOrigin(
+        new Request("http://scopeledger.test/api/exports/x/download", {
+          method: "GET",
+          headers: { host: "scopeledger.test" }
+        })
+      )
+    ).not.toThrow();
+  });
+
+  /**
+   * Another site's script calling this one carries the caller's cookies. No
+   * read is meant to change anything, but nothing enforces that on the route
+   * that forgets, so a mismatched origin is refused on reads too.
+   */
+  it("rejects a read issued by another site's script", () => {
+    expect(() =>
+      assertSameOrigin(
+        new Request("http://scopeledger.test/api/projects", {
+          method: "GET",
+          headers: { host: "scopeledger.test", origin: "https://attacker.test" }
+        })
+      )
+    ).toThrow(InvalidOriginError);
+  });
 });
 
 describe("runtime transport headers", () => {

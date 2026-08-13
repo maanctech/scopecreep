@@ -10,7 +10,7 @@ vi.mock("@/lib/auth/current", () => ({
 }));
 
 import { currentAuthContext } from "@/lib/auth/current";
-import { WITHHELD_FROM_EXPORT, organizationScopedTables } from "@/lib/exports/tables";
+import { WITHHELD_FROM_EXPORT, exportableTables, organizationScopedTables } from "@/lib/exports/tables";
 import { downloadDataExport, listDataExports, requestDataExport } from "@/lib/exports/service";
 
 const ORGANIZATION_A = "70000000-0000-4000-8000-000000000001";
@@ -181,6 +181,10 @@ describe("a firm can take its own records with it", () => {
   });
 });
 
+const REVIEWED_AS_HARMLESS = new Map<string, string>([
+  ["backup_records.includes_encrypted_secrets", "a boolean recording whether a backup covered that table, holding no secret itself"]
+]);
+
 describe("the withheld list", () => {
   it("names tables that still exist, so it cannot rot into a list of nothing", async () => {
     const present = await withTenant(ORGANIZATION_A, organizationScopedTables);
@@ -193,6 +197,35 @@ describe("the withheld list", () => {
    * it holds something a firm should not be handed, this is where that has to
    * be decided rather than discovered in a downloaded file.
    */
+  /**
+   * The withheld list is decided per table, but the export selects every column
+   * a table has. A credential added to a table that is already exported would
+   * therefore leave in the next download without anything being decided about
+   * it, which the per-table review cannot see.
+   *
+   * A name that reads like a credential and is not one belongs below, with the
+   * reason, so that clearing it stays a decision somebody made rather than a
+   * pattern somebody loosened.
+   */
+  it("carries no column whose name says it holds credential material", async () => {
+    const exportable = await withTenant(ORGANIZATION_A, exportableTables);
+    const columns = await withTenant(ORGANIZATION_A, () =>
+      query<{ table_name: string; column_name: string }>(
+        `SELECT table_name, column_name
+         FROM information_schema.columns
+         WHERE table_schema = 'public' AND table_name = ANY($1::text[])`,
+        [exportable]
+      )
+    );
+    const credentialish = /token|secret|password|ciphertext|cipher|credential|private_key|auth_tag|verifier|signature/i;
+    const offending = columns.rows
+      .filter((row) => credentialish.test(row.column_name))
+      .map((row) => `${row.table_name}.${row.column_name}`)
+      .filter((column) => !REVIEWED_AS_HARMLESS.has(column));
+
+    expect(offending).toEqual([]);
+  });
+
   it("accounts for every organization-scoped table, so a new one cannot arrive unreviewed", async () => {
     const present = await withTenant(ORGANIZATION_A, organizationScopedTables);
 

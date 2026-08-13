@@ -1,5 +1,10 @@
-import { describe, expect, it } from "vitest";
-import { requestToken, sessionFromToken } from "@/lib/auth/clerkSession";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  requestToken,
+  resetClaimsVerifierForTesting,
+  sessionFromToken,
+  setClaimsVerifierForTesting
+} from "@/lib/auth/clerkSession";
 
 const CLAIMS = {
   v: 2,
@@ -9,6 +14,11 @@ const CLAIMS = {
   email: "mara@example.com",
   o: { id: "org_abc", rol: "admin", slg: "meridian" }
 };
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+  resetClaimsVerifierForTesting();
+});
 
 const accepts = async () => CLAIMS;
 
@@ -53,5 +63,57 @@ describe("finding the token on an incoming request", () => {
 
   it("reports no token when the request carries neither", () => {
     expect(requestToken(new Request("https://app.example/api/findings"))).toBeNull();
+  });
+
+  /**
+   * A cookie set for a parent domain arrives alongside this application's own
+   * and nothing in the header distinguishes them, so whoever set the extra one
+   * would otherwise choose which account the request runs as.
+   */
+  it("carries no session when a second session cookie is also present", () => {
+    const request = new Request("https://app.example/api/findings", {
+      headers: { cookie: "__session=attacker.token.here; __session=header.payload.signature" }
+    });
+
+    expect(requestToken(request)).toBeNull();
+  });
+
+  it("still prefers an explicit bearer token over any cookie at all", () => {
+    const request = new Request("https://app.example/api/findings", {
+      headers: {
+        authorization: "Bearer header.payload.signature",
+        cookie: "__session=one; __session=two"
+      }
+    });
+
+    expect(requestToken(request)).toBe("header.payload.signature");
+  });
+});
+
+describe("replacing the claims verifier", () => {
+  /**
+   * The override is the one thing here that could accept a token Clerk never
+   * signed, so it is fenced to the test runner exactly as the authentication
+   * bypass is, rather than relying on nothing in production calling it.
+   */
+  it("refuses to install a replacement on a production server", () => {
+    vi.stubEnv("NODE_ENV", "production");
+
+    expect(() => setClaimsVerifierForTesting(accepts)).toThrow(/production server/);
+  });
+
+  /**
+   * A replacement installed before a deployment turned production must not
+   * survive into it either, so the override is ignored as well as refused.
+   */
+  it("ignores a replacement that was already installed once production is in effect", async () => {
+    setClaimsVerifierForTesting(accepts);
+    vi.stubEnv("NODE_ENV", "production");
+
+    await expect(sessionFromToken("a.b.c")).resolves.toBeNull();
+  });
+
+  it("installs a replacement anywhere else", () => {
+    expect(() => setClaimsVerifierForTesting(accepts)).not.toThrow();
   });
 });

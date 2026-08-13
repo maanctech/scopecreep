@@ -31,11 +31,20 @@ const clerkVerifier: ClaimsVerifier = async (token) =>
 let verifierOverride: ClaimsVerifier | undefined;
 
 /**
- * Test-only seam. Verifying for real would need Clerk's signing keys and a
- * network round trip, which no test should depend on; production never calls
- * this, so the live path is unaffected.
+ * A replacement verifier is the one thing here that could accept a token Clerk
+ * never signed, so it is refused outright on a production server rather than
+ * left to the fact that nothing currently calls it. The fence is production
+ * rather than the test-runner marker the authentication bypass uses, because
+ * the suites that exercise the real session path deliberately remove that
+ * marker and still need to install a verifier.
  */
+function isProductionRuntime() {
+  return process.env.NODE_ENV === "production";
+}
+
 export function setClaimsVerifierForTesting(verify: ClaimsVerifier) {
+  if (isProductionRuntime()) throw new Error("The claims verifier cannot be replaced on a production server.");
+
   verifierOverride = verify;
 }
 
@@ -44,7 +53,11 @@ export function resetClaimsVerifierForTesting() {
 }
 
 function activeVerifier(verify?: ClaimsVerifier) {
-  return verify ?? verifierOverride ?? clerkVerifier;
+  if (verify) return verify;
+
+  if (verifierOverride && !isProductionRuntime()) return verifierOverride;
+
+  return clerkVerifier;
 }
 
 /**
@@ -65,22 +78,36 @@ export async function sessionFromToken(
   }
 }
 
+/**
+ * More than one session cookie means somebody else placed one, since a cookie
+ * set for a parent domain arrives alongside our own and nothing in the header
+ * says which is which. Taking the first would let whoever set it decide who the
+ * caller is, so an ambiguous request carries no session at all: being signed
+ * out is recoverable, being signed in as somebody else's account is not.
+ */
+function onlySessionCookie(values: string[]) {
+  return values.length === 1 ? values[0] : null;
+}
+
 export function requestToken(request: Request) {
   const authorization = request.headers.get("authorization");
 
   if (authorization?.startsWith("Bearer ")) return authorization.slice(7).trim() || null;
 
-  const item = request.headers
-    .get("cookie")
-    ?.split(";")
+  const prefix = `${CLERK_SESSION_COOKIE_NAME}=`;
+  const values = (request.headers.get("cookie") ?? "")
+    .split(";")
     .map((part) => part.trim())
-    .find((part) => part.startsWith(`${CLERK_SESSION_COOKIE_NAME}=`));
+    .filter((part) => part.startsWith(prefix))
+    .map((part) => decodeURIComponent(part.slice(prefix.length)));
 
-  return item ? decodeURIComponent(item.slice(CLERK_SESSION_COOKIE_NAME.length + 1)) : null;
+  return onlySessionCookie(values);
 }
 
 export async function cookieSession(verify?: ClaimsVerifier) {
-  return sessionFromToken((await cookies()).get(CLERK_SESSION_COOKIE_NAME)?.value, verify);
+  const present = (await cookies()).getAll(CLERK_SESSION_COOKIE_NAME).map((cookie) => cookie.value);
+
+  return sessionFromToken(onlySessionCookie(present), verify);
 }
 
 export async function requestSession(request: Request, verify?: ClaimsVerifier) {

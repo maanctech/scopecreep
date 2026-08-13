@@ -28,6 +28,27 @@ function isLoopback(hostname: string) {
   return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "[::1]";
 }
 
+/**
+ * The driver parses the connection string after the pool's own `ssl` option and
+ * overwrites it, so whenever the URL carries an ssl parameter the URL is what
+ * decides and DATABASE_SSL decides nothing. Only `verify-full` is accepted:
+ * `require` and `verify-ca` verify today but are documented as about to adopt
+ * libpq's weaker meaning, and a setting that silently stops verifying on a
+ * dependency upgrade is not one to depend on.
+ */
+function verifiesDatabaseIdentity(database: URL, env: RuntimeEnvironment) {
+  const sslmode = database.searchParams.get("sslmode");
+
+  if (sslmode) return sslmode === "verify-full";
+
+  const carriesCertificateParameters = ["sslcert", "sslkey", "sslrootcert"]
+    .some((name) => database.searchParams.has(name));
+
+  if (carriesCertificateParameters) return true;
+
+  return env.DATABASE_SSL === "require";
+}
+
 function positiveInteger(env: RuntimeEnvironment, name: string, errors: string[]) {
   const value = env[name];
 
@@ -54,6 +75,10 @@ export function validateProductionConfiguration(env: RuntimeEnvironment = proces
       }
 
       if (!database.pathname || database.pathname === "/") errors.push("DATABASE_URL must name a database.");
+
+      if (!isLoopback(database.hostname) && !verifiesDatabaseIdentity(database, env)) {
+        errors.push("The database connection must verify the server's identity: add sslmode=verify-full to DATABASE_URL. Encryption without that check protects the traffic from a passive eavesdropper while handing the credentials to anyone able to answer in the server's place.");
+      }
     } catch {
       errors.push("DATABASE_URL must be a valid PostgreSQL URL.");
     }

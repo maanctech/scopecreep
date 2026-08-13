@@ -6,7 +6,7 @@ ScopeLedger is a hosted, multi-tenant, professional-only revenue review system. 
 
 - Browser sessions authenticate a professional user into one organization and one role.
 - PostgreSQL is the durable commercial store. Organization-owned records are filtered by organization ID.
-- Uploaded SOW originals and future attachment files remain in the private local document directory.
+- Uploaded SOW originals and future attachment files are held in a private object store and are only ever served back through an authenticated route, so they never have a URL of their own.
 - Anthropic is the default AI provider and OpenAI is the alternative, so all analysis content is sent off the host to a third party. No configuration keeps it local.
 - Integration credentials are encrypted with `SCOPELEDGER_MASTER_KEY` before database storage.
 - Client-facing drafts remain private until a professional deliberately copies or exports them.
@@ -31,13 +31,12 @@ AI values are estimates, not approved charges. ScopeLedger never automatically s
 
 ## Secrets and Private Data
 
-Never commit `.env*`, the local JSON store, document originals, imports, support data, logs, or backup archives. Keep the database and document directory on encrypted storage with host-level access controls. Store the master encryption key outside PostgreSQL and outside backup archives.
+Never commit `.env*`, the local JSON store, document originals, imports, support data, logs, or backup archives. The database and the object store are managed services, encrypted at rest by their providers and reached only with credentials held as deployment environment variables. Store the master encryption key outside PostgreSQL and outside backup archives.
 
 Support bundles redact credentials, tokens, authorization material, email addresses, SOW content, message bodies, and other business text. They contain health, migration, job, integration-state, and redacted audit metadata only.
 
 ## Known Private-Beta Limits
 
-- Rate limits are process-local and must be replaced or supplemented at the reverse proxy for multi-instance deployment.
 - There is no browser-based organization switcher or member administration.
 - The application has not received an independent penetration test.
 - External OAuth connectors require customer-owned provider applications and production verification.

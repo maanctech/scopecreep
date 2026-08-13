@@ -5,11 +5,22 @@ export function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
 }
 
-export function assertSameOrigin(request: Request) {
-  if (["GET", "HEAD", "OPTIONS"].includes(request.method.toUpperCase())) return;
+const READ_METHODS = ["GET", "HEAD", "OPTIONS"];
 
+/**
+ * A read carrying no origin is a same-origin navigation, which is how a browser
+ * fetches a download link, so those stay allowed. A read carrying an origin that
+ * does not match is another site's script calling this one with the caller's
+ * cookies attached, and is refused: no read here is meant to change anything,
+ * but the check costs nothing and stops the first one that forgets from being
+ * reachable across sites.
+ */
+export function assertSameOrigin(request: Request) {
   const origin = request.headers.get("origin");
   const host = request.headers.get("host");
+  const isRead = READ_METHODS.includes(request.method.toUpperCase());
+
+  if (isRead && !origin) return;
 
   if (!origin || !host) {
     if (isTestRuntime()) return;

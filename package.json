@@ -18,6 +18,7 @@
     "rls:check": "tsx --env-file-if-exists=.env.local scripts/check-rls.ts",
     "ai:check": "tsx --env-file-if-exists=.env.local scripts/check-ai.ts",
     "ratelimit:check": "tsx --env-file-if-exists=.env.local scripts/check-rate-limit.ts",
+    "access:check": "tsx --env-file-if-exists=.env.local scripts/check-access.ts",
     "lint": "eslint .",
     "format": "eslint . --fix",
     "format:check": "eslint .",

@@ -144,6 +144,67 @@ describe("production configuration and log safety", () => {
     })).toEqual([]);
   });
 
+  /**
+   * Encryption without an identity check protects the traffic from somebody
+   * listening and hands the database password to anybody able to answer in the
+   * server's place, which is the attack worth caring about.
+   */
+  it("refuses a hosted database reached without verifying who answered", () => {
+    const identityUnverified = "The database connection must verify the server's identity: add sslmode=verify-full to DATABASE_URL. Encryption without that check protects the traffic from a passive eavesdropper while handing the credentials to anyone able to answer in the server's place.";
+
+    for (const sslmode of ["require", "prefer", "verify-ca", "no-verify", "disable"]) {
+      expect(validateProductionConfiguration({
+        ...validInstallation,
+        DATABASE_URL: `postgresql://db.example.com/scopeledger?sslmode=${sslmode}`,
+        ANTHROPIC_API_KEY: "test-only-key"
+      })).toContain(identityUnverified);
+    }
+
+    expect(validateProductionConfiguration({
+      ...validInstallation,
+      DATABASE_URL: "postgresql://db.example.com/scopeledger?sslmode=verify-full",
+      ANTHROPIC_API_KEY: "test-only-key"
+    })).toEqual([]);
+  });
+
+  it("accepts a hosted database whose URL says nothing, when DATABASE_SSL asks for verification", () => {
+    expect(validateProductionConfiguration({
+      ...validInstallation,
+      DATABASE_URL: "postgresql://db.example.com/scopeledger",
+      DATABASE_SSL: "require",
+      ANTHROPIC_API_KEY: "test-only-key"
+    })).toEqual([]);
+  });
+
+  it("refuses a hosted database when neither the URL nor DATABASE_SSL asks for anything", () => {
+    expect(validateProductionConfiguration({
+      ...validInstallation,
+      DATABASE_URL: "postgresql://db.example.com/scopeledger",
+      ANTHROPIC_API_KEY: "test-only-key"
+    })).not.toEqual([]);
+  });
+
+  /**
+   * DATABASE_SSL is overwritten by anything the URL says, so it cannot rescue a
+   * connection string that has already asked for something weaker.
+   */
+  it("does not let DATABASE_SSL rescue a URL that asked for less", () => {
+    expect(validateProductionConfiguration({
+      ...validInstallation,
+      DATABASE_URL: "postgresql://db.example.com/scopeledger?sslmode=require",
+      DATABASE_SSL: "require",
+      ANTHROPIC_API_KEY: "test-only-key"
+    })).not.toEqual([]);
+  });
+
+  it("leaves a loopback database alone, which never crosses a network", () => {
+    expect(validateProductionConfiguration({
+      ...validInstallation,
+      DATABASE_URL: "postgresql://127.0.0.1:5432/scopeledger",
+      ANTHROPIC_API_KEY: "test-only-key"
+    })).toEqual([]);
+  });
+
   it("rejects a provider that is not in the catalog", () => {
     expect(validateProductionConfiguration({ ...validInstallation, AI_PROVIDER: "gemini" })).toContain(
       "AI_PROVIDER must be one of anthropic, openai."
