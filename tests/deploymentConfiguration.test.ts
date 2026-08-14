@@ -10,6 +10,8 @@ const COMPLETE_PRODUCTION_ENVIRONMENT = {
   BLOB_READ_WRITE_TOKEN: "vercel_blob_rw_test_only",
   UPSTASH_REDIS_REST_URL: "https://example.upstash.io",
   UPSTASH_REDIS_REST_TOKEN: "test-only-token",
+  NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: "pk_live_only",
+  CLERK_SECRET_KEY: "sk_live_only",
   ANTHROPIC_API_KEY: "test-only-key"
 };
 

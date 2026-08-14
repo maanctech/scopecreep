@@ -72,7 +72,9 @@ describe("production configuration and log safety", () => {
     CRON_SECRET: SCHEDULE_SECRET,
     BLOB_READ_WRITE_TOKEN: "vercel_blob_rw_test_only",
     UPSTASH_REDIS_REST_URL: "https://example.upstash.io",
-    UPSTASH_REDIS_REST_TOKEN: "test-only-token"
+    UPSTASH_REDIS_REST_TOKEN: "test-only-token",
+    NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: "pk_test_only",
+    CLERK_SECRET_KEY: "sk_test_only"
   };
 
   it("requires the API key of whichever cloud provider is selected", () => {
@@ -140,6 +142,76 @@ describe("production configuration and log safety", () => {
       ...withoutCounter,
       KV_REST_API_URL: "https://example.upstash.io",
       KV_REST_API_TOKEN: "test-only-token",
+      ANTHROPIC_API_KEY: "test-only-key"
+    })).toEqual([]);
+  });
+
+  it("refuses to start without the keys that let anybody sign in", () => {
+    const {
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: _publishable,
+      CLERK_SECRET_KEY: _secret,
+      ...withoutIdentity
+    } = validInstallation;
+
+    const errors = validateProductionConfiguration({ ...withoutIdentity, ANTHROPIC_API_KEY: "test-only-key" });
+
+    expect(errors).toContain("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY is required; without it the sign-in page cannot load and nobody reaches the application.");
+    expect(errors).toContain("CLERK_SECRET_KEY is required; without it no session token can be verified and every request is refused.");
+  });
+
+  /**
+   * The two keys are adjacent in the Clerk dashboard and one is safe to
+   * publish while the other is not, so the pair being swapped is the mistake
+   * worth naming rather than leaving to a runtime failure.
+   */
+  it("refuses a publishable key pasted into the secret slot", () => {
+    expect(validateProductionConfiguration({
+      ...validInstallation,
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: "sk_test_only",
+      CLERK_SECRET_KEY: "pk_test_only",
+      ANTHROPIC_API_KEY: "test-only-key"
+    })).toEqual(expect.arrayContaining([
+      "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY must be a Clerk publishable key, which begins pk_.",
+      "CLERK_SECRET_KEY must be a Clerk secret key, which begins sk_."
+    ]));
+  });
+
+  /**
+   * A development instance shows Clerk's own banner, shares demonstration
+   * OAuth credentials with every other development instance, and is not a
+   * thing to sell access to. Loopback is left alone because a self-hosted
+   * installation reached only from the machine it runs on is not that.
+   */
+  it("refuses a publicly reachable deployment running on a Clerk development instance", () => {
+    const errors = validateProductionConfiguration({
+      ...validInstallation,
+      APP_URL: "https://scopeledger.example",
+      DATABASE_URL: "postgresql://db.example.com/scopeledger?sslmode=verify-full",
+      ANTHROPIC_API_KEY: "test-only-key"
+    });
+
+    expect(errors).toContain("A publicly reachable deployment must use a Clerk production instance: NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY and CLERK_SECRET_KEY begin pk_live_ and sk_live_ there.");
+  });
+
+  it("leaves a loopback installation on development keys alone", () => {
+    expect(validateProductionConfiguration({ ...validInstallation, ANTHROPIC_API_KEY: "test-only-key" })).toEqual([]);
+  });
+
+  /**
+   * The endpoint cannot be registered until the deployment has a public
+   * address, so this is checked for shape rather than required. Absent, the
+   * directory stops following Clerk; wrong, it stops without saying so.
+   */
+  it("refuses a webhook signing secret that is not one, and accepts its absence", () => {
+    expect(validateProductionConfiguration({
+      ...validInstallation,
+      CLERK_WEBHOOK_SIGNING_SECRET: "not-a-signing-secret",
+      ANTHROPIC_API_KEY: "test-only-key"
+    })).toContain("CLERK_WEBHOOK_SIGNING_SECRET must be a Clerk webhook signing secret, which begins whsec_.");
+
+    expect(validateProductionConfiguration({
+      ...validInstallation,
+      CLERK_WEBHOOK_SIGNING_SECRET: "whsec_test_only",
       ANTHROPIC_API_KEY: "test-only-key"
     })).toEqual([]);
   });
@@ -224,6 +296,8 @@ describe("production configuration and log safety", () => {
         BLOB_READ_WRITE_TOKEN: "vercel_blob_rw_test_only",
         UPSTASH_REDIS_REST_URL: "https://example.upstash.io",
         UPSTASH_REDIS_REST_TOKEN: "test-only-token",
+        NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: "pk_test_only",
+        CLERK_SECRET_KEY: "sk_test_only",
         ANTHROPIC_API_KEY: "test-only-key"
       })
     ).toEqual([]);

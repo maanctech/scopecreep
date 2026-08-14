@@ -57,6 +57,50 @@ function positiveInteger(env: RuntimeEnvironment, name: string, errors: string[]
   }
 }
 
+function isPubliclyReachable(env: RuntimeEnvironment) {
+  try {
+    return !isLoopback(new URL(env.APP_URL!).hostname);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * A development instance carries Clerk's own banner and shares demonstration
+ * OAuth credentials with every other one, so selling access to a deployment
+ * running on it is not a thing to do quietly. Loopback is exempt for the same
+ * reason it is exempt from the HTTPS rule above: an installation reachable
+ * only from the machine it runs on is not published to anyone.
+ */
+function collectIdentityErrors(env: RuntimeEnvironment, errors: string[]) {
+  const publishable = env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.trim();
+  const secret = env.CLERK_SECRET_KEY?.trim();
+
+  if (!publishable) {
+    errors.push("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY is required; without it the sign-in page cannot load and nobody reaches the application.");
+  } else if (!publishable.startsWith("pk_")) {
+    errors.push("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY must be a Clerk publishable key, which begins pk_.");
+  }
+
+  if (!secret) {
+    errors.push("CLERK_SECRET_KEY is required; without it no session token can be verified and every request is refused.");
+  } else if (!secret.startsWith("sk_")) {
+    errors.push("CLERK_SECRET_KEY must be a Clerk secret key, which begins sk_.");
+  }
+
+  const onDevelopmentInstance = publishable?.startsWith("pk_test_") || secret?.startsWith("sk_test_");
+
+  if (onDevelopmentInstance && isPubliclyReachable(env)) {
+    errors.push("A publicly reachable deployment must use a Clerk production instance: NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY and CLERK_SECRET_KEY begin pk_live_ and sk_live_ there.");
+  }
+
+  const signingSecret = env.CLERK_WEBHOOK_SIGNING_SECRET?.trim();
+
+  if (signingSecret && !signingSecret.startsWith("whsec_")) {
+    errors.push("CLERK_WEBHOOK_SIGNING_SECRET must be a Clerk webhook signing secret, which begins whsec_.");
+  }
+}
+
 export function validateProductionConfiguration(env: RuntimeEnvironment = process.env) {
   const errors: string[] = [];
 
@@ -125,6 +169,8 @@ export function validateProductionConfiguration(env: RuntimeEnvironment = proces
       errors.push("APP_URL must be a valid absolute URL.");
     }
   }
+
+  collectIdentityErrors(env, errors);
 
   if (!env.SCOPELEDGER_MASTER_KEY?.trim()) {
     errors.push("SCOPELEDGER_MASTER_KEY is required to protect integration credentials.");
