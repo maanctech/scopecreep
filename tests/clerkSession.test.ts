@@ -3,6 +3,8 @@ import {
   requestToken,
   resetClaimsVerifierForTesting,
   sessionFromToken,
+  recordSessionRefusal,
+  sessionOutcomeFromToken,
   setClaimsVerifierForTesting
 } from "@/lib/auth/clerkSession";
 
@@ -41,6 +43,80 @@ describe("turning a request into a Clerk session", () => {
   it("treats a missing token as nobody", async () => {
     await expect(sessionFromToken(null, accepts)).resolves.toBeNull();
     await expect(sessionFromToken("", accepts)).resolves.toBeNull();
+  });
+});
+
+const refusedBecause = (reason: string) => async () => {
+  throw Object.assign(new Error("refused"), { reason });
+};
+
+function recordedWarnings(work: () => void) {
+  const written: string[] = [];
+  const warn = vi.spyOn(console, "warn").mockImplementation((line: string) => void written.push(line));
+
+  work();
+  warn.mockRestore();
+
+  return written;
+}
+
+describe("recording why a session was refused", () => {
+  it("records a refusal caused by the origin even on a production server", () => {
+    vi.stubEnv("NODE_ENV", "production");
+
+    expect(recordedWarnings(() => recordSessionRefusal("wrong-origin")).join("")).toContain("wrong-origin");
+  });
+
+  it("stays quiet about a token that never arrived, which is an ordinary signed-out visitor", () => {
+    expect(recordedWarnings(() => recordSessionRefusal("absent"))).toEqual([]);
+  });
+
+  it("stays quiet on a production server about an expiry, which happens to everyone every day", () => {
+    vi.stubEnv("NODE_ENV", "production");
+
+    expect(recordedWarnings(() => recordSessionRefusal("expired"))).toEqual([]);
+  });
+
+  it("records that same expiry away from production, where somebody is watching", () => {
+    vi.stubEnv("NODE_ENV", "development");
+
+    expect(recordedWarnings(() => recordSessionRefusal("expired")).join("")).toContain("expired");
+  });
+});
+
+describe("a refused session says why, without changing what the caller sees", () => {
+  it("reports a token that never arrived as absent", async () => {
+    expect(await sessionOutcomeFromToken(null, accepts)).toEqual({ session: null, reason: "absent" });
+  });
+
+  it("reports a token refused for the origin it came from as wrong-origin", async () => {
+    const outcome = await sessionOutcomeFromToken("a.b.c", refusedBecause("token-invalid-authorized-parties"));
+
+    expect(outcome).toEqual({ session: null, reason: "wrong-origin" });
+  });
+
+  it("reports a token past its expiry as expired", async () => {
+    const outcome = await sessionOutcomeFromToken("a.b.c", refusedBecause("token-expired"));
+
+    expect(outcome).toEqual({ session: null, reason: "expired" });
+  });
+
+  it("reports a refusal it has never heard of as invalid rather than guessing", async () => {
+    const outcome = await sessionOutcomeFromToken("a.b.c", refusedBecause("something-new-from-clerk"));
+
+    expect(outcome).toEqual({ session: null, reason: "invalid" });
+  });
+
+  it("reports a failure carrying no reason at all as invalid", async () => {
+    const outcome = await sessionOutcomeFromToken("a.b.c", rejects);
+
+    expect(outcome).toEqual({ session: null, reason: "invalid" });
+  });
+
+  it("still hands back the session itself when the token verifies", async () => {
+    const outcome = await sessionOutcomeFromToken("a.b.c", accepts);
+
+    expect(outcome.session?.clerkUserId).toBe("user_abc");
   });
 });
 

@@ -2,6 +2,7 @@ import { verifyToken } from "@clerk/nextjs/server";
 import { cookies } from "next/headers";
 import { CLERK_SESSION_COOKIE_NAME } from "@/lib/auth/clerkCookie";
 import { sessionFromClaims, type ClerkSession } from "@/lib/auth/clerkIdentity";
+import { logEvent } from "@/lib/observability/logger";
 
 export { CLERK_SESSION_COOKIE_NAME };
 
@@ -60,6 +61,53 @@ function activeVerifier(verify?: ClaimsVerifier) {
   return clerkVerifier;
 }
 
+export type SessionRefusal = "absent" | "expired" | "wrong-origin" | "invalid";
+
+export type SessionOutcome =
+  | { session: ClerkSession }
+  | { session: null; reason: SessionRefusal };
+
+const REFUSALS: Record<string, SessionRefusal> = {
+  "token-expired": "expired",
+  "token-not-active-yet": "expired",
+  "token-invalid-authorized-parties": "wrong-origin"
+};
+
+function refusalFor(error: unknown): SessionRefusal {
+  const reason = (error as { reason?: unknown })?.reason;
+
+  return typeof reason === "string" && REFUSALS[reason] ? REFUSALS[reason] : "invalid";
+}
+
+/** The reason is for a log. In a response body it would let a caller test guesses. */
+export async function sessionOutcomeFromToken(
+  token: string | null | undefined,
+  verify?: ClaimsVerifier
+): Promise<SessionOutcome> {
+  if (!token) return { session: null, reason: "absent" };
+
+  try {
+    const session = sessionFromClaims(await activeVerifier(verify)(token));
+
+    return session ? { session } : { session: null, reason: "invalid" };
+  } catch (error) {
+    return { session: null, reason: refusalFor(error) };
+  }
+}
+
+const RECORDED_IN_PRODUCTION: SessionRefusal[] = ["wrong-origin"];
+
+/** Absent and expired are ordinary and would bury the one that means a broken deployment. */
+export function recordSessionRefusal(reason: SessionRefusal) {
+  if (reason === "absent") return;
+
+  const inProduction = process.env.NODE_ENV === "production";
+
+  if (inProduction && !RECORDED_IN_PRODUCTION.includes(reason)) return;
+
+  logEvent("warn", "session.refused", { reason, expectedOrigin: process.env.APP_URL ?? null });
+}
+
 /**
  * A token that fails verification is nobody, not an error. Expiry is the
  * ordinary end of a working day, and a caller that has to distinguish expiry
@@ -69,13 +117,7 @@ export async function sessionFromToken(
   token: string | null | undefined,
   verify?: ClaimsVerifier
 ): Promise<ClerkSession | null> {
-  if (!token) return null;
-
-  try {
-    return sessionFromClaims(await activeVerifier(verify)(token));
-  } catch {
-    return null;
-  }
+  return (await sessionOutcomeFromToken(token, verify)).session;
 }
 
 /**
@@ -104,12 +146,20 @@ export function requestToken(request: Request) {
   return onlySessionCookie(values);
 }
 
+async function recordedSession(token: string | null, verify?: ClaimsVerifier) {
+  const outcome = await sessionOutcomeFromToken(token, verify);
+
+  if (!outcome.session) recordSessionRefusal(outcome.reason);
+
+  return outcome.session;
+}
+
 export async function cookieSession(verify?: ClaimsVerifier) {
   const present = (await cookies()).getAll(CLERK_SESSION_COOKIE_NAME).map((cookie) => cookie.value);
 
-  return sessionFromToken(onlySessionCookie(present), verify);
+  return recordedSession(onlySessionCookie(present), verify);
 }
 
 export async function requestSession(request: Request, verify?: ClaimsVerifier) {
-  return sessionFromToken(requestToken(request), verify);
+  return recordedSession(requestToken(request), verify);
 }

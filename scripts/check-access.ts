@@ -1,6 +1,8 @@
-import { clerkClient } from "@clerk/nextjs/server";
+import { clerkClient, verifyToken } from "@clerk/nextjs/server";
 import { closePool, query } from "../lib/db/client";
 import { withSystemAccess } from "../lib/db/tenantContext";
+
+type ClerkBackend = Awaited<ReturnType<typeof clerkClient>>;
 
 type MembershipRow = {
   organization_name: string;
@@ -51,28 +53,52 @@ function reportMemberships(memberships: MembershipRow[]) {
   }
 }
 
-/**
- * A local row is only ever written by a signed-in request that carries an
- * organization, so an empty table says nothing about whether the sign-in
- * worked. Asking Clerk separates the three ways it ends up empty: nobody
- * signed in, somebody signed in but belongs to no organization, or somebody
- * signed in with an organization and never opened a page that needed one.
- */
+/** A token minted here carries no azp, so the origin check is left out rather than always failing. */
+async function reportTokenVerification(clerk: ClerkBackend, sessionId: string) {
+  const minted = await clerk.sessions.getToken(sessionId);
+
+  try {
+    const claims = await verifyToken(minted.jwt, { secretKey: process.env.CLERK_SECRET_KEY?.trim() });
+    const organization = claims.o as { id?: string; rol?: string } | undefined;
+
+    console.log(`      its token is valid and would sign in as ${organization?.rol ?? "no role"} of ${organization?.id ?? "no organization"}`);
+    console.log(`      so only the browser's origin is left: it must be exactly ${process.env.APP_URL?.trim()}`);
+  } catch (error) {
+    console.log(`      its token FAILS this application's verification: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+
+/** An empty table cannot say which of the three ways it got that way, so ask Clerk. */
 async function reportClerkDirectory() {
   const clerk = await clerkClient();
   const users = await clerk.users.getUserList({ limit: 20 });
   const organizations = await clerk.organizations.getOrganizationList({ limit: 20 });
 
   console.log(`Clerk holds ${users.totalCount} user(s) and ${organizations.totalCount} organization(s).`);
+  console.log(`A session is only accepted from ${process.env.APP_URL?.trim() || "nowhere: APP_URL is unset"}. Signing in at any other host verifies as nobody.`);
 
   for (const user of users.data) {
     const address = user.emailAddresses.find((email) => email.id === user.primaryEmailAddressId);
     const memberships = await clerk.users.getOrganizationMembershipList({ userId: user.id });
     const belongs = memberships.data.map((membership) => `${membership.organization.name} as ${membership.role}`);
+    const sessions = await clerk.sessions.getSessionList({ userId: user.id, limit: 10 });
 
     console.log("");
     console.log(`  ${address?.emailAddress ?? user.id}`);
     console.log(`    ${belongs.length ? belongs.join(", ") : "belongs to no organization, so no request of theirs carries one"}`);
+
+    if (!sessions.data.length) {
+      console.log("    has never opened a browser session, so nothing was ever presented to this application");
+    }
+
+    for (const session of sessions.data) {
+      const active = session.lastActiveOrganizationId;
+
+      console.log(`    session ${session.status}, last active ${new Date(session.lastActiveAt).toISOString()}`);
+      console.log(`      active organization: ${active ?? "none, so its token carries no organization and this application sees nobody"}`);
+
+      await reportTokenVerification(clerk, session.id);
+    }
   }
 }
 
