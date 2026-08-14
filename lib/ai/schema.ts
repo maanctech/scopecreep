@@ -17,15 +17,15 @@ export const analysisJsonSchema = {
       type: "string",
       enum: ["In Scope", "Possibly In Scope", "Out of Scope", "Needs Human Review"]
     },
-    confidence_score: { type: "number", minimum: 0, maximum: 1 },
+    confidence_score: { type: "number" },
     reasoning: { type: "string" },
     relevant_sow_sections: { type: "array", items: { type: "string" } },
     request_type: {
       type: "string",
       enum: ["New Deliverable", "Revision", "Support", "Strategy", "Design", "Engineering", "Admin", "Other"]
     },
-    estimated_hours: { type: "number", minimum: 0, maximum: 1000 },
-    estimated_revenue: { type: "number", minimum: 0 },
+    estimated_hours: { type: "number" },
+    estimated_revenue: { type: "number" },
     suggested_change_order: { type: "string" },
     internal_note: { type: "string" }
   }

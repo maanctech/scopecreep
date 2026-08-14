@@ -67,6 +67,38 @@ afterEach(() => {
   vi.unstubAllEnvs();
 });
 
+/**
+ * Anthropic answers 400 for a number carrying these, and every test above
+ * stubs fetch, so nothing but a live call noticed. The bounds they expressed
+ * are enforced after parsing in lib/analysis.ts, which is where a value out
+ * of range has to be caught anyway.
+ */
+describe("the analysis schema stays within what a provider will accept", () => {
+  it("constrains no number by range", () => {
+    const found: string[] = [];
+
+    const walk = (node: Record<string, unknown>, path: string) => {
+      for (const keyword of ["minimum", "maximum", "exclusiveMinimum", "exclusiveMaximum"]) {
+        if (keyword in node) found.push(`${path}.${keyword}`);
+      }
+
+      const properties = node.properties as Record<string, Record<string, unknown>> | undefined;
+
+      if (properties) {
+        for (const [property, child] of Object.entries(properties)) walk(child, `${path}.${property}`);
+      }
+
+      const items = node.items as Record<string, unknown> | undefined;
+
+      if (items) walk(items, `${path}[]`);
+    };
+
+    walk(analysisJsonSchema as unknown as Record<string, unknown>, "schema");
+
+    expect(found).toEqual([]);
+  });
+});
+
 describe.each(CATALOG_PROVIDER_NAMES)("%s adapter honors the shared provider contract", (name) => {
   it("returns the raw content and the model that produced it", async () => {
     applyCredentials(name);
