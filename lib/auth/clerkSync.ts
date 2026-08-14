@@ -97,7 +97,7 @@ async function removeMembership(data: Record<string, unknown>) {
  * from. Removing access is reversible; removing the ledger is not.
  */
 export async function applyClerkEvent(event: ClerkEvent) {
-  return withSystemAccess(async () => {
+  return withSystemAccess("directory-sync", async () => {
     switch (event.type) {
       case "organization.created":
       case "organization.updated":

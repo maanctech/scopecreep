@@ -14,7 +14,7 @@ let database: TestDatabase;
 beforeAll(async () => {
   database = await startTestDatabase();
 
-  await withSystemAccess(() =>
+  await withSystemAccess("diagnostics", () =>
     query("INSERT INTO organizations (id, name, slug, clerk_organization_id) VALUES ($1,$2,$3,$4)", [
       ORGANIZATION, "Wharf Consulting", "wharf-consulting", "org_wharf"
     ])
@@ -60,7 +60,7 @@ const RENAME = JSON.stringify({
 });
 
 function organizationName() {
-  return withSystemAccess(async () => {
+  return withSystemAccess("diagnostics", async () => {
     const result = await query<{ name: string }>("SELECT name FROM organizations WHERE id = $1", [ORGANIZATION]);
 
     return result.rows[0].name;

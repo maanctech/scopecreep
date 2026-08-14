@@ -42,7 +42,6 @@ const AUTH_CONTEXT_A: AuthContext = {
   email: "alice@example.com",
   displayName: "Alice Rivera",
   role: "Owner",
-  isSystemAdmin: false,
   expiresAt: "2099-01-01T00:00:00.000Z"
 };
 
@@ -54,7 +53,6 @@ const AUTH_CONTEXT_B: AuthContext = {
   email: "bob@example.com",
   displayName: "Bob Chen",
   role: "Owner",
-  isSystemAdmin: false,
   expiresAt: "2099-01-01T00:00:00.000Z"
 };
 
@@ -67,7 +65,7 @@ let database: TestDatabase;
 beforeAll(async () => {
   database = await startTestDatabase();
 
-  await withSystemAccess(async () => {
+  await withSystemAccess("diagnostics", async () => {
     await query(
       "INSERT INTO organizations (id, name, slug) VALUES ($1,$2,$3), ($4,$5,$6)",
       [ORGANIZATION_A, "Aperture Consulting", "aperture-consulting", ORGANIZATION_B, "Beacon Studio", "beacon-studio"]
@@ -111,7 +109,7 @@ describe("PostgreSQL store", () => {
     expect(lead.email).toBe("priya@example.com");
     expect(lead.status).toBe("New");
 
-    const persisted = await withSystemAccess(() => query<{ organization_id: string; company: string }>(
+    const persisted = await withSystemAccess("diagnostics", () => query<{ organization_id: string; company: string }>(
       "SELECT organization_id, company FROM leads WHERE id = $1",
       [lead.id]
     ));

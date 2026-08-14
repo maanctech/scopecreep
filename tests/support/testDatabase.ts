@@ -8,11 +8,20 @@ const APPLICATION_PASSWORD = "scopeledger-test-app";
 
 export type TestDatabase = { close: () => Promise<void> };
 
+const PURPOSE_ROLES = [
+  "scopeledger_provisioning",
+  "scopeledger_directory_sync",
+  "scopeledger_webhook_routing",
+  "scopeledger_job_recovery",
+  "scopeledger_bootstrap"
+];
+
 const GRANTS = [
   `GRANT USAGE ON SCHEMA public TO ${APPLICATION_ROLE}`,
   `GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO ${APPLICATION_ROLE}`,
   `GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO ${APPLICATION_ROLE}`,
-  `GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO ${APPLICATION_ROLE}`
+  `GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO ${APPLICATION_ROLE}`,
+  ...PURPOSE_ROLES.map((role) => `GRANT ${role} TO ${APPLICATION_ROLE}`)
 ];
 
 /**

@@ -41,7 +41,7 @@ function sessionFor(overrides: Partial<ClerkSession> = {}): ClerkSession {
 }
 
 function membershipVersion(organizationId: string) {
-  return withSystemAccess(async () => {
+  return withSystemAccess("diagnostics", async () => {
     const result = await query<{ version: string }>(
       "SELECT xmin::text AS version FROM organization_memberships WHERE organization_id = $1",
       [organizationId]
@@ -52,7 +52,7 @@ function membershipVersion(organizationId: string) {
 }
 
 function countOf(table: string, column: string, value: string) {
-  return withSystemAccess(async () => {
+  return withSystemAccess("diagnostics", async () => {
     const result = await query<{ total: string }>(`SELECT count(*)::text AS total FROM ${table} WHERE ${column} = $1`, [value]);
 
     return Number(result.rows[0].total);
@@ -67,7 +67,6 @@ describe("resolving a Clerk session to a tenant", () => {
     expect(context?.email).toBe("mara@meridian.example");
     expect(context?.displayName).toBe("Mara Okonkwo");
     expect(context?.role).toBe("Admin");
-    expect(context?.isSystemAdmin).toBe(false);
   });
 
   it("scopes the context to the local organization row, never the Clerk identifier", async () => {
@@ -91,7 +90,7 @@ describe("resolving a Clerk session to a tenant", () => {
     expect(promoted?.role).toBe("Admin");
     expect(demoted?.role).toBe("Reviewer");
 
-    const stored = await withSystemAccess(() =>
+    const stored = await withSystemAccess("diagnostics", () =>
       query<{ role: string }>("SELECT role FROM organization_memberships WHERE organization_id = $1", [demoted!.organizationId])
     );
 

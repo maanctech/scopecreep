@@ -100,7 +100,6 @@ beforeEach(() => {
     email: "owner@example.test",
     displayName: "Owner",
     role: "Owner",
-    isSystemAdmin: false,
     expiresAt: "2099-01-01T00:00:00.000Z",
   });
   mocks.transaction.mockImplementation(

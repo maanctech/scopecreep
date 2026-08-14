@@ -1,5 +1,5 @@
 import { closePool, query } from "../lib/db/client";
-import { withSystemAccess } from "../lib/db/tenantContext";
+import { PURPOSE_ROLES, withSystemAccess } from "../lib/db/tenantContext";
 
 /**
  * Runs as the schema owner, immediately after migrations, to provision the
@@ -34,7 +34,7 @@ async function main() {
 
   const role = quotedIdentifier(ROLE);
 
-  await withSystemAccess(async () => {
+  await withSystemAccess("diagnostics", async () => {
     const existing = await query<{ rolsuper: boolean; rolbypassrls: boolean }>(
       "SELECT rolsuper, rolbypassrls FROM pg_roles WHERE rolname = $1",
       [ROLE]
@@ -54,9 +54,14 @@ async function main() {
     await query(`GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO ${role}`);
     await query(`ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO ${role}`);
     await query(`ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO ${role}`);
+
+    for (const purpose of Object.values(PURPOSE_ROLES)) {
+      if (purpose) await query(`GRANT ${quotedIdentifier(purpose)} TO ${role}`);
+    }
   });
 
   console.log(`Application role "${ROLE}" is provisioned without SUPERUSER or BYPASSRLS.`);
+  console.log("It may assume each system-access purpose role, and nothing wider.");
 }
 
 main()

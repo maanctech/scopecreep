@@ -12,7 +12,7 @@ let database: TestDatabase;
 beforeAll(async () => {
   database = await startTestDatabase();
 
-  await withSystemAccess(async () => {
+  await withSystemAccess("diagnostics", async () => {
     await query("INSERT INTO organizations (id, name, slug, clerk_organization_id) VALUES ($1,$2,$3,$4)", [
       ORGANIZATION, "Harbour Advisory", "harbour-advisory", "org_harbour"
     ]);
@@ -33,7 +33,7 @@ afterAll(async () => {
 });
 
 function organizationName() {
-  return withSystemAccess(async () => {
+  return withSystemAccess("diagnostics", async () => {
     const result = await query<{ name: string }>("SELECT name FROM organizations WHERE id = $1", [ORGANIZATION]);
 
     return result.rows[0]?.name;
@@ -41,7 +41,7 @@ function organizationName() {
 }
 
 function membershipRoles() {
-  return withSystemAccess(async () => {
+  return withSystemAccess("diagnostics", async () => {
     const result = await query<{ role: string }>(
       "SELECT role FROM organization_memberships WHERE organization_id = $1",
       [ORGANIZATION]
@@ -95,7 +95,7 @@ describe("keeping the firm's records in step with Clerk", () => {
       }
     });
 
-    const stored = await withSystemAccess(() =>
+    const stored = await withSystemAccess("diagnostics", () =>
       query<{ email: string; display_name: string }>("SELECT email, display_name FROM users WHERE id = $1", [MEMBER])
     );
 

@@ -45,7 +45,6 @@ const AUTH: AuthContext = {
   email: "mara@example.com",
   displayName: "Mara Iqbal",
   role: "Owner",
-  isSystemAdmin: false,
   expiresAt: "2099-01-01T00:00:00.000Z"
 };
 
@@ -102,7 +101,7 @@ beforeAll(async () => {
   database = await startTestDatabase();
   vi.mocked(currentAuthContext).mockResolvedValue(AUTH);
 
-  await withSystemAccess(async () => {
+  await withSystemAccess("diagnostics", async () => {
     await query(
       "INSERT INTO organizations (id,name,slug) VALUES ($1,$2,$3), ($4,$5,$6)",
       [ORGANIZATION, "Meridian Partners", "meridian-partners", OTHER_ORGANIZATION, "Rival Group", "rival-group"]

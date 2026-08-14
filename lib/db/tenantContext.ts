@@ -1,8 +1,28 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 
+export type SystemPurpose =
+  | "provisioning"
+  | "directory-sync"
+  | "webhook-routing"
+  | "job-recovery"
+  | "bootstrap"
+  | "migrations"
+  | "diagnostics";
+
+/** Purposes with no role reach every table, so nothing here may serve a browser request. */
+export const PURPOSE_ROLES: Record<SystemPurpose, string | null> = {
+  "provisioning": "scopeledger_provisioning",
+  "directory-sync": "scopeledger_directory_sync",
+  "webhook-routing": "scopeledger_webhook_routing",
+  "job-recovery": "scopeledger_job_recovery",
+  "bootstrap": "scopeledger_bootstrap",
+  "migrations": null,
+  "diagnostics": null
+};
+
 export type TenantContext = {
   organizationId: string | null;
-  systemAccess: boolean;
+  systemPurpose: SystemPurpose | null;
 };
 
 const storage = new AsyncLocalStorage<TenantContext>();
@@ -14,17 +34,16 @@ const storage = new AsyncLocalStorage<TenantContext>();
  * serve one organization's rows to the next request that borrowed it.
  */
 export function withTenant<T>(organizationId: string, work: () => Promise<T>) {
-  return storage.run({ organizationId, systemAccess: false }, work);
+  return storage.run({ organizationId, systemPurpose: null }, work);
 }
 
 /**
- * Reserved for work that legitimately precedes or spans tenant identity:
- * resolving a session token to its organization, first-run setup, migrations,
- * and whole-installation backups. Policies admit it explicitly, so widening
- * this is widening the security boundary.
+ * Reserved for work that legitimately precedes or spans tenant identity. The
+ * purpose decides which tables the work can reach at all, so widening one is
+ * widening the security boundary.
  */
-export function withSystemAccess<T>(work: () => Promise<T>) {
-  return storage.run({ organizationId: null, systemAccess: true }, work);
+export function withSystemAccess<T>(purpose: SystemPurpose, work: () => Promise<T>) {
+  return storage.run({ organizationId: null, systemPurpose: purpose }, work);
 }
 
 export function currentTenantContext() {

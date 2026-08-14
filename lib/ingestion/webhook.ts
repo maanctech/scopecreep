@@ -133,7 +133,7 @@ export async function receiveWebhook(input: {
   if (Buffer.byteLength(input.body) > 1_000_000)
     throw new Error("Webhook payloads must be 1 MB or smaller.");
 
-  const connection = await withSystemAccess(() => query<Row>(
+  const connection = await withSystemAccess("webhook-routing", () => query<Row>(
     `SELECT c.*,s.ciphertext,s.initialization_vector,s.auth_tag FROM communication_connections c JOIN encrypted_secrets s ON s.connection_id=c.id AND s.organization_id=c.organization_id AND s.name='webhook-signing-secret' WHERE c.id=$1 AND c.provider='Webhook' AND c.status<>'Disabled'`,
     [input.connectionId],
   ));

@@ -18,7 +18,7 @@ const ABANDONED_MESSAGE =
 export async function recoverStaleAnalysisJobs(options: { staleAfterMinutes?: number } = {}) {
   const staleAfterMinutes = options.staleAfterMinutes ?? STALE_JOB_MINUTES;
 
-  return withSystemAccess(async () => {
+  return withSystemAccess("job-recovery", async () => {
     const requeued = await query<{ id: string }>(
       `UPDATE analysis_jobs
        SET status='Queued',progress=0,started_at=NULL,error_message=$1,updated_at=now()
@@ -53,7 +53,7 @@ export async function recoverStaleAnalysisJobs(options: { staleAfterMinutes?: nu
 export async function drainQueuedAnalysisJobs(options: { budgetMs?: number; limit?: number } = {}) {
   const budgetMs = options.budgetMs ?? JOB_BUDGET_MS;
   const limit = options.limit ?? DRAIN_JOB_LIMIT;
-  const queued = await withSystemAccess(() => query<{ id: string; organization_id: string }>(
+  const queued = await withSystemAccess("job-recovery", () => query<{ id: string; organization_id: string }>(
     `SELECT id,organization_id FROM analysis_jobs
      WHERE status='Queued' AND cancel_requested_at IS NULL
      ORDER BY created_at,id LIMIT $1`,

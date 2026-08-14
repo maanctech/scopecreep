@@ -1,5 +1,5 @@
 import { Pool, type PoolClient, type QueryResult, type QueryResultRow } from "pg";
-import { currentTenantContext } from "@/lib/db/tenantContext";
+import { currentTenantContext, PURPOSE_ROLES } from "@/lib/db/tenantContext";
 
 declare global {
   var __scopeLedgerPool: Pool | undefined;
@@ -59,8 +59,12 @@ async function applyTenantContext(client: Pick<PoolClient, "query">) {
 
   await client.query("SELECT set_config('app.organization_id', $1, true), set_config('app.system_access', $2, true)", [
     context?.organizationId ?? "",
-    context?.systemAccess ? "on" : ""
+    context?.systemPurpose ? "on" : ""
   ]);
+
+  const role = context?.systemPurpose ? PURPOSE_ROLES[context.systemPurpose] : null;
+
+  if (role) await client.query(`SET LOCAL ROLE ${role}`);
 }
 
 export async function query<T extends QueryResultRow = QueryResultRow>(

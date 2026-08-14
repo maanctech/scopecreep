@@ -30,7 +30,6 @@ const AUTH_CONTEXT_A: AuthContext = {
   email: "hana@example.com",
   displayName: "Hana Ortiz",
   role: "Owner",
-  isSystemAdmin: true,
   expiresAt: "2099-01-01T00:00:00.000Z"
 };
 
@@ -42,7 +41,6 @@ const AUTH_CONTEXT_B: AuthContext = {
   email: "kai@example.com",
   displayName: "Kai Lindqvist",
   role: "Owner",
-  isSystemAdmin: true,
   expiresAt: "2099-01-01T00:00:00.000Z"
 };
 
@@ -50,7 +48,7 @@ function actingAs(context: AuthContext) {
   vi.mocked(currentAuthContext).mockResolvedValue(context);
 }
 
-const inspect: typeof query = (text, values) => withSystemAccess(() => query(text, values));
+const inspect: typeof query = (text, values) => withSystemAccess("diagnostics", () => query(text, values));
 
 /**
  * The fake stops at the network boundary rather than at the connector, so the
@@ -112,7 +110,7 @@ beforeAll(async () => {
   process.env.SCOPELEDGER_MASTER_KEY = Buffer.alloc(32, 5).toString("base64");
   realFetch = globalThis.fetch;
 
-  await withSystemAccess(async () => {
+  await withSystemAccess("diagnostics", async () => {
     await query(
       "INSERT INTO organizations (id, name, slug) VALUES ($1,$2,$3), ($4,$5,$6)",
       [ORGANIZATION_A, "Harbour Consulting", "harbour-consulting", ORGANIZATION_B, "Kestrel Works", "kestrel-works"]

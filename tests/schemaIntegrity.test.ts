@@ -102,6 +102,14 @@ describe("the migrated schema is internally consistent", () => {
     expect(violations).toEqual([]);
   });
 
+  it("keeps no column on users that reads like a standing privilege", async () => {
+    const columns = await db.query<{ column_name: string }>(
+      "SELECT column_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'users'"
+    );
+
+    expect(columns.rows.map((row) => row.column_name)).not.toContain("is_system_admin");
+  });
+
   it("accepts a communication_connections insert that leaves status to its default", async () => {
     await db.query("INSERT INTO organizations (id, name, slug) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING", [
       "20000000-0000-4000-8000-000000000001",

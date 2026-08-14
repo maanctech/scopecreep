@@ -5,7 +5,7 @@ import type { PoolClient } from "pg";
 import { transaction } from "@/lib/db/client";
 import { withSystemAccess } from "@/lib/db/tenantContext";
 
-const systemTransaction: typeof transaction = (work) => withSystemAccess(() => transaction(work));
+const systemTransaction: typeof transaction = (work) => withSystemAccess("migrations", () => transaction(work));
 
 export type Migration = {
   version: string;

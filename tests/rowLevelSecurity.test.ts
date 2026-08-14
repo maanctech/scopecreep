@@ -11,7 +11,7 @@ let database: TestDatabase;
 beforeAll(async () => {
   database = await startTestDatabase();
 
-  await withSystemAccess(async () => {
+  await withSystemAccess("diagnostics", async () => {
     for (const [id, slug] of [[ACME, "acme"], [RIVAL, "rival"]]) {
       await query("INSERT INTO organizations (id, name, slug) VALUES ($1, $2, $3)", [id, `${slug} co`, slug]);
       await query("INSERT INTO companies (id, organization_id, name) VALUES (gen_random_uuid(), $1, $2)", [id, `${slug} client`]);
@@ -25,7 +25,7 @@ afterAll(async () => {
 
 describe("row-level security isolates organizations in the database", () => {
   it("enables and forces row-level security on every organization-scoped table", async () => {
-    const unprotected = await withSystemAccess(() => query<{ relname: string }>(`
+    const unprotected = await withSystemAccess("diagnostics", () => query<{ relname: string }>(`
       SELECT c.relname FROM pg_class c
       JOIN pg_namespace n ON n.oid = c.relnamespace
       WHERE n.nspname = 'public' AND c.relkind = 'r' AND c.relname <> 'schema_migrations'
@@ -37,7 +37,7 @@ describe("row-level security isolates organizations in the database", () => {
   });
 
   it("gives every protected table a policy rather than enabling security with no rule", async () => {
-    const policyless = await withSystemAccess(() => query<{ relname: string }>(`
+    const policyless = await withSystemAccess("diagnostics", () => query<{ relname: string }>(`
       SELECT c.relname FROM pg_class c
       JOIN pg_namespace n ON n.oid = c.relnamespace
       WHERE n.nspname = 'public' AND c.relkind = 'r' AND c.relrowsecurity
@@ -92,7 +92,7 @@ describe("row-level security isolates organizations in the database", () => {
   });
 
   it("lets an explicit system-access scope span organizations for backups and migrations", async () => {
-    const everything = await withSystemAccess(() => query<{ name: string }>("SELECT name FROM companies ORDER BY name"));
+    const everything = await withSystemAccess("diagnostics", () => query<{ name: string }>("SELECT name FROM companies ORDER BY name"));
 
     expect(everything.rows.map((row) => row.name)).toEqual(["acme client", "rival client"]);
   });
@@ -132,7 +132,7 @@ const EXPECTED_POLICY_BY_TABLE = new Map<string, string>([
 ]);
 
 async function policyExpressions() {
-  const policies = await withSystemAccess(() => query<{ tablename: string; qual: string | null; with_check: string | null }>(
+  const policies = await withSystemAccess("diagnostics", () => query<{ tablename: string; qual: string | null; with_check: string | null }>(
     "SELECT tablename, qual, with_check FROM pg_policies WHERE schemaname = 'public' ORDER BY tablename"
   ));
 
@@ -169,5 +169,51 @@ describe("every tenant policy says what it is supposed to say", () => {
       .map((policy) => policy.table);
 
     expect(perRow).toEqual([]);
+  });
+});
+
+describe("system access reaches only the tables its purpose needs", () => {
+  it("lets job recovery read the job table it exists to repair", async () => {
+    const jobs = await withSystemAccess("job-recovery", () => query("SELECT id FROM analysis_jobs"));
+
+    expect(jobs.rows).toEqual([]);
+  });
+
+  it("refuses job recovery the scope findings it has no business reading", async () => {
+    await expect(withSystemAccess("job-recovery", () => query("SELECT id FROM scope_findings")))
+      .rejects.toThrow(/permission denied/i);
+  });
+
+  it("refuses job recovery the stored connector credentials", async () => {
+    await expect(withSystemAccess("job-recovery", () => query("SELECT id FROM encrypted_secrets")))
+      .rejects.toThrow(/permission denied/i);
+  });
+
+  it("lets provisioning write the three identity tables it owns", async () => {
+    const found = await withSystemAccess("provisioning", () => query("SELECT id FROM organizations"));
+
+    expect(found.rows.length).toBeGreaterThan(1);
+  });
+
+  it("refuses provisioning the scope findings of the firms it just created", async () => {
+    await expect(withSystemAccess("provisioning", () => query("SELECT id FROM scope_findings")))
+      .rejects.toThrow(/permission denied/i);
+  });
+
+  it("refuses webhook routing everything but the connection it must route to", async () => {
+    const connections = await withSystemAccess("webhook-routing", () => query("SELECT id FROM communication_connections"));
+
+    expect(connections.rows).toEqual([]);
+
+    await expect(withSystemAccess("webhook-routing", () => query("SELECT id FROM analysis_jobs")))
+      .rejects.toThrow(/permission denied/i);
+  });
+
+  it("hands back the ordinary application role once the scope closes", async () => {
+    await withSystemAccess("job-recovery", () => query("SELECT id FROM analysis_jobs"));
+
+    const who = await withSystemAccess("diagnostics", () => query<{ user: string }>("SELECT current_user AS user"));
+
+    expect(who.rows[0].user).toBe("scopeledger_test_app");
   });
 });

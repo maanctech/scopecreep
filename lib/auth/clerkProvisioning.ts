@@ -6,7 +6,7 @@ import { query } from "@/lib/db/client";
 import { withSystemAccess } from "@/lib/db/tenantContext";
 
 type OrganizationRow = { id: string; name: string };
-type UserRow = { id: string; email: string; display_name: string; is_system_admin: boolean };
+type UserRow = { id: string; email: string; display_name: string };
 
 const UNIQUE_VIOLATION = "23505";
 
@@ -75,7 +75,7 @@ export class EmailAlreadyClaimedError extends Error {
 
 async function userFor(session: ClerkSession, directory: ClerkDirectory) {
   const existing = await query<UserRow>(
-    "SELECT id, email, display_name, is_system_admin FROM users WHERE clerk_user_id = $1",
+    "SELECT id, email, display_name FROM users WHERE clerk_user_id = $1",
     [session.clerkUserId]
   );
 
@@ -90,7 +90,7 @@ async function userFor(session: ClerkSession, directory: ClerkDirectory) {
   const inserted = await query<UserRow>(
     `INSERT INTO users (id, email, normalized_email, display_name, clerk_user_id)
      VALUES ($1, $2, $3, $4, $5)
-     RETURNING id, email, display_name, is_system_admin`,
+     RETURNING id, email, display_name`,
     [randomUUID(), email, email.toLowerCase(), displayNameFrom(remote.fullName, email), session.clerkUserId]
   );
 
@@ -112,7 +112,6 @@ type KnownTenant = {
   user_id: string;
   email: string;
   display_name: string;
-  is_system_admin: boolean;
   role: string | null;
 };
 
@@ -123,7 +122,6 @@ async function knownTenant(session: ClerkSession) {
             users.id AS user_id,
             users.email,
             users.display_name,
-            users.is_system_admin,
             organization_memberships.role
      FROM organizations
      JOIN users ON users.clerk_user_id = $2
@@ -157,7 +155,7 @@ export async function authContextForSession(
 
   const role = organizationRoleFor(session.clerkOrganizationRole);
 
-  return withSystemAccess(async () => {
+  return withSystemAccess("provisioning", async () => {
     const known = await knownTenant(session);
 
     if (known && known.role === role) {
@@ -169,7 +167,6 @@ export async function authContextForSession(
         email: known.email,
         displayName: known.display_name,
         role,
-        isSystemAdmin: known.is_system_admin,
         expiresAt: session.expiresAt
       };
     }
@@ -187,7 +184,6 @@ export async function authContextForSession(
       email: user.email,
       displayName: user.display_name,
       role,
-      isSystemAdmin: user.is_system_admin,
       expiresAt: session.expiresAt
     };
   });

@@ -9,18 +9,16 @@ type MembershipRow = {
   clerk_organization_id: string | null;
   email: string;
   clerk_user_id: string | null;
-  is_system_admin: boolean;
   role: string;
 };
 
 async function localMemberships() {
-  const found = await withSystemAccess(() =>
+  const found = await withSystemAccess("diagnostics", () =>
     query<MembershipRow>(
       `SELECT organizations.name AS organization_name,
               organizations.clerk_organization_id,
               users.email,
               users.clerk_user_id,
-              users.is_system_admin,
               organization_memberships.role
        FROM organization_memberships
        JOIN organizations ON organizations.id = organization_memberships.organization_id
@@ -38,18 +36,10 @@ function reportMemberships(memberships: MembershipRow[]) {
   for (const row of memberships) {
     console.log("");
     console.log(`  ${row.email} -> ${row.organization_name} (${row.role})`);
-    console.log(`    system administrator: ${row.is_system_admin ? "YES" : "no"}`);
 
     if (!row.clerk_user_id || !row.clerk_organization_id) {
       console.log("    NOT LINKED TO CLERK: this row predates the move and cannot sign in.");
     }
-  }
-
-  const administrators = memberships.filter((row) => row.is_system_admin);
-
-  if (administrators.length) {
-    console.log("");
-    console.log(`${administrators.length} account(s) can read past every tenant policy. Confirm each is intended.`);
   }
 }
 

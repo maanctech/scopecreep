@@ -5,7 +5,7 @@ type RoleRow = { rolname: string; rolsuper: boolean; rolbypassrls: boolean };
 type TableRow = { relname: string };
 
 async function main() {
-  const role = await withSystemAccess(() => query<RoleRow>(
+  const role = await withSystemAccess("diagnostics", () => query<RoleRow>(
     "SELECT rolname, rolsuper, rolbypassrls FROM pg_roles WHERE rolname = current_user"
   ));
   const connected = role.rows[0];
@@ -22,7 +22,7 @@ async function main() {
     problems.push(`"${connected.rolname}" holds BYPASSRLS, so it reads and writes past every tenant policy.`);
   }
 
-  const unprotected = await withSystemAccess(() => query<TableRow>(`
+  const unprotected = await withSystemAccess("diagnostics", () => query<TableRow>(`
     SELECT c.relname FROM pg_class c
     JOIN pg_namespace n ON n.oid = c.relnamespace
     WHERE n.nspname = 'public' AND c.relkind = 'r' AND c.relname <> 'schema_migrations'

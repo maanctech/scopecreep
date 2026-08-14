@@ -12,7 +12,6 @@ export type AuthContext = {
   email: string;
   displayName: string;
   role: OrganizationRole;
-  isSystemAdmin: boolean;
   expiresAt: string;
 };
 

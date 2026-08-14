@@ -35,7 +35,7 @@ const readOnlyCookie = `${CLERK_SESSION_COOKIE_NAME}=${READ_ONLY_TOKEN}`;
 beforeAll(async () => {
   database = await startTestDatabase();
 
-  await withSystemAccess(async () => {
+  await withSystemAccess("diagnostics", async () => {
     await query("INSERT INTO organizations (id, name, slug, clerk_organization_id) VALUES ($1,$2,$3,$4)", [
       ORGANIZATION, "Ledger Partners", "ledger-partners", READ_ONLY_CLAIMS.o.id
     ]);

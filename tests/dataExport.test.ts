@@ -26,7 +26,6 @@ const AUTH_CONTEXT_A: AuthContext = {
   email: "hana@example.com",
   displayName: "Hana Ortiz",
   role: "Owner",
-  isSystemAdmin: true,
   expiresAt: "2099-01-01T00:00:00.000Z"
 };
 
@@ -51,7 +50,7 @@ let database: TestDatabase;
 beforeAll(async () => {
   database = await startTestDatabase();
 
-  await withSystemAccess(async () => {
+  await withSystemAccess("diagnostics", async () => {
     await query(
       "INSERT INTO organizations (id, name, slug) VALUES ($1,$2,$3), ($4,$5,$6)",
       [ORGANIZATION_A, "Harbour Consulting", "harbour-consulting", ORGANIZATION_B, "Kestrel Works", "kestrel-works"]

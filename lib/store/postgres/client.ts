@@ -33,7 +33,7 @@ export function withStoreContext<T>(work: (context: Context) => Promise<T>): Pro
 }
 
 export async function publicOrganizationId() {
-  const result = await withSystemAccess(() => query<{ id: string }>(
+  const result = await withSystemAccess("bootstrap", () => query<{ id: string }>(
     `SELECT o.id FROM organizations o
      JOIN organization_settings s ON s.organization_id = o.id
      WHERE COALESCE((s.settings->>'publicLeadCapture')::boolean, false) = true
