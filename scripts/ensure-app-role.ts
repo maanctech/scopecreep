@@ -1,11 +1,10 @@
-import { closePool, query } from "../lib/db/client";
-import { PURPOSE_ROLES, withSystemAccess } from "../lib/db/tenantContext";
+import { Pool } from "pg";
+import { PURPOSE_ROLES } from "../lib/db/tenantContext";
 
 /**
- * Runs as the schema owner, immediately after migrations, to provision the
- * unprivileged role the application itself connects as. The two identities
- * have to differ: creating tables needs rights that would also let the
- * connection read past every tenant policy.
+ * Creating a role and granting it anything needs rights the application
+ * account deliberately lacks, so this runs on the owner connection migrations
+ * use rather than the one the application connects with.
  */
 const ROLE = process.env.SCOPELEDGER_DB_APP_USER;
 const PASSWORD = process.env.SCOPELEDGER_DB_APP_PASSWORD;
@@ -23,6 +22,14 @@ function quotedLiteral(value: string) {
   return `'${value.replace(/'/g, "''")}'`;
 }
 
+function ownerUrl() {
+  const value = process.env.DATABASE_MIGRATION_URL?.trim() || process.env.DATABASE_URL?.trim();
+
+  if (!value) throw new Error("DATABASE_MIGRATION_URL is required to provision the application role.");
+
+  return value;
+}
+
 async function main() {
   if (!ROLE || !PASSWORD) {
     throw new Error("SCOPELEDGER_DB_APP_USER and SCOPELEDGER_DB_APP_PASSWORD are required to provision the application role.");
@@ -33,9 +40,10 @@ async function main() {
   }
 
   const role = quotedIdentifier(ROLE);
+  const pool = new Pool({ connectionString: ownerUrl(), max: 1 });
 
-  await withSystemAccess("diagnostics", async () => {
-    const existing = await query<{ rolsuper: boolean; rolbypassrls: boolean }>(
+  try {
+    const existing = await pool.query<{ rolsuper: boolean; rolbypassrls: boolean }>(
       "SELECT rolsuper, rolbypassrls FROM pg_roles WHERE rolname = $1",
       [ROLE]
     );
@@ -46,27 +54,35 @@ async function main() {
 
     const verb = existing.rows[0] ? "ALTER" : "CREATE";
 
-    await query(`${verb} ROLE ${role} LOGIN PASSWORD ${quotedLiteral(PASSWORD)}`);
+    await pool.query(`${verb} ROLE ${role} LOGIN PASSWORD ${quotedLiteral(PASSWORD)}`);
 
-    await query(`GRANT USAGE ON SCHEMA public TO ${role}`);
-    await query(`GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO ${role}`);
-    await query(`GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO ${role}`);
-    await query(`GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO ${role}`);
-    await query(`ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO ${role}`);
-    await query(`ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO ${role}`);
+    await pool.query(`GRANT USAGE ON SCHEMA public TO ${role}`);
+    await pool.query(`GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO ${role}`);
+    await pool.query(`GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO ${role}`);
+    await pool.query(`GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO ${role}`);
+    await pool.query(`ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO ${role}`);
+    await pool.query(`ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO ${role}`);
 
     for (const purpose of Object.values(PURPOSE_ROLES)) {
-      if (purpose) await query(`GRANT ${quotedIdentifier(purpose)} TO ${role}`);
+      if (purpose) await pool.query(`GRANT ${quotedIdentifier(purpose)} TO ${role}`);
     }
-  });
 
-  console.log(`Application role "${ROLE}" is provisioned without SUPERUSER or BYPASSRLS.`);
-  console.log("It may assume each system-access purpose role, and nothing wider.");
+    const assumable = await pool.query<{ rolname: string }>(
+      `SELECT purpose.rolname FROM pg_auth_members membership
+       JOIN pg_roles purpose ON purpose.oid = membership.roleid
+       JOIN pg_roles holder ON holder.oid = membership.member
+       WHERE holder.rolname = $1 ORDER BY purpose.rolname`,
+      [ROLE]
+    );
+
+    console.log(`Application role "${ROLE}" is provisioned without SUPERUSER or BYPASSRLS.`);
+    console.log(`It may assume: ${assumable.rows.map((row) => row.rolname).join(", ") || "nothing"}`);
+  } finally {
+    await pool.end();
+  }
 }
 
-main()
-  .catch((error) => {
-    console.error(error instanceof Error ? error.message : error);
-    process.exitCode = 1;
-  })
-  .finally(closePool);
+main().catch((error) => {
+  console.error(error instanceof Error ? error.message : error);
+  process.exitCode = 1;
+});

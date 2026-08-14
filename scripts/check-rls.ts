@@ -1,5 +1,5 @@
-import { closePool, query } from "../lib/db/client";
-import { withSystemAccess } from "../lib/db/tenantContext";
+import { closePool, query, transaction } from "../lib/db/client";
+import { withSystemAccess, type SystemPurpose } from "../lib/db/tenantContext";
 
 type RoleRow = { rolname: string; rolsuper: boolean; rolbypassrls: boolean };
 type TableRow = { relname: string };
@@ -46,6 +46,98 @@ async function main() {
   }
 
   console.log(`Row-level security is enforced for "${connected.rolname}" across every table.`);
+
+  await reportPurposeScoping();
+}
+
+const OUT_OF_REACH: Array<{ purpose: SystemPurpose; allowed: string; refused: string }> = [
+  { purpose: "job-recovery", allowed: "analysis_jobs", refused: "scope_findings" },
+  { purpose: "provisioning", allowed: "organizations", refused: "encrypted_secrets" },
+  { purpose: "webhook-routing", allowed: "communication_connections", refused: "analysis_jobs" },
+  { purpose: "directory-sync", allowed: "organization_memberships", refused: "encrypted_secrets" },
+  { purpose: "bootstrap", allowed: "organization_settings", refused: "scope_findings" }
+];
+
+async function reachable(purpose: SystemPurpose, table: string) {
+  try {
+    await withSystemAccess(purpose, () => query(`SELECT 1 FROM ${table} LIMIT 1`));
+
+    return true;
+  } catch (error) {
+    if (/permission denied/i.test(error instanceof Error ? error.message : "")) return false;
+
+    throw error;
+  }
+}
+
+class RolledBack extends Error {}
+
+/**
+ * Reading proves nothing about a purpose that writes. A missing insert grant
+ * would serve every existing account and fail only the first sign-in of a new
+ * one, so the write is attempted for real and then rolled back.
+ */
+async function writable(purpose: SystemPurpose, statement: string) {
+  try {
+    await withSystemAccess(purpose, () => transaction(async (client) => {
+      await client.query(statement);
+
+      throw new RolledBack();
+    }));
+
+    return true;
+  } catch (error) {
+    if (error instanceof RolledBack) return true;
+
+    if (/permission denied/i.test(error instanceof Error ? error.message : "")) return false;
+
+    throw error;
+  }
+}
+
+const MUST_WRITE: Array<{ purpose: SystemPurpose; statement: string; describes: string }> = [
+  {
+    purpose: "provisioning",
+    describes: "create a firm on its first sign-in",
+    statement: "INSERT INTO organizations (id, name, slug) VALUES (gen_random_uuid(), 'probe', 'probe-' || gen_random_uuid())"
+  },
+  {
+    purpose: "provisioning",
+    describes: "create the person signing in",
+    statement: "INSERT INTO users (id, email, normalized_email, display_name) VALUES (gen_random_uuid(), 'probe@example.invalid', 'probe@example.invalid', 'Probe')"
+  },
+  {
+    purpose: "job-recovery",
+    describes: "return a stalled job to the queue",
+    statement: "UPDATE analysis_jobs SET updated_at = now() WHERE false"
+  }
+];
+
+async function reportPurposeScoping() {
+  const problems: string[] = [];
+
+  for (const { purpose, allowed, refused } of OUT_OF_REACH) {
+    if (!await reachable(purpose, allowed)) problems.push(`"${purpose}" cannot reach ${allowed}, which it needs.`);
+
+    if (await reachable(purpose, refused)) problems.push(`"${purpose}" can reach ${refused}, which it must not.`);
+  }
+
+  for (const { purpose, statement, describes } of MUST_WRITE) {
+    if (!await writable(purpose, statement)) problems.push(`"${purpose}" cannot ${describes}.`);
+  }
+
+  if (problems.length) {
+    console.error("\nSystem access is not scoped to its purpose:");
+
+    for (const problem of problems) console.error(`- ${problem}`);
+
+    console.error("\nRun npm run db:ensure-app-role so the application role may assume each purpose role.");
+    process.exitCode = 1;
+
+    return;
+  }
+
+  console.log(`Each system-access purpose reaches its own tables, writes what it must, and is refused the rest (${OUT_OF_REACH.length} read, ${MUST_WRITE.length} write).`);
 }
 
 main()
